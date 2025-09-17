@@ -32,7 +32,7 @@ sequenceDiagram
 
 The following component diagram shows the Redis structures used by the Matching Service:
 
-``` mermaid
+```mermaid
 graph TD
     MS(Matching Service) --> Redis
 
