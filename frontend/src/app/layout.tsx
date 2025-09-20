@@ -18,6 +18,9 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${openSans.variable} ${sourceCodePro.variable} antialiased`}
+        style={{
+          fontSize: '15px'
+        }}
       >
         {children}
       </body>

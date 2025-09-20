@@ -1,103 +1,295 @@
-import Image from "next/image";
+'use client';
+
+import * as React from 'react';
+import {
+  AppBar,
+  Box,
+  Stack,
+  Toolbar,
+  Typography
+} from '@mui/material'
+import { 
+  SquaredOutlinedButton, 
+  SquaredFilledButton,
+  RoundedFilledButton 
+} from "@/app/components/CustomButton";
+import { openSans } from "@/app/ui/fonts";
+import { ChevronRightIcon } from '@heroicons/react/24/outline';
 
 export default function Home() {
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main
+      className="flex flex-col min-h-screen p-6"
+      style={{
+        background: 'radial-gradient(circle, #D3E0FB 50%, #E8DEFD 100%)'
+      }}
+    >
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      {/* Top navigation bar */}
+      <AppBar 
+        position='sticky' 
+        sx={{
+          backgroundColor:'transparent',
+          boxShadow: 'none'
+        }}
+      >
+        <Toolbar>
+          {/* Logo */}
+          <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
+            <Box
+              component='img'
+              src="/logo.png"
+              alt="PeerPrep Logo"
+              sx={{
+                objectFit: "contain" ,
+                height: "100%",
+                maxHeight: { xs: "40px", sm: "56px", md: "72px" },
+              }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </Box>
+
+          {/* Buttons */}
+          <Stack direction='row' spacing={2}>
+            <SquaredOutlinedButton
+              href='/login'
+            >
+              Log In
+            </SquaredOutlinedButton>
+
+            <SquaredFilledButton
+              href='/sign-up'
+            >
+              Sign Up
+            </SquaredFilledButton>
+          </Stack>
+
+        </Toolbar>
+      </AppBar>
+
+      <Box 
+        sx={{ 
+          flexGrow: 1,
+          display: 'flex',
+          justifyContent: 'center', 
+          alignItems: 'flex-start',
+          pt: 4
+        }}
+      >
+        <Stack 
+          direction='column' 
+          alignItems='center'
+          spacing={2}
+        >
+          <Typography
+            sx={{ 
+              textAlign: 'center',
+              color: '#141127',
+              fontFamily: openSans.style.fontFamily,
+              fontWeight: 800,
+              fontSize: '38px'
+            }}
           >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+            Collaboration is the best algorithm.
+          </Typography>
+
+          <Typography
+            sx={{ 
+              textAlign: 'center',
+              color: '#6D6B80',
+              fontFamily: openSans.style.fontFamily,
+              fontSize: '20px',
+              width: { xs: 'auto', md: '650px' }
+            }}
+          >
+            PeerPrep lets you prepare for technical interviews live with peers—get matched and start solving together!
+          </Typography>
+
+          <RoundedFilledButton
+            customFillColor='#905CF6'
+            href='/sign-up'
+          >
+            <Stack direction='row' spacing={2}>
+              Start Practicing
+              <ChevronRightIcon color='#FFFFFF' className="w-5 md:w-6"/>
+            </Stack>
+          </RoundedFilledButton>
+
+          {/* Spacer */}
+          <Box sx={{ height: 100 }} />
+          
+          {/* Cards */}
+          <Stack 
+            direction= {{ xs: 'column', md: 'row'}}
+            spacing={{ xs: 20, md: 5 }}
+          >
+            <Box 
+              sx={{ 
+                position: 'relative',
+                borderRadius: '10px',
+                width: '300px',
+                height: '360px',
+                display: 'flex',
+                background: '#FFFFFF',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                padding: '30px',
+                boxShadow: '0px 4px 30px #8B5CF6'
+              }}
+            >
+              <Box
+                component='img'
+                src='/landing_page/customise_card_img.png'
+                alt='Practice Image'
+                sx = {{
+                  width: '160px',
+                  height: 'auto',
+                  position: 'absolute',
+                  top: '-90px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                }}
+              />
+              <Stack 
+                direction='column'
+                spacing={1}
+              >
+                <Typography
+                  sx={{
+                    color: '#8B5CF6',
+                    fontFamily: openSans.style.fontFamily,
+                    fontWeight: 700,
+                    fontSize: '24px'
+                  }}
+                >
+                  Customise Your Practice
+                </Typography>
+                <Typography
+                  sx={{
+                    color: '#6B7280',
+                    fontFamily: openSans.style.fontFamily,
+                    fontWeight: 400,
+                    fontSize: '12px'
+                  }}
+                >
+                  Choose the difficulty level and topic that fit your goals. Whether you want to brush up on arrays, tackle graph problems, or push yourself with dynamic programming, PeerPrep adapts to your needs.
+                </Typography>
+              </Stack>
+            </Box>
+
+            <Box 
+              sx={{
+                position: 'relative',
+                borderRadius: '10px',
+                width: '300px',
+                height: '360px',
+                display: 'flex',
+                background: '#FFFFFF',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                padding: '30px',
+                boxShadow: '0px 4px 30px #2563EB'
+              }}
+            >
+              <Box
+                component='img'
+                src='/landing_page/collaboration_card_img.png'
+                alt='Practice Image'
+                sx = {{
+                  width: '160px',
+                  height: 'auto',
+                  position: 'absolute',
+                  top: '-90px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                }}
+              />
+              <Stack 
+                direction='column'
+                spacing={1}
+              >
+                <Typography
+                  sx={{
+                    color: '#2563EB',
+                    fontFamily: openSans.style.fontFamily,
+                    fontWeight: 700,
+                    fontSize: '24px'
+                  }}
+                >
+                  Real-time Collaboration
+                </Typography>
+                <Typography
+                  sx={{
+                    color: '#6B7280',
+                    fontFamily: openSans.style.fontFamily,
+                    fontWeight: 400,
+                    fontSize: '12px'
+                  }}
+                >
+                  Work together with peers in a live coding environment that updates instantly as you type. Share ideas, debug together, and simulate the teamwork of real interview settings.
+                </Typography>
+              </Stack>
+            </Box>
+            
+            <Box 
+              sx={{
+                position: 'relative',
+                borderRadius: '10px',
+                width: '300px',
+                height: '360px',
+                display: 'flex',
+                background: '#FFFFFF',
+                justifyContent: 'center',
+                alignItems: 'center',
+                textAlign: 'center',
+                padding: '30px',
+                boxShadow: '0px 4px 30px #8B5CF6'
+              }}
+            >
+              <Box
+                component='img'
+                src='/landing_page/interview_card_img.png'
+                alt='Practice Image'
+                sx = {{
+                  width: '160px',
+                  height: 'auto',
+                  position: 'absolute',
+                  top: '-90px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                }}
+              />
+              <Stack 
+                direction='column'
+                spacing={1}
+              >
+                <Typography
+                  sx={{
+                    color: '#8B5CF6',
+                    fontFamily: openSans.style.fontFamily,
+                    fontWeight: 700,
+                    fontSize: '24px'
+                  }}
+                >
+                  Prepare For Interviews
+                </Typography>
+                <Typography
+                  sx={{
+                    color: '#6B7280',
+                    fontFamily: openSans.style.fontFamily,
+                    fontWeight: 400,
+                    fontSize: '12px'
+                  }}
+                >
+                  Tackle curated technical interview problems that mirror the style and difficulty of top tech company interviews. Every question is designed to strengthen the skills recruiters are really testing.
+                </Typography>
+              </Stack>
+            </Box>
+          </Stack>
+
+        </Stack>
+      </Box>
+    </main>
   );
 }
