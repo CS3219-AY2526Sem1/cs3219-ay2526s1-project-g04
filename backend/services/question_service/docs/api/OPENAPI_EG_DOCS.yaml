@@ -1,26 +1,382 @@
-openapi: 3.0.4
+openapi: 3.0.9
 info:
-  title: Sample API
-  description: Optional multiline or single-line description in [CommonMark](http://commonmark.org/help/) or HTML.
-  version: 0.1.9
-
+  title: Question Service API (PeerPrep)
+  version: 0.1.0
+  description: |
+    Microservice to manage and serve coding interview questions.
+    - Read APIs for users/services
+    - Selection API (idempotent by session_id)
+    - Admin CRUD + publish/versioning
+    - Markdown sanitized on read; images via signed URLs
 servers:
-  - url: http://api.example.com/v1
-    description: Optional server description, e.g. Main (production) server
-  - url: http://staging-api.example.com
-    description: Optional server description, e.g. Internal staging server for testing
+  - url: http://localhost:3000
+    description: Local dev
+  - url: https://api.example.com/question-service
+    description: Production (placeholder)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: 1-based page number
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size:
+      name: size
+      in: query
+      description: Page size (max 50)
+      schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+    Difficulty:
+      name: difficulty
+      in: query
+      description: Optional difficulty filter
+      schema: { $ref: '#/components/schemas/Difficulty' }
+    Topics:
+      name: topics
+      in: query
+      description: Comma-separated topic slugs (e.g., `graphs,dp`)
+      schema: { type: string }
+    Q:
+      name: q
+      in: query
+      description: Full-text search (title/body)
+      schema: { type: string }
+    Highlight:
+      name: highlight
+      in: query
+      description: Include short snippet highlighting matches
+      schema: { type: boolean, default: false }
+  schemas:
+    Difficulty:
+      type: string
+      enum: [easy, medium, hard]
+    Status:
+      type: string
+      enum: [draft, published, archived]
+    Attachment:
+      type: object
+      properties:
+        object_key: { type: string, example: q/two-sum/diagram.png }
+        mime:       { type: string, example: image/png }
+        byte_size:  { type: integer, minimum: 0 }
+        width:      { type: integer, minimum: 1, nullable: true }
+        height:     { type: integer, minimum: 1, nullable: true }
+        alt:        { type: string, nullable: true }
+      required: [object_key, mime]
+    QuestionBase:
+      type: object
+      properties:
+        id:          { type: string, example: two-sum }
+        title:       { type: string }
+        body_md:     { type: string }
+        difficulty:  { $ref: '#/components/schemas/Difficulty' }
+        topics:      { type: array, items: { type: string }, example: [arrays, hash-map] }
+        attachments: { type: array, items: { $ref: '#/components/schemas/Attachment' } }
+        status:      { $ref: '#/components/schemas/Status' }
+        version:     { type: integer }
+        created_at:  { type: string, format: date-time }
+        updated_at:  { type: string, format: date-time }
+      required: [id, title, body_md, difficulty, status, version]
+    QuestionSummary:
+      allOf:
+        - $ref: '#/components/schemas/QuestionBase'
+        - type: object
+          properties:
+            body_md:
+              description: Omitted or truncated in list responses
+              type: string
+              nullable: true
+            snippet:
+              type: string
+              description: Present when `highlight=true` and `q` provided
+              nullable: true
+    QuestionRead:
+      allOf:
+        - $ref: '#/components/schemas/QuestionBase'
+        - type: object
+          properties:
+            body_html: { type: string, description: Sanitized HTML derived from body_md }
+    QuestionCreate:
+      type: object
+      properties:
+        id:         { type: string, description: Stable slug/identifier }
+        title:      { type: string }
+        body_md:    { type: string }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        topics:     { type: array, items: { type: string } }
+        attachments:{ type: array, items: { $ref: '#/components/schemas/Attachment' } }
+      required: [id, title, body_md, difficulty]
+    QuestionUpdate:
+      type: object
+      description: Partial update (any provided fields will be updated)
+      properties:
+        title:      { type: string }
+        body_md:    { type: string }
+        difficulty: { $ref: '#/components/schemas/Difficulty' }
+        topics:     { type: array, items: { type: string } }
+        attachments:{ type: array, items: { $ref: '#/components/schemas/Attachment' } }
+        status:     { $ref: '#/components/schemas/Status' }
+    QuestionListResponse:
+      type: object
+      properties:
+        page:      { type: integer }
+        page_size: { type: integer }
+        total:     { type: integer }
+        items:     { type: array, items: { $ref: '#/components/schemas/QuestionSummary' } }
+      required: [page, page_size, total, items]
+    SelectionRequest:
+      type: object
+      properties:
+        session_id:  { type: string }
+        difficulty:  { $ref: '#/components/schemas/Difficulty' }
+        topics:      { type: array, items: { type: string } }
+        exclude_ids: { type: array, items: { type: string } }
+        recent_ids:  { type: array, items: { type: string } }
+        seed:        { type: number, description: Deterministic selection seed (testing) }
+      required: [session_id]
+    Error:
+      type: object
+      properties:
+        error:   { type: string, example: not_found }
+        message: { type: string, example: Question not found }
+        details: { type: object, additionalProperties: true, nullable: true }
+      required: [error, message]
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Health
+  - name: Read
+  - name: Selection
+  - name: Admin
 
 paths:
-  /users:
+  /healthz:
     get:
-      summary: Returns a list of users.
-      description: Optional extended description in CommonMark or HTML.
+      tags: [Health]
+      summary: Liveness probe
+      security: []
       responses:
-        "200": # status code
-          description: A JSON array of user names
+        '200':
+          description: Service is alive
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: string
+                type: object
+                properties:
+                  ok: { type: boolean, example: true }
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness probe (DB/AMQP reachable)
+      security: []
+      responses:
+        '200':
+          description: Ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ready: { type: boolean, example: true }
+                  checks:
+                    type: object
+                    properties:
+                      db:   { type: boolean, example: true }
+                      amqp: { type: boolean, example: true }
+
+  /questions:
+    get:
+      tags: [Read]
+      summary: List and filter published questions
+      description: |
+        Returns a paginated list of **published** questions.
+        Optional filters: difficulty, topics, full-text `q`.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Difficulty'
+        - $ref: '#/components/parameters/Topics'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Highlight'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionListResponse' }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Forbidden,    content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /questions/{id}:
+    get:
+      tags: [Read]
+      summary: Get a published question by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionRead' }
+        '404': { description: Not Found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /select:
+    post:
+      tags: [Selection]
+      summary: Select one eligible question for a session (idempotent)
+      description: |
+        Returns one **matching, published** question. Idempotent for the same `session_id` for 10 minutes.
+        Requires role `service` (or `admin`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SelectionRequest' }
+            examples:
+              basic:
+                value:
+                  session_id: "sess-123"
+                  difficulty: "medium"
+                  topics: ["graphs"]
+                  exclude_ids: ["two-sum"]
+      responses:
+        '200':
+          description: Selected question
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: no-store recommended
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionRead' }
+        '409': { description: No eligible question, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Unauthorized,      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Forbidden (role),  content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+
+  /admin/questions:
+    get:
+      tags: [Admin]
+      summary: List questions (any status) for admin
+      description: Admin view with filters by status/difficulty/topics.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Difficulty'
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/Status' }
+        - $ref: '#/components/parameters/Topics'
+        - $ref: '#/components/parameters/Q'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionListResponse' }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Forbidden,    content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      security:
+        - bearerAuth: []
+      x-roles: [admin]
+
+    post:
+      tags: [Admin]
+      summary: Create a question (draft)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuestionCreate' }
+      responses:
+        '201':
+          description: Created (draft)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionRead' }
+        '400': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Unauthorized,     content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Forbidden,        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      security:
+        - bearerAuth: []
+      x-roles: [admin]
+
+  /admin/questions/{id}:
+    patch:
+      tags: [Admin]
+      summary: Update a question (partial)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuestionUpdate' }
+      responses:
+        '200': { description: Updated, content: { application/json: { schema: { $ref: '#/components/schemas/QuestionRead' } } } }
+        '400': { description: Validation error, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '404': { description: Not found,        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Unauthorized,     content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Forbidden,        content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      security:
+        - bearerAuth: []
+      x-roles: [admin]
+
+    delete:
+      tags: [Admin]
+      summary: Archive a question (soft delete)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: Archived }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Forbidden,    content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      security:
+        - bearerAuth: []
+      x-roles: [admin]
+
+  /admin/questions/{id}/publish:
+    post:
+      tags: [Admin]
+      summary: Publish the current head as a new version
+      description: Copies current fields, topics, and attachments into `question_versions`, increments head `version`, sets status to `published`, and emits an event.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Published
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  question: { $ref: '#/components/schemas/QuestionRead' }
+                  published_version: { type: integer, example: 3 }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '409': { description: Invalid state (e.g., archived), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '401': { description: Unauthorized, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '403': { description: Forbidden,    content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+      security:
+        - bearerAuth: []
+      x-roles: [admin]
