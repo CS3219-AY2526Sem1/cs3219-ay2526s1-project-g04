@@ -8,13 +8,10 @@ import {
   Toolbar,
   Typography
 } from '@mui/material'
-import { 
-  SquaredOutlinedButton, 
-  SquaredFilledButton,
-  RoundedFilledButton 
-} from "@/app/components/CustomButton";
-import { openSans } from "@/app/ui/fonts";
-import { ChevronRightIcon } from '@heroicons/react/24/outline';
+import { LoginButton } from '@/components/ui/landing_page/LoginButton'
+import { SignUpButton } from '@/components/ui/landing_page/SignUpButton';
+import { StartPracticingButton } from '@/components/ui/landing_page/StartPracticingButton';
+import { openSans } from "@/styles/fonts";
 
 export default function Home() {
   return (
@@ -50,17 +47,8 @@ export default function Home() {
 
           {/* Buttons */}
           <Stack direction='row' spacing={2}>
-            <SquaredOutlinedButton
-              href='/login'
-            >
-              Log In
-            </SquaredOutlinedButton>
-
-            <SquaredFilledButton
-              href='/sign-up'
-            >
-              Sign Up
-            </SquaredFilledButton>
+            <LoginButton />
+            <SignUpButton />
           </Stack>
 
         </Toolbar>
@@ -104,15 +92,7 @@ export default function Home() {
             PeerPrep lets you prepare for technical interviews live with peers—get matched and start solving together!
           </Typography>
 
-          <RoundedFilledButton
-            customFillColor='#905CF6'
-            href='/sign-up'
-          >
-            <Stack direction='row' spacing={2}>
-              Start Practicing
-              <ChevronRightIcon color='#FFFFFF' className="w-5 md:w-6"/>
-            </Stack>
-          </RoundedFilledButton>
+          <StartPracticingButton />
 
           {/* Spacer */}
           <Box sx={{ height: 100 }} />
