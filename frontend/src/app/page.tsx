@@ -120,7 +120,7 @@ export default function Home() {
           {/* Cards */}
           <Stack 
             direction= {{ xs: 'column', md: 'row'}}
-            spacing={{ xs: 20, md: 5 }}
+            spacing={{ xs: 20, md: 10 }}
           >
             <Box 
               sx={{ 
