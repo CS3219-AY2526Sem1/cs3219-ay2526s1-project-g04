@@ -66,7 +66,7 @@ flowchart TB
 
     FE -->|"GET match/status/{userId}"| MS
     MS -->|5: 200, matched_ready + sessionId| FE 
-    FE -->|6: get sessionId status| CS
+    FE -->|6: poll sessionId status| CS
 
     MS -->|QUERY userId status| Redis
     CS -->|3: update session ID in user status HSET| Redis
