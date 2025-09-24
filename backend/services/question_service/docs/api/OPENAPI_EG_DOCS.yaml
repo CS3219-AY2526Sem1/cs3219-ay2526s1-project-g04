@@ -267,6 +267,19 @@ components:
           additionalProperties: true
           nullable: true
       required: [error, message]
+    TopicListResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        page_size:
+          type: integer
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopicTag'
 
 security:
   - bearerAuth: []
@@ -650,3 +663,31 @@ paths:
       security:
         - bearerAuth: []
       x-roles: [admin]
+
+  /topics:
+    get:
+      tags: [Read]
+      summary: List topic tags (slug + color)
+      description: Returns a paginated list of topic tags for UI rendering.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
