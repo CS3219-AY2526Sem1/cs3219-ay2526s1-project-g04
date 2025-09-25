@@ -1,0 +1,26 @@
+{
+  "name": "collaboration_service",
+  "version": "1.0.0",
+  "description": "source code for collaboration service",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch src/app.ts",
+    "start": "node dist/app.js",
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.2",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}
