@@ -7,11 +7,13 @@ This package contains the source code for sending/listening message to/from a me
 1. Ensure rabbitMQ service is running. [Guide to run](../../infrastructure/broker/README.md
 )
 
+2. Have .env file with the `RABBITMQ_URL` value
+
 ### For services that wants to publish message to the broker
 
 Sample code:
 ```js
-messager = new MessagePublisher("publisher_name") // pass in a name to keep track who publishes
+const messager = new MessagePublisher("publisher_name") // pass in a name to keep track who publishes
 
 await messager.connect()
 
