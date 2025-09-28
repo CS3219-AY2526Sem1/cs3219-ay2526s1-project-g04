@@ -1,3 +1,3 @@
 export default function Page() {
-    return <p>Question Bank Page</p>
+    return <h1>Question Bank</h1>
 }
