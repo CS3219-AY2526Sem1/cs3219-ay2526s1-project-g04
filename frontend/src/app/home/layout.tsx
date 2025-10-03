@@ -18,7 +18,7 @@ export default function HomeLayout({ children }: LayoutProps) {
             <SideNavigationBar topOffset={appBarHeight} />
 
             <main 
-                className='flex-grow border-l border-gray-100 p-6 md:ml-[280px] md:p-10'
+                className='flex-grow border-l overflow-y-auto border-gray-100 p-6 md:ml-[280px] md:p-10'
                 style={{
                     marginTop: appBarHeight,
                     marginLeft: drawerWidth + 5,
