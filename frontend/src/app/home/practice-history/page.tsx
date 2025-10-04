@@ -1,3 +1,3 @@
 export default function Page() {
-    return <p>Practice History Page</p>
+    return <h1>Practice History</h1>
 }
