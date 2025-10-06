@@ -9,7 +9,8 @@
     "start": "node dist/app.js",
     "build": "tsc",
     "type-check": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "cd ../.. && npm run lint -- services/collaboration_service/src "
   },
   "author": "",
   "license": "ISC",
