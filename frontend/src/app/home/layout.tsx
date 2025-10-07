@@ -1,91 +1,31 @@
 'use client';
 
-import * as React from 'react';
-import "@/styles/globals.css";
-import Link from 'next/link';
-import { 
-    AppBar,
-    Box,
-    IconButton,
-    Stack,
-    Toolbar,
-    Tooltip
-} from "@mui/material";
-import { 
-    SettingsOutlined, 
-    NotificationsOutlined, 
-    AccountCircleOutlined 
-} from '@mui/icons-material';
+import React, { useState } from "react";
+import TopNavigationBar from '@/components/ui/home/top-nav';
+import SideNavigationBar from '@/components/ui/home/side-nav';
+import { drawerWidth } from '@/components/ui/home/side-nav';
 
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export default function HomeLayout({ children }: LayoutProps) {
+    const [appBarHeight, setAppBarHeight] = React.useState(0);
+
     return (
-        <div className="min-h-screen flex flex-col">
-            {/* Top AppBar */}
-            <AppBar
-                position='sticky'
-                sx={{
-                    backgroundColor:'var(--background)',
-                    color: 'var(--foreground)',
-                    borderBottom: '0.1px solid rgba(255, 255, 255, 0.2)',
-                    boxShadow: '0px 4px 20px rgba(0, 0, 0, 0.25)',
-                    py: 1
+        <div className="flex h-screen flex-col md:flex-row md:overflow-hidden">
+            <TopNavigationBar onHeightChange={setAppBarHeight} />
+            <SideNavigationBar topOffset={appBarHeight} />
+
+            <main 
+                className='flex-grow border-l overflow-y-auto border-gray-100 p-6 md:ml-[280px] md:p-10'
+                style={{
+                    marginTop: appBarHeight,
+                    marginLeft: drawerWidth + 5,
                 }}
             >
-                <Toolbar>
-                    {/* Logo */}
-                    <Box sx={{ display: "flex", alignItems: "center", flexGrow: 1 }}>
-                        <Tooltip title="/home/dashboard">
-                            <Link href='/home/dashboard'>
-                                <Box
-                                    component='img'
-                                    src="/logo.png"
-                                    alt="PeerPrep Logo"
-                                    sx={{
-                                        objectFit: "contain" ,
-                                        height: "100%",
-                                        maxHeight: { xs: "40px", sm: "56px", md: "72px" },
-                                    }}
-                                />
-                            </Link>
-                        </Tooltip>
-                    </Box>
-
-                    {/* Top Navigation Bar right elements */}
-                    <Stack direction='row' spacing={2}>
-                        <Tooltip title="settings">
-                            <IconButton 
-                                aria-label="settings"
-                                sx={{ color: 'var(--foreground)' }}
-                            >
-                                <SettingsOutlined />
-                            </IconButton>
-                        </Tooltip>
-                        
-                        <Tooltip title="notifications">
-                            <IconButton 
-                                aria-label="notifications"
-                                sx={{ color: 'var(--foreground)' }}
-                            >
-                                <NotificationsOutlined />
-                            </IconButton>
-                        </Tooltip>
-                        
-                        <Tooltip title="profile">
-                            <IconButton 
-                                aria-label="profile"
-                                sx={{ color: 'var(--foreground)' }}
-                            >
-                                <AccountCircleOutlined />
-                            </IconButton>
-                        </Tooltip>
-                    </Stack>
-
-                </Toolbar>
-            </AppBar>
+                {children}
+            </main>
         </div>
     )
 }
