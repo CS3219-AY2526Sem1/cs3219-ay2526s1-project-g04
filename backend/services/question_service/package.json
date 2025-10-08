@@ -26,7 +26,11 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "express-jwt": "^8.5.1",
+    "helmet": "^8.1.0",
+    "jwks-rsa": "^3.2.0",
+    "morgan": "^1.10.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
