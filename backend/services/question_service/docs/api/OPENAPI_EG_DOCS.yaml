@@ -193,7 +193,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Attachment'
-      required: [id, title, body_md, difficulty]
+      required: [title, body_md, difficulty]
     QuestionUpdate:
       type: object
       description: Partial update (any provided fields will be updated)
