@@ -1,12 +1,12 @@
-import express from "express";
+import express from 'express';
 
-const app = express();
-const PORT = 3000;
+/**
+ * This file handles all the endpoints
+ * Routing will be used if endpoints get too large
+ */
 
-app.get("/", (req, res) => {
-  res.send("Hello World from Express + TypeScript (NodeNext)!");
-});
+export const app = express();
 
-app.listen(PORT, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${PORT}`);
+app.get('/', (req, res) => {
+  res.status(200).send('Collab service is alive');
 });
