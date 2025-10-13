@@ -5,9 +5,13 @@ export enum USERSTATE {
   end = 'end',
 }
 
+export interface UserEntry {
+  state: USERSTATE;
+}
+
 export class Session {
-  private users: Record<string, any> = {};
-  private doc: any;
+  private users: Record<string, UserEntry> = {};
+  private doc: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   private sessionId: number;
 
   constructor(sessionId: number, userAId: number, userBId: number) {
@@ -33,12 +37,12 @@ export class Session {
 
   public readyUser(userId: number) {
     console.log(`Added userId ${userId} to session ${this.sessionId}`);
-    this.users[userId].state = USERSTATE.ready;
+    this.users[userId]!.state = USERSTATE.ready;
   }
 
   public userNotReady(userId: number): boolean {
     console.log(this.users[userId]);
-    return this.users[userId].state === USERSTATE.waiting;
+    return this.users[userId]!.state === USERSTATE.waiting;
   }
 
   public updateCodeDocument() {
