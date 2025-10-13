@@ -1,0 +1,9 @@
+name: Root CI Pipeline
+run-name: ${{ github.actor }} is learning GitHub Actions
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  run-backend:
+    uses: backend/.github/workflows/.backend_ci.yml@main
