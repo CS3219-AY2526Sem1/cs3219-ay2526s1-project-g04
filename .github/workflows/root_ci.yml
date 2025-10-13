@@ -1,12 +1,11 @@
 name: Root CI Pipeline
 run-name: PeerPrep
 on:
-  push:
-    branches:
-      - master
   pull_request:
     branches:
       - master
+  workflow_dispatch:
+ 
 jobs:
   run-backend:
     uses: ./.github/workflows/backend_ci.yml
