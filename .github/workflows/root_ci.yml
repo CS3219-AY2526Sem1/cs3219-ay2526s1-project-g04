@@ -1,6 +1,9 @@
 name: Root CI Pipeline
 run-name: PeerPrep
 on:
+  push:
+    branches:
+      - master
   pull_request:
     branches:
       - master
