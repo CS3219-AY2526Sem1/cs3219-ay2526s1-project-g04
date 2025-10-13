@@ -6,7 +6,7 @@ on:
   
 defaults:
   run:
-    working-directory: ./backend
+    working-directory: backend
     
 jobs:
   run-services-lint:
