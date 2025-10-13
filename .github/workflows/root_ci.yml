@@ -6,4 +6,4 @@ on:
       - '**'
 jobs:
   run-backend:
-    uses: ./backend/.github/workflows/backend_ci.yml@master
+    uses: .github/workflows/backend_ci.yml@master
