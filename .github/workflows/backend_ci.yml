@@ -7,12 +7,15 @@ on:
 defaults:
   run:
     working-directory: backend
+  
     
 jobs:
   run-services-lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v5
+    - uses: actions/setup-node@v5
+    - run: npm i
     - run: npm run lint -- services/collaboration_service/src 
     - run: npm run lint -- services/user_service/src 
     - run: npm run lint -- services/question_service/src 
