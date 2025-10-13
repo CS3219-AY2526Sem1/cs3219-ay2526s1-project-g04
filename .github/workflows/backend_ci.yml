@@ -1,9 +1,13 @@
 name: Reusable workflow example
-run-name: Run backend CI
+run-name: Backend CI
 
 on:
   workflow_call:
-
+  
+defaults:
+  run:
+    working-directory: ./backend
+    
 jobs:
   run-services-lint:
     runs-on: ubuntu-latest
