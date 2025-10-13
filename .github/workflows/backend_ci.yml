@@ -10,13 +10,24 @@ defaults:
   
     
 jobs:
-  run-services-lint:
+  install-lint-service:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v5
-    - uses: actions/setup-node@v5
-    - run: npm i
-    - run: npm run lint -- services/collaboration_service/src 
-    - run: npm run lint -- services/user_service/src 
-    - run: npm run lint -- services/question_service/src 
-    - run: npm run lint -- services/matching_service/src 
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - name: Install lint
+        run: npm i
+      
+  lint-services:
+    runs-on: ubuntu-latest
+    needs: install-lint-service
+    steps:
+      - name: lint collab service
+        run: npm run lint -- services/collaboration_service/src 
+      - name: lint user service
+        run: npm run lint -- services/user_service/src 
+      - name: lint question service
+        run: npm run lint -- services/question_service/src 
+      - name: lint matching service
+        run: npm run lint -- services/matching_service/src 
