@@ -5,15 +5,17 @@ import json from '@eslint/json';
 import markdown from '@eslint/markdown';
 import { defineConfig } from 'eslint/config';
 import prettierPlugin from 'eslint-plugin-prettier';
+import prettierConfig from 'eslint-plugin-prettier/recommended';
 
 export default defineConfig([
   {
     files: ['**/*.{js,mjs,cjs,ts,mts,cts}'],
     plugins: { js, prettier: prettierPlugin },
-    extends: ['js/recommended'],
+    extends: ['js/recommended', prettierConfig],
     languageOptions: { globals: globals.node },
     rules: {
       'no-console': 'warn',
+      'prettier/prettier': ['error'],
     },
   },
   tseslint.configs.recommended,
