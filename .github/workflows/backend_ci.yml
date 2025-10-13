@@ -1,4 +1,5 @@
 name: Reusable workflow example
+run-name: Run backend CI
 
 on:
   workflow_call:
@@ -7,4 +8,7 @@ jobs:
   run-services-lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@v6
+    - run: npm run lint -- services/collaboration_service/src 
+    - run: npm run lint -- services/user_service/src 
+    - run: npm run lint -- services/question_service/src 
+    - run: npm run lint -- services/matching_service/src 
