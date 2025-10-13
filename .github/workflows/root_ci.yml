@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - master
+    types: [opened, synchronize, reopened]
 jobs:
   run-backend:
     uses: ./.github/workflows/backend_ci.yml
