@@ -30,7 +30,7 @@ export class SessionManager {
 
   public async createSession(matchedId: string) {
     //Get data from redis
-    const matchedData: Record<string, any> =
+    const matchedData: Record<string, string> =
       await this.redis.getMatchedUser(matchedId);
 
     //Create session id
