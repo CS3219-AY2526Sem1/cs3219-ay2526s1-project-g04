@@ -526,6 +526,35 @@ paths:
       x-roles: [admin]
 
   /admin/questions/{id}:
+    get:
+      tags: [Admin]
+      summary: Get a question by ID (draft / published / archived)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: 
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionRead'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
     patch:
       tags: [Admin]
       summary: Update a question (partial)
