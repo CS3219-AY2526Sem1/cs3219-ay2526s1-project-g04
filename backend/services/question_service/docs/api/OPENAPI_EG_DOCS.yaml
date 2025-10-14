@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Question Service API (PeerPrep)
-  version: 0.1.1
+  version: 0.1.2
   description: |
     Microservice to manage and serve coding interview questions.
     - Read APIs for users/services
@@ -9,7 +9,7 @@ info:
     - Admin CRUD + publish/versioning
     - Markdown sanitized on read; images via signed URLs
     
-    **Change in 0.1.1**: Read models now return `topics` as objects including `color_hex` for frontend rendering.
+    **Change in 0.1.2**: Included a GET method for /admin/questions/{id} so that admins can retrieve questions by ID regardless of status
 servers:
   - url: http://localhost:3000
     description: Local dev
