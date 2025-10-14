@@ -26,8 +26,11 @@ Client → ALB / API Gateway → Question Service (Express)
                                └─ RabbitMQ (Amazon MQ): events
 
 ```
+
 ---
+
 ## Folder Structure
+
 ```
 backend/services/question_service/
 ├── .gitignore
