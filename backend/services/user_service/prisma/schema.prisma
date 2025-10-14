@@ -18,10 +18,10 @@ model User {
   email        String    @unique
   password     String
   createdAt    DateTime  @default(now())
-  role         Role     @default(USER)
-  displayName        String
+  role         Role      @default(USER)
   bio                String?
   profilePictureUrl  String?
+  username     String    @unique
 
   @@map("users")
 }
