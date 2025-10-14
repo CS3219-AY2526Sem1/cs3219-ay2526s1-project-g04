@@ -25,21 +25,26 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "^6.17.1",
+    "@prisma/client": "^6.17.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-jwt": "^8.5.1",
     "helmet": "^8.1.0",
     "jwks-rsa": "^3.2.0",
-    "morgan": "^1.10.1"
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@tsconfig/node22": "^22.0.2",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.7.0",
     "eslint": "^9.37.0",
     "eslint-plugin-perfectionist": "^4.15.1",
     "prettier": "^3.6.2",
+    "prisma": "^6.17.1",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.0"
