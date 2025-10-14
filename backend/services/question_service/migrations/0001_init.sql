@@ -11,10 +11,10 @@ CREATE TABLE IF NOT EXISTS questions (
   id             text PRIMARY KEY,
   title          text NOT NULL,
   body_md        text NOT NULL,
-  difficulty     text NOT NULL CHECK (difficulty IN ('easy','medium','hard')),
+  difficulty     text NOT NULL CHECK (difficulty IN ('Easy','Medium','Hard')),
   topics         jsonb NOT NULL DEFAULT '[]',              -- array of topic slugs
   attachments    jsonb NOT NULL DEFAULT '[]',
-  status         text NOT NULL CHECK (status IN ('draft','published','archived')),
+  status         text NOT NULL CHECK (status IN ('Draft','Published','Archived')),
   version        int  NOT NULL DEFAULT 1,
   rand_key       double precision NOT NULL DEFAULT random(),
   created_at     timestamptz DEFAULT now(),
@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS question_versions (
   version        int  NOT NULL,
   title          text NOT NULL,
   body_md        text NOT NULL,
-  difficulty     text NOT NULL CHECK (difficulty IN ('easy','medium','hard')),
+  difficulty     text NOT NULL CHECK (difficulty IN ('Easy','Medium','Hard')),
   topics         jsonb NOT NULL DEFAULT '[]',
   attachments    jsonb NOT NULL DEFAULT '[]',
-  status         text NOT NULL CHECK (status IN ('draft','published','archived')),
+  status         text NOT NULL CHECK (status IN ('Draft','Published','Archived')),
   published_at   timestamptz,
   created_at     timestamptz DEFAULT now(),
   PRIMARY KEY (id, version)
@@ -95,10 +95,10 @@ CREATE INDEX IF NOT EXISTS idx_questions_topics_gin
   ON questions USING GIN (topics jsonb_path_ops);
 
 -- Full-text search over title+body:
--- Partial index for published content to keep it small & fast.
+-- Partial index for Published content to keep it small & fast.
 CREATE INDEX IF NOT EXISTS idx_questions_tsv_en_published
   ON questions USING GIN (tsv_en)
-  WHERE status = 'published';
+  WHERE status = 'Published';
 
 -- Topic lookup convenience
 CREATE INDEX IF NOT EXISTS idx_topics_color ON topics (color_hex);
@@ -115,8 +115,8 @@ COMMIT;
 --
 -- INSERT INTO questions (id, title, body_md, difficulty, topics, status)
 -- VALUES
---   ('two-sum', 'Two Sum', 'Find two numbers…', 'easy', '["arrays"]', 'published'),
---   ('graph-traversal', 'Graph Traversal', 'BFS/DFS…', 'medium', '["graphs"]', 'published')
+--   ('two-sum', 'Two Sum', 'Find two numbers…', 'Easy', '["arrays"]', 'Published'),
+--   ('graph-traversal', 'Graph Traversal', 'BFS/DFS…', 'Medium', '["graphs"]', 'Published')
 -- ON CONFLICT (id) DO NOTHING;
 --
 -- INSERT INTO question_topics (question_id, topic_slug) VALUES
