@@ -8,6 +8,6 @@ const connectionString = `${process.env.DATABASE_URL}`;
 const adapter = new PrismaPg({ connectionString });
 export const prisma = new PrismaClient({ adapter });
 
-process.on("beforeExit", async () => {
-    await prisma.$disconnect();
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
 });
