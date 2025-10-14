@@ -1,3 +1,3 @@
 // index.ts
 
-import 'dotenv/config'
+import 'dotenv/config';

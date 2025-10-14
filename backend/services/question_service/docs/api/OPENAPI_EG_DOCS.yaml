@@ -49,7 +49,7 @@ components:
     Topics:
       name: topics
       in: query
-      description: "Comma-separated topic slugs (e.g., `graphs,dp`)"
+      description: 'Comma-separated topic slugs (e.g., `graphs,dp`)'
       schema:
         type: string
     Q:
@@ -475,10 +475,10 @@ paths:
             examples:
               basic:
                 value:
-                  session_id: "sess-123"
-                  difficulty: "medium"
-                  topics: ["graphs"]
-                  exclude_ids: ["two-sum"]
+                  session_id: 'sess-123'
+                  difficulty: 'medium'
+                  topics: ['graphs']
+                  exclude_ids: ['two-sum']
       responses:
         '200':
           description: Selected question
@@ -596,7 +596,7 @@ paths:
         - name: id
           in: path
           required: true
-          schema: 
+          schema:
             type: string
       responses:
         '200':

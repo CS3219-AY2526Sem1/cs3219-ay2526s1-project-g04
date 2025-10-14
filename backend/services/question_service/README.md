@@ -8,12 +8,12 @@ A microservice that stores coding interview questions and reliably serves **one 
 
 ## ✨ Features
 
-* **Question catalog**: CRUD (admin), get-by-id, list/filter with pagination, basic full‑text search.
-* **Selection API**: returns one **matching, published** question; **idempotent** per `session_id` with a **10‑minute reservation** stored in Postgres.
-* **Repeat‑avoidance**: excludes questions recently attempted by either peer (`recent_ids` field or via history integration).
-* **Content safety**: Markdown → sanitized HTML; attachments via **S3 signed URLs**; optional **CloudFront**.
-* **Security**: JWT (RS256 via JWKS) with roles: `admin`, `service` (and optional `anonymous` for read‑only).
-* **Events**: `question.created|updated|published|selected` to RabbitMQ (topic exchange) for analytics/history.
+- **Question catalog**: CRUD (admin), get-by-id, list/filter with pagination, basic full‑text search.
+- **Selection API**: returns one **matching, published** question; **idempotent** per `session_id` with a **10‑minute reservation** stored in Postgres.
+- **Repeat‑avoidance**: excludes questions recently attempted by either peer (`recent_ids` field or via history integration).
+- **Content safety**: Markdown → sanitized HTML; attachments via **S3 signed URLs**; optional **CloudFront**.
+- **Security**: JWT (RS256 via JWKS) with roles: `admin`, `service` (and optional `anonymous` for read‑only).
+- **Events**: `question.created|updated|published|selected` to RabbitMQ (topic exchange) for analytics/history.
 
 ---
 
@@ -26,8 +26,8 @@ Client → ALB / API Gateway → Question Service (Express)
                                └─ RabbitMQ (Amazon MQ): events
 ```
 
-* **No Redis required**: idempotency/reservations are persisted in Postgres for simplicity.
-* **Search**: Postgres FTS (upgrade path to OpenSearch/Elastic if needed).
+- **No Redis required**: idempotency/reservations are persisted in Postgres for simplicity.
+- **Search**: Postgres FTS (upgrade path to OpenSearch/Elastic if needed).
 
 ---
 
@@ -35,8 +35,8 @@ Client → ALB / API Gateway → Question Service (Express)
 
 ### Prerequisites
 
-* Node.js **>= 20** and npm/pnpm
-* Docker + Docker Compose
+- Node.js **>= 20** and npm/pnpm
+- Docker + Docker Compose
 
 ### 1) Install
 
@@ -94,12 +94,12 @@ Service is now at **[http://localhost:3000](http://localhost:3000)**.
 
 ### Read
 
-* **GET `/questions/{id}`** → returns a **published** question or `404`. Includes `body_html` (sanitized) and `body_md`.
-* **GET `/questions?difficulty=&topics=&q=&page=&size=`** → paginated list (stable order: `updated_at desc`).
+- **GET `/questions/{id}`** → returns a **published** question or `404`. Includes `body_html` (sanitized) and `body_md`.
+- **GET `/questions?difficulty=&topics=&q=&page=&size=`** → paginated list (stable order: `updated_at desc`).
 
 ### Selection
 
-* **POST `/select`** → body:
+- **POST `/select`** → body:
 
 ```json
 {
@@ -114,16 +114,16 @@ Service is now at **[http://localhost:3000](http://localhost:3000)**.
 
 **Behavior**
 
-* Returns one **eligible, published** question.
-* **Idempotent**: same `session_id` within **10 minutes** returns the same question (reservation in DB).
-* Respects `exclude_ids`/`recent_ids` when possible; falls back if the pool is too small.
+- Returns one **eligible, published** question.
+- **Idempotent**: same `session_id` within **10 minutes** returns the same question (reservation in DB).
+- Respects `exclude_ids`/`recent_ids` when possible; falls back if the pool is too small.
 
 ### Admin (if enabled)
 
-* `POST /admin/questions` → create (`draft`)
-* `PATCH /admin/questions/{id}` → edit
-* `POST /admin/questions/{id}/publish` → publish & version
-* `DELETE /admin/questions/{id}` → archive (soft delete)
+- `POST /admin/questions` → create (`draft`)
+- `PATCH /admin/questions/{id}` → edit
+- `POST /admin/questions/{id}/publish` → publish & version
+- `DELETE /admin/questions/{id}` → archive (soft delete)
 
 All `/admin/**` routes require role **`admin`**.
 
@@ -167,31 +167,30 @@ expires_at timestamptz not null
 
 ### Indexes
 
-* `(status, difficulty)`
-* `gin(to_tsvector('english', title || ' ' || body_md))` (basic FTS)
-* `btree(rand_key)`
+- `(status, difficulty)`
+- `gin(to_tsvector('english', title || ' ' || body_md))` (basic FTS)
+- `btree(rand_key)`
 
 ---
 
-
 ## 📈 Observability
 
-* **Logs**: JSON with `correlation_id` (trace incoming → DB/RabbitMQ).
-* **Metrics**: request rate, latency p50/p95/p99, error %, selection success.
-* **Health**: `/healthz` (liveness), `/readyz` (readiness: DB/AMQP reachable).
+- **Logs**: JSON with `correlation_id` (trace incoming → DB/RabbitMQ).
+- **Metrics**: request rate, latency p50/p95/p99, error %, selection success.
+- **Health**: `/healthz` (liveness), `/readyz` (readiness: DB/AMQP reachable).
 
 ---
 
 ## 🔁 Events (RabbitMQ)
 
-* Exchange: `question.events` (type **topic**, durable)
-* Routing keys:
+- Exchange: `question.events` (type **topic**, durable)
+- Routing keys:
+  - `question.created`
+  - `question.updated`
+  - `question.published`
+  - `question.selected`
 
-  * `question.created`
-  * `question.updated`
-  * `question.published`
-  * `question.selected`
-* Payload (minimal): ids, `difficulty`, `topics`, `version`, `session_id` for `selected`, and `correlation_id`.
+- Payload (minimal): ids, `difficulty`, `topics`, `version`, `session_id` for `selected`, and `correlation_id`.
 
 ---
 
