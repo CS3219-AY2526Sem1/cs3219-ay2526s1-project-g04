@@ -1,10 +1,10 @@
-import express from "express";
+import express from 'express';
 
 const app = express();
 const PORT = 3000;
 
-app.get("/", (req, res) => {
-  res.send("Hello World from Express + TypeScript (NodeNext)!");
+app.get('/', (req, res) => {
+  res.send('Hello World from Express + TypeScript (NodeNext)!');
 });
 
 app.listen(PORT, () => {
