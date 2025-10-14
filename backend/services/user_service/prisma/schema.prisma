@@ -19,6 +19,9 @@ model User {
   password     String
   createdAt    DateTime  @default(now())
   role         Role     @default(USER)
+  displayName        String
+  bio                String?
+  profilePictureUrl  String?
 
   @@map("users")
 }
