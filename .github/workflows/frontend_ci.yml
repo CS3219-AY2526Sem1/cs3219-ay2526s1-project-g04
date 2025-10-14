@@ -15,6 +15,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - name: Install lint
         run: pnpm i
       - name: lint frontend
