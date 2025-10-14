@@ -24,10 +24,43 @@ Client → ALB / API Gateway → Question Service (Express)
                                ├─ PostgreSQL (RDS): questions, versions, session_reservations
                                ├─ S3: image objects  → CloudFront (optional)
                                └─ RabbitMQ (Amazon MQ): events
-```
 
-- **No Redis required**: idempotency/reservations are persisted in Postgres for simplicity.
-- **Search**: Postgres FTS (upgrade path to OpenSearch/Elastic if needed).
+```
+---
+## Folder Structure
+```
+backend/services/question_service/
+├── .gitignore
+├── .env.example
+├── docker-compose.yml
+├── package.json
+├── tsconfig.json
+├── prisma/
+│   ├── schema.prisma
+│   └── seed.ts
+└── src/
+    ├── index.ts
+    ├── app/
+    │   ├── ExpressApp.ts
+    │   └── routes.ts
+    ├── controllers/
+    │   ├── AdminController.ts
+    │   └── QuestionController.ts
+    ├── middleware/
+    │   └── auth.ts
+    ├── repositories/
+    │   ├── prisma.ts
+    │   ├── QuestionRepository.ts
+    │   └── ReservationRepository.ts
+    ├── services/
+    │   ├── MarkdownService.ts
+    │   ├── QuestionService.ts
+    │   └── SelectionService.ts
+    └── utils/
+        ├── logger.ts
+        └── s3Signer.ts
+
+```
 
 ---
 
