@@ -1,15 +1,14 @@
 openapi: 3.0.3
 info:
   title: Question Service API (PeerPrep)
-  version: 0.1.2
+  version: 0.1.3
   description: |
     Microservice to manage and serve coding interview questions.
     - Read APIs for users/services
     - Selection API (idempotent by session_id)
     - Admin CRUD + publish/versioning
     - Markdown sanitized on read; images via signed URLs
-    
-    **Change in 0.1.2**: Included a GET method for /admin/questions/{id} so that admins can retrieve questions by ID regardless of status
+
 servers:
   - url: http://localhost:3000
     description: Local dev
@@ -182,6 +181,10 @@ components:
           type: string
         body_md:
           type: string
+          description: |
+            Markdown body. Image links may reference internal object keys (preferred) using
+            `pp://<object_key>` or the alias `/attachments/<object_key>`. The service will adopt any
+            staging keys and rewrite links to signed/CDN URLs in body_html on read.
         difficulty:
           $ref: '#/components/schemas/Difficulty'
         topics:
@@ -202,6 +205,10 @@ components:
           type: string
         body_md:
           type: string
+          description: |
+            Markdown body. Image links may reference internal object keys (preferred) using
+            `pp://<object_key>` or the alias `/attachments/<object_key>`. The service will adopt any
+            staging keys and rewrite links to signed/CDN URLs in body_html on read.
         difficulty:
           $ref: '#/components/schemas/Difficulty'
         topics:
@@ -281,6 +288,60 @@ components:
           items:
             $ref: '#/components/schemas/TopicTag'
 
+    SignUploadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        content_type:
+          type: string
+          description: MIME type of the file to upload (must match PUT)
+          example: image/png
+        filename:
+          type: string
+          description: Original filename from client (sanitized server-side)
+          example: diagram.png
+        suggested_prefix:
+          type: string
+          nullable: true
+          description: Optional key prefix, e.g. 'questions/{id}' for existing questions; defaults to 'staging/{userId}/sessionUlid'
+          example: questions/two-sum
+      required: [content_type, filename]
+    SignUploadResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        object_key:
+          type: string
+          description: Stable storage key to reference in Markdown (pp:// alias)
+          example: staging/u123/01J9K3H0X2/20251010/a1b2c3-diagram.png
+        upload_url:
+          type: string
+          description: Short-lived presigned PUT URL for direct upload to S3
+          example: https://s3.ap-southeast-1.amazonaws.com/bucket/...signature...
+        expires_at:
+          type: string
+          format: date-time
+          description: Expiration time for the upload_url
+        max_bytes:
+          type: integer
+          minimum: 1
+          description: Maximum allowed object size in bytes
+      required: [object_key, upload_url, expires_at]
+    SignViewResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        object_key:
+          type: string
+          example: questions/two-sum/20251010/a1b2c3-diagram.png
+        view_url:
+          type: string
+          description: Short-lived presigned GET (or CDN-signed) URL suitable for previews
+          example: https://dxxx.cloudfront.net/...signed...
+        expires_at:
+          type: string
+          format: date-time
+      required: [object_key, view_url, expires_at]
 security:
   - bearerAuth: []
 
@@ -489,7 +550,9 @@ paths:
 
     post:
       tags: [Admin]
-      summary: Create a question (draft)
+      summary: Create a question (draft) — if id omitted, server generates slug
+      description: |
+        Creates a draft question. If 'id' is omitted, the server generates a canonical slug from 'title' and ensures uniqueness.
       requestBody:
         required: true
         content:
@@ -558,6 +621,8 @@ paths:
     patch:
       tags: [Admin]
       summary: Update a question (partial)
+      description: |
+        Partial update. If body_md contains 'pp://' or '/attachments' links to staging keys, the service will adopt them and update attachments accordingly.
       parameters:
         - name: id
           in: path
@@ -752,6 +817,95 @@ paths:
                 $ref: '#/components/schemas/Error'
         '403':
           description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      x-roles: [admin]
+
+  /admin/attachments/sign-upload:
+    post:
+      tags: [Admin]
+      summary: Get a presigned URL to upload a file directly to object storage
+      description: |
+        Returns a short-lived presigned **PUT** URL and an `object_key` that can be referenced in Markdown
+        as `pp://<object_key>` or `/attachments/<object_key>`. Buckets remain private; do not embed the
+        presigned URL in Markdown.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUploadRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignUploadResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      x-roles: [admin]
+
+  /admin/attachments/sign-view:
+    get:
+      tags: [Admin]
+      summary: Get a short-lived view URL for an existing object key (editor preview)
+      parameters:
+        - name: object_key
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Storage key previously returned from sign-upload or stored on the question
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignViewResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
           content:
             application/json:
               schema:
