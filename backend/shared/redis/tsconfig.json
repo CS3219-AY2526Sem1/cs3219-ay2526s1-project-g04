@@ -1,9 +1,8 @@
 {
-  "extends": "../../tsconfig.json",
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDirs": ["./src", "../../shared"],
+    "rootDir": "./src",
     "outDir": "./dist",
 
     // Environment Settings
@@ -40,11 +39,6 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
-    "skipLibCheck": true
-  },
-  "exclude": [
-    "../../shared/**/tests/**", // skip tests
-    "../../shared/**/dist/**", //  skip build outputs
-    "../../shared/**/node_modules/**" //  skip dependencies
-  ]
+    "skipLibCheck": true,
+  }
 }

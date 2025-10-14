@@ -1,0 +1,16 @@
+{
+  "name": "redis_service",
+  "version": "1.0.0",
+  "description": "redis",
+  "type": "module",
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.2",
+    "@types/node": "^24.6.2",
+    "@types/redis": "^4.0.10",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "redis": "^5.8.3"
+  }
+}
