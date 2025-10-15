@@ -210,7 +210,6 @@ export async function pickRandomEligible(filters: {
     LIMIT 50
   `;
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   const rows = await prisma.$queryRawUnsafe<Question[]>(sql, ...params);
   return rows[0];
 }
