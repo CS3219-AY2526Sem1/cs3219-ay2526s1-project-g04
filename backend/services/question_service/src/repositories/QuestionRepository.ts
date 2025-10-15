@@ -59,8 +59,6 @@ export async function listPublished(opts: {
     LIMIT ${size} OFFSET ${offset}
   `;
 
-  // Safe because we keep SQL shape constant and only pass params
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return prisma.$queryRawUnsafe<Question[]>(sql, ...params);
 }
 

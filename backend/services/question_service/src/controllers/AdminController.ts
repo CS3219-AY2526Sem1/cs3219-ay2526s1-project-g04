@@ -26,7 +26,7 @@ function isStringArray(x: unknown): x is string[] {
  * @param req
  * @param res
  */
-export async function createQuestion(req: Request, res: Response) {
+export async function create(req: Request, res: Response) {
   try {
     const { title, body_md, difficulty, topics, attachments } = req.body ?? {};
 

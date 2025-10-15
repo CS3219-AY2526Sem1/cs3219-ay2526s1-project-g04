@@ -1,0 +1,61 @@
+// src/controllers/QuestionController.ts
+
+import { Request, Response } from 'express';
+import * as Service from '../services/QuestionService';
+import { selectOne } from '../services/SelectionService';
+
+/**
+ * GET /questions/:id
+ * Gets a question from repository by its ID
+ * @param req
+ * @param res
+ */
+export async function getById(req: Request, res: Response) {
+  const q = await Service.getPublishedWithHtml(req.params.id);
+
+  if (!q) return res.status(404);
+}
+
+/**
+ * GET /questions
+ * Gets a list of published questions
+ * @param req
+ * @param res
+ */
+export async function list(req: Request, res: Response) {
+  const { difficulty, topics, q, page, size } = req.query;
+
+  const data = await Service.listPublished({
+    difficulty,
+    topics: typeof topics === 'string' ? (topics as string).split(',') : topics,
+    q,
+    page: Number(page),
+    size: Number(size),
+  });
+  return res.json({ items: data });
+}
+
+/**
+ * POST /select
+ * Selects a question
+ * @param req
+ * @param res
+ */
+export async function select(req: Request, res: Response) {
+  const { session_id, difficulty, topics, exclude_ids, recent_ids } =
+    req.body || {};
+
+  if (!session_id)
+    return res.status(400).json({ error: 'session_id required' });
+
+  const result = await selectOne({
+    session_id,
+    difficulty,
+    topics,
+    exclude_ids,
+    recent_ids,
+  });
+  if (!result.question_id)
+    return res.status(404).json({ error: 'no eligible question' });
+  return res.json(result);
+}
