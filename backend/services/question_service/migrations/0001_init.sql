@@ -1,8 +1,6 @@
 -- migrations/0001_init.sql
 -- Question Service: initial schema + indexes
 
-BEGIN;
-
 -- =========================
 -- Core tables
 -- =========================
@@ -64,18 +62,16 @@ CREATE TABLE IF NOT EXISTS question_topics (
 
 -- Keep questions.updated_at fresh
 CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS trigger AS $$
+RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  NEW.updated_at = now();
+  NEW.updated_at := now();
   RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
+END$$;
 
 DROP TRIGGER IF EXISTS trg_questions_updated_at ON questions;
 CREATE TRIGGER trg_questions_updated_at
 BEFORE UPDATE ON questions
-FOR EACH ROW 
-WHEN (OLD IS DISTINCT FROM NEW)
+FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
 -- =========================
@@ -102,8 +98,6 @@ CREATE INDEX IF NOT EXISTS idx_questions_tsv_en_published
 
 -- Topic lookup convenience
 CREATE INDEX IF NOT EXISTS idx_topics_color ON topics (color_hex);
-
-COMMIT;
 
 -- =========================
 -- Optional seed (comment out in prod)

@@ -27,30 +27,30 @@ ON CONFLICT (slug) DO UPDATE
 WITH seed(id, title, difficulty, description, topics) AS (
   VALUES
   -- EASY
-  ('reverse-a-string','Reverse a String','easy','Reverse a character array in place using O(1) extra memory.','["strings","algorithms"]'),
-  ('linked-list-cycle-detection','Linked List Cycle Detection','easy','Detect whether a singly linked list contains a cycle.','["data-structures","algorithms"]'),
-  ('roman-to-integer','Roman to Integer','easy','Convert a Roman numeral string into its integer value.','["algorithms"]'),
-  ('add-binary','Add Binary','easy','Return the sum of two binary strings as a binary string.','["bit-manipulation","algorithms"]'),
-  ('fibonacci-number','Fibonacci Number','easy','Compute F(n) where F(0)=0, F(1)=1, and F(n)=F(n-1)+F(n-2).','["recursion","algorithms"]'),
-  ('implement-stack-using-queues','Implement Stack using Queues','easy','Build a LIFO stack using only standard queue operations.','["data-structures"]'),
-  ('combine-two-tables','Combine Two Tables','easy','SQL join to report names with city/state; show nulls if missing.','["databases"]'),
+  ('reverse-a-string','Reverse a String','Easy','Reverse a character array in place using O(1) extra memory.','["strings","algorithms"]'),
+  ('linked-list-cycle-detection','Linked List Cycle Detection','Easy','Detect whether a singly linked list contains a cycle.','["data-structures","algorithms"]'),
+  ('roman-to-integer','Roman to Integer','Easy','Convert a Roman numeral string into its integer value.','["algorithms"]'),
+  ('add-binary','Add Binary','Easy','Return the sum of two binary strings as a binary string.','["bit-manipulation","algorithms"]'),
+  ('fibonacci-number','Fibonacci Number','Easy','Compute F(n) where F(0)=0, F(1)=1, and F(n)=F(n-1)+F(n-2).','["recursion","algorithms"]'),
+  ('implement-stack-using-queues','Implement Stack using Queues','Easy','Build a LIFO stack using only standard queue operations.','["data-structures"]'),
+  ('combine-two-tables','Combine Two Tables','Easy','SQL join to report names with city/state; show nulls if missing.','["databases"]'),
 
   -- MEDIUM
-  ('repeated-dna-sequences','Repeated DNA Sequences','medium','Find all 10-letter-long DNA sequences that occur more than once.','["algorithms","bit-manipulation"]'),
-  ('course-schedule','Course Schedule','medium','Determine if all courses can be finished given prerequisites.','["data-structures","algorithms"]'),
-  ('lru-cache','LRU Cache Design','medium','Design an LRU cache supporting O(1) get and put operations.','["data-structures"]'),
-  ('longest-common-subsequence','Longest Common Subsequence','medium','Return the length of the longest common subsequence of two strings.','["strings","algorithms"]'),
-  ('rotate-image','Rotate Image','medium','Rotate an n×n matrix 90° clockwise in place.','["arrays","algorithms"]'),
-  ('airplane-seat-assignment-probability','Airplane Seat Assignment Probability','medium','Compute the probability that the nth passenger gets their own seat.','["brainteaser"]'),
-  ('validate-binary-search-tree','Validate Binary Search Tree','medium','Check whether a binary tree satisfies BST ordering constraints.','["data-structures","algorithms"]'),
+  ('repeated-dna-sequences','Repeated DNA Sequences','Medium','Find all 10-letter-long DNA sequences that occur more than once.','["algorithms","bit-manipulation"]'),
+  ('course-schedule','Course Schedule','Medium','Determine if all courses can be finished given prerequisites.','["data-structures","algorithms"]'),
+  ('lru-cache','LRU Cache Design','Medium','Design an LRU cache supporting O(1) get and put operations.','["data-structures"]'),
+  ('longest-common-subsequence','Longest Common Subsequence','Medium','Return the length of the longest common subsequence of two strings.','["strings","algorithms"]'),
+  ('rotate-image','Rotate Image','Medium','Rotate an n×n matrix 90° clockwise in place.','["arrays","algorithms"]'),
+  ('airplane-seat-assignment-probability','Airplane Seat Assignment Probability','Medium','Compute the probability that the nth passenger gets their own seat.','["brainteaser"]'),
+  ('validate-binary-search-tree','Validate Binary Search Tree','Medium','Check whether a binary tree satisfies BST ordering constraints.','["data-structures","algorithms"]'),
 
   -- HARD
-  ('sliding-window-maximum','Sliding Window Maximum','hard','For each window of size k, return the maximum element.','["arrays","algorithms"]'),
-  ('n-queens','N-Queen Problem','hard','Return all distinct solutions to the n-queens placement puzzle.','["algorithms"]'),
-  ('serialize-and-deserialize-binary-tree','Serialize and Deserialize a Binary Tree','hard','Design algorithms to serialize and deserialize a binary tree.','["data-structures","algorithms"]'),
-  ('wildcard-matching','Wildcard Matching','hard','Wildcard pattern matching with ? and * over the entire string.','["strings","algorithms"]'),
-  ('chalkboard-xor-game','Chalkboard XOR Game','hard','Determine whether Alice wins the XOR game under optimal play.','["brainteaser"]'),
-  ('trips-and-users','Trips and Users','hard','SQL: compute daily cancellation rate for unbanned users only.','["databases"]')
+  ('sliding-window-maximum','Sliding Window Maximum','Hard','For each window of size k, return the maximum element.','["arrays","algorithms"]'),
+  ('n-queens','N-Queen Problem','Hard','Return all distinct solutions to the n-queens placement puzzle.','["algorithms"]'),
+  ('serialize-and-deserialize-binary-tree','Serialize and Deserialize a Binary Tree','Hard','Design algorithms to serialize and deserialize a binary tree.','["data-structures","algorithms"]'),
+  ('wildcard-matching','Wildcard Matching','Hard','Wildcard pattern matching with ? and * over the entire string.','["strings","algorithms"]'),
+  ('chalkboard-xor-game','Chalkboard XOR Game','Hard','Determine whether Alice wins the XOR game under optimal play.','["brainteaser"]'),
+  ('trips-and-users','Trips and Users','Hard','SQL: compute daily cancellation rate for unbanned users only.','["databases"]')
 ),
 
 upsert_questions AS (
@@ -68,7 +68,7 @@ upsert_questions AS (
     s.difficulty,
     s.topics::jsonb,
     '[]'::jsonb,
-    'published',
+    'Published',
     1,
     random(),
     now(),
@@ -80,7 +80,7 @@ upsert_questions AS (
         difficulty  = EXCLUDED.difficulty,
         topics      = EXCLUDED.topics,
         attachments = EXCLUDED.attachments,
-        status      = 'published',
+        status      = 'Published',
         updated_at  = now()
   RETURNING id, topics
 )
@@ -111,7 +111,7 @@ SELECT
   q.difficulty,
   q.topics,
   q.attachments,
-  'published',
+  'Published',
   now()
 FROM questions q
 ON CONFLICT (id, version) DO NOTHING;

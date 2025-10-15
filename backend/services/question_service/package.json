@@ -22,7 +22,8 @@
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^6.17.1",
@@ -32,8 +33,10 @@
     "express-jwt": "^8.5.1",
     "helmet": "^8.1.0",
     "jwks-rsa": "^3.2.0",
+    "marked": "^16.4.0",
     "morgan": "^1.10.1",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "sanitize-html": "^2.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
@@ -41,6 +44,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.7.0",
+    "@types/sanitize-html": "^2.16.0",
     "eslint": "^9.37.0",
     "eslint-plugin-perfectionist": "^4.15.1",
     "prettier": "^3.6.2",
