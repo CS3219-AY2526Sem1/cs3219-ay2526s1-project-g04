@@ -1,14 +1,14 @@
-version: '3.9'
+version: "3.9"
 services:
   postgres:
     image: postgres:16
     environment:
       POSTGRES_PASSWORD: ylchin0715
       POSTGRES_USER: postgres
-      POSTGRES_DB: questionservice
-    ports: ['5432:5432']
+      POSTGRES_DB: qs
+    ports: ["5432:5432"]
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d questionservice']
+      test: ["CMD-SHELL", "pg_isready -U postgres -d qs"]
       interval: 5s
       timeout: 3s
       retries: 10

@@ -1,7 +1,6 @@
 // src/controllers/AdminController.ts (example)
 import * as Repo from '../repositories/QuestionRepository';
 import { Request, Response } from 'express';
-import { v4 as uuid } from 'uuid';
 import { slugifyTitle } from '../utils/slug';
 
 // types
@@ -61,7 +60,7 @@ export async function createQuestion(req: Request, res: Response) {
     });
 
     res.status(201).location(`/admin/questions/${created.id}`).json(created);
-  } catch (e: any) {
+  } catch {
     res.status(500).json({ error: 'internal_error' });
   }
 }

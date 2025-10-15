@@ -68,7 +68,7 @@ upsert_questions AS (
     s.difficulty,
     s.topics::jsonb,
     '[]'::jsonb,
-    'Published',
+    'published',
     1,
     random(),
     now(),
@@ -80,7 +80,7 @@ upsert_questions AS (
         difficulty  = EXCLUDED.difficulty,
         topics      = EXCLUDED.topics,
         attachments = EXCLUDED.attachments,
-        status      = 'Published',
+        status      = 'published',
         updated_at  = now()
   RETURNING id, topics
 )
@@ -111,7 +111,7 @@ SELECT
   q.difficulty,
   q.topics,
   q.attachments,
-  'Published',
+  'published',
   now()
 FROM questions q
 ON CONFLICT (id, version) DO NOTHING;

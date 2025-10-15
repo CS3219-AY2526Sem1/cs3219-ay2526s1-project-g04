@@ -324,7 +324,7 @@ components:
 
     Status:
       type: string
-      enum: [Draft, Published, Archived]
+      enum: [draft, published, archived]
 
     TopicListResponse:
       type: object

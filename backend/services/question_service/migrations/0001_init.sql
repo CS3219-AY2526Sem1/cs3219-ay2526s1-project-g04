@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS questions (
   difficulty     text NOT NULL CHECK (difficulty IN ('Easy','Medium','Hard')),
   topics         jsonb NOT NULL DEFAULT '[]',              -- array of topic slugs
   attachments    jsonb NOT NULL DEFAULT '[]',
-  status         text NOT NULL CHECK (status IN ('Draft','Published','Archived')),
+  status         text NOT NULL CHECK (status IN ('draft','published','archived')),
   version        int  NOT NULL DEFAULT 1,
   rand_key       double precision NOT NULL DEFAULT random(),
   created_at     timestamptz DEFAULT now(),
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS question_versions (
   difficulty     text NOT NULL CHECK (difficulty IN ('Easy','Medium','Hard')),
   topics         jsonb NOT NULL DEFAULT '[]',
   attachments    jsonb NOT NULL DEFAULT '[]',
-  status         text NOT NULL CHECK (status IN ('Draft','Published','Archived')),
+  status         text NOT NULL CHECK (status IN ('draft','published','archived')),
   published_at   timestamptz,
   created_at     timestamptz DEFAULT now(),
   PRIMARY KEY (id, version)
@@ -109,8 +109,8 @@ CREATE INDEX IF NOT EXISTS idx_topics_color ON topics (color_hex);
 --
 -- INSERT INTO questions (id, title, body_md, difficulty, topics, status)
 -- VALUES
---   ('two-sum', 'Two Sum', 'Find two numbers…', 'Easy', '["arrays"]', 'Published'),
---   ('graph-traversal', 'Graph Traversal', 'BFS/DFS…', 'Medium', '["graphs"]', 'Published')
+--   ('two-sum', 'Two Sum', 'Find two numbers…', 'Easy', '["arrays"]', 'published'),
+--   ('graph-traversal', 'Graph Traversal', 'BFS/DFS…', 'Medium', '["graphs"]', 'published')
 -- ON CONFLICT (id) DO NOTHING;
 --
 -- INSERT INTO question_topics (question_id, topic_slug) VALUES
