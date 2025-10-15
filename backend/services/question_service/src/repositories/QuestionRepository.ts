@@ -5,7 +5,7 @@ import { Prisma, questions as Question } from '@prisma/client';
 import { slugifyTitle } from '../utils/slug';
 
 export async function getPublishedById(id: string) {
-  return prisma.questions.findFirst({ where: { id, status: 'Published' } });
+  return prisma.questions.findFirst({ where: { id, status: 'published' } });
 }
 
 export async function listPublished(opts: {
@@ -35,7 +35,7 @@ export async function listPublished(opts: {
 
   // FTS / topics path — parameterized SQL with explicit casts
   const clauses: string[] = ['status = $1'];
-  const params: unknown[] = ['Published'];
+  const params: unknown[] = ['published'];
   let i = params.length + 1;
 
   if (opts.difficulty) {
@@ -208,6 +208,29 @@ export async function pickRandomEligible(filters: {
     LIMIT 50
   `;
 
-  const rows = await prisma.$queryRawUnsafe<Question[]>(sql, ...params);
+  const rows = await prisma.$queryRawUnsafe<
+    Array<{
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      topics: string[]; // jsonb
+      attachments: unknown[]; // jsonb
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      rand_key: number;
+      created_at: Date;
+      updated_at: Date;
+    }>
+  >(`
+  SELECT
+    id, title, body_md, difficulty, topics, attachments,
+    status, version, rand_key, created_at, updated_at
+  FROM questions
+  WHERE status = 'published'
+    -- add your difficulty/topics/exclude filters here
+  ORDER BY rand_key
+  LIMIT 1
+`);
   return rows[0];
 }

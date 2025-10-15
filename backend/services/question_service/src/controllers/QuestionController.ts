@@ -3,7 +3,7 @@
 import { Request, Response } from 'express';
 import * as Service from '../services/QuestionService';
 import { selectOne } from '../services/SelectionService';
-
+import * as Repo from '../repositories/QuestionRepository';
 /**
  * GET /questions/:id
  * Gets a question from repository by its ID
@@ -11,9 +11,13 @@ import { selectOne } from '../services/SelectionService';
  * @param res
  */
 export async function getById(req: Request, res: Response) {
-  const q = await Service.getPublishedWithHtml(req.params.id);
-
-  if (!q) return res.status(404);
+  try {
+    const q = await Repo.getPublishedById(req.params.id);
+    if (!q) return res.status(404).json({ error: 'not found' });
+    return res.json(q);
+  } catch (err) {
+    return res.status(500).json({ error: 'internal_error' });
+  }
 }
 
 /**
