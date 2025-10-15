@@ -169,7 +169,7 @@ export default function QuestionBankTable({
                 >
                   Edit
                 </Link>
-                {params.row.status === 'draft' &&
+                {(params.row.status === 'draft' || params.row.status === 'archived') &&
                   <Link
                     component='button'
                     onClick={() => { handlePublishClick(params.row.id) }}
@@ -177,12 +177,14 @@ export default function QuestionBankTable({
                     Publish
                   </Link>
                 }
-                <Link
-                  component='button'
-                  onClick={() => { handleDeleteClick(params.row.id) }}
-                >
-                  Delete
-                </Link>
+                {params.row.status !== 'archived' && 
+                  <Link
+                    component='button'
+                    onClick={() => { handleDeleteClick(params.row.id) }}
+                  >
+                    Delete
+                  </Link>
+                }
               </div>
             )
           }
