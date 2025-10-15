@@ -6,7 +6,7 @@ import { prisma } from './prisma';
 export async function getReservation(sessionId: string) {
   const row = await prisma.session_reservations.findFirst({
     where: {
-      sessionId: sessionId,
+      session_id: sessionId,
       expires_at: { gt: new Date() },
     },
   });
