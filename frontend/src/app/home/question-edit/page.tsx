@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import QuestionForm from "@/components/ui/home/question_edit/forms/QuestionForm"
 
