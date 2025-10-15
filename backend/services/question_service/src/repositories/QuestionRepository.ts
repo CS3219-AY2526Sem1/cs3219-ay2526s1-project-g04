@@ -15,11 +15,11 @@ export async function listPublished(opts: {
   page?: number;
   size?: number;
 }) {
-  const page = Math.max(1, opts.page || 1);
-  const size = Math.min(100, Math.max(1, opts.size || 20));
+  const page = Math.max(1, opts.page ?? 1);
+  const size = Math.min(100, Math.max(1, opts.size ?? 20));
   const offset = (page - 1) * size;
 
-  // fast path: no search text and no topic filter -> use prisma
+  // Fast path — no search text and no topic filter → use Prisma
   if (!opts.q && !opts.topics?.length) {
     const where: Prisma.questionsWhereInput = {
       status: 'Published',
@@ -33,9 +33,9 @@ export async function listPublished(opts: {
     });
   }
 
-  // fts / topics path -- parameterized sql
+  // FTS / topics path — parameterized SQL with explicit casts
   const clauses: string[] = ['status = $1'];
-  const params: (string | string[])[] = ['Published'];
+  const params: unknown[] = ['Published'];
   let i = params.length + 1;
 
   if (opts.difficulty) {
@@ -43,7 +43,6 @@ export async function listPublished(opts: {
     params.push(opts.difficulty);
   }
   if (opts.topics?.length) {
-    // jsonb ?| needs text[]; cast the placeholder
     clauses.push(`topics ?| $${i++}::text[]`);
     params.push(opts.topics);
   }
@@ -60,11 +59,13 @@ export async function listPublished(opts: {
     LIMIT ${size} OFFSET ${offset}
   `;
 
+  // Safe because we keep SQL shape constant and only pass params
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   return prisma.$queryRawUnsafe<Question[]>(sql, ...params);
 }
 
 export async function createDraft(q: {
-  id: string;
+  id?: string;
   title: string;
   body_md: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
@@ -72,9 +73,9 @@ export async function createDraft(q: {
   attachments: unknown[];
 }) {
   const base = slugifyTitle(q.title);
-
   const MAX_SUFFIX = 50;
-  for (let n = 0; n <= MAX_SUFFIX; n++) {
+
+  for (let n = 0; n <= MAX_SUFFIX; n += 1) {
     const id = n === 0 ? base : `${base}-${n + 1}`;
     try {
       return await prisma.questions.create({
@@ -90,20 +91,18 @@ export async function createDraft(q: {
           version: 1,
         },
       });
-    } catch (err: any) {
-      // unique violation on PK id -> try next suffix
+    } catch (err: unknown) {
       if (
-        err?.code === 'P2002' ||
-        (err instanceof Prisma.PrismaClientKnownRequestError &&
-          err.code === 'P2002')
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
       ) {
         continue;
       }
-      // any other DB error -> surface it
       throw err;
     }
-    throw new Error('Could not allocate a unique slug for this title');
   }
+
+  throw new Error('Could not allocate a unique slug for this title');
 }
 
 export async function updateDraft(
@@ -125,15 +124,18 @@ export async function updateDraft(
 
 export async function publish(id: string) {
   return prisma.$transaction(async (tx) => {
+    // 1) Update the source row and return the snapshot
     const updated = await tx
-      .$queryRawUnsafe<any[]>(
-        `UPDATE questions
-         SET status='Published',
-             version = version + 1,
-             updated_at = now(),
-             rand_key = random()
-         WHERE id=$1
-         RETURNING *`,
+      .$queryRawUnsafe<Question[]>(
+        `
+        UPDATE questions
+        SET status = 'Published',
+            version = version + 1,
+            updated_at = now(),
+            rand_key = random()
+        WHERE id = $1
+        RETURNING *
+        `,
         id,
       )
       .then((r) => r[0])
@@ -141,18 +143,30 @@ export async function publish(id: string) {
 
     if (!updated) return undefined;
 
+    // 2) Normalize JSON fields for Prisma
+    const topicsJson =
+      (updated as unknown as { topics: unknown }).topics === null
+        ? Prisma.JsonNull
+        : ((updated as unknown as { topics: unknown })
+            .topics as Prisma.InputJsonValue);
+
+    const attachmentsJson =
+      (updated as unknown as { attachments: unknown }).attachments === null
+        ? Prisma.JsonNull
+        : ((updated as unknown as { attachments: unknown })
+            .attachments as Prisma.InputJsonValue);
+
+    // 3) Insert into question_versions — ONLY fields that exist
     await tx.question_versions.create({
       data: {
         id: updated.id,
         version: updated.version,
         title: updated.title,
         body_md: updated.body_md,
-        topics: updated.topics,
-        attachments: updated.attachments,
+        difficulty: updated.difficulty,
+        topics: topicsJson,
+        attachments: attachmentsJson,
         status: updated.status,
-        rand_key: updated.rand_key,
-        created_at: updated.created_at,
-        updated_at: updated.updated_at,
         published_at: new Date(),
       },
     });
@@ -161,27 +175,42 @@ export async function publish(id: string) {
   });
 }
 
-export async function pickRandomEligible(*filters: {
+export async function pickRandomEligible(filters: {
   difficulty?: string;
   topics?: string[];
   excludeIds?: string[];
   recentIds?: string[];
 }) {
-  const wh: string[] = [`status='Published'`];
-  const params: any[] = [];
+  const clauses: string[] = [`status = 'Published'`];
+  const params: unknown[] = [];
   let i = 1;
 
-  if (filters.difficulty) { wh.push(`difficulty=$${i++}`); params.push(filters.difficulty); }
-  if (filters.topics?.length) { wh.push(`topics ?| $${i++}`); params.push(filters.topics); }
-  if (filters.excludeIds?.length) { wh.push(`NOT (id = ANY($${i++}))`); params.push(filters.excludeIds); }
-  if (filters.recentIds?.length) { wh.push(`NOT (id = ANY($${i++}))`); params.push(filters.recentIds); }
+  if (filters.difficulty) {
+    clauses.push(`difficulty = $${i++}`);
+    params.push(filters.difficulty);
+  }
+  if (filters.topics?.length) {
+    clauses.push(`topics ?| $${i++}::text[]`);
+    params.push(filters.topics);
+  }
+  if (filters.excludeIds?.length) {
+    clauses.push(`NOT (id = ANY($${i++}::text[]))`);
+    params.push(filters.excludeIds);
+  }
+  if (filters.recentIds?.length) {
+    clauses.push(`NOT (id = ANY($${i++}::text[]))`);
+    params.push(filters.recentIds);
+  }
 
   const sql = `
-    SELECT * FROM questions
-    WHERE ${wh.join(" AND ")}
+    SELECT *
+    FROM questions
+    WHERE ${clauses.join(' AND ')}
     ORDER BY rand_key
     LIMIT 50
   `;
-  const rows = await prisma.$queryRawUnsafe<any[]>(sql, ...params);
+
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  const rows = await prisma.$queryRawUnsafe<Question[]>(sql, ...params);
   return rows[0];
 }
