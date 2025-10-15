@@ -1,0 +1,23 @@
+name: Frontend
+run-name: Frontend CI
+
+on:
+  workflow_call:
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  lint-services:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Install lint
+        run: pnpm i
+      - name: lint frontend
+        run: pnpm run lint -- src
