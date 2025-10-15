@@ -1,5 +1,4 @@
 'use client';
-import { BorderColor } from '@mui/icons-material';
 import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
@@ -9,6 +8,10 @@ const theme = createTheme({
         body1: { fontSize: '1rem' }
     },
 
+    palette: {
+        mode: 'light'
+    },
+
     components: {
         MuiOutlinedInput: {
             styleOverrides: {
@@ -16,7 +19,7 @@ const theme = createTheme({
                     color: "var(--foreground)", // text color
                 }
             }
-        }
+        },
     }
 });
 
