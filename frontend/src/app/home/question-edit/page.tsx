@@ -1,12 +1,12 @@
 'use client'
 
-import QuestionForm1 from "@/components/ui/home/question_bank/QuestionForm1"
+import QuestionForm from "@/components/ui/home/question_edit/forms/QuestionForm"
 
 export default function Page() {
     return (
         <div className="flex flex-col gap-y-6">
-            <h1>Question Editor</h1>
-            <QuestionForm1 />
+            <h1>Create New Question</h1>
+            <QuestionForm mode='create' />
         </div>
     )
 }
