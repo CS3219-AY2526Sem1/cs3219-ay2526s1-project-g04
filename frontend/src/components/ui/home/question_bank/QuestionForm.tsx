@@ -1,6 +1,6 @@
-"use client"
+'use client';
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import TextField from '@mui/material/TextField';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -8,16 +8,16 @@ import MenuItem from '@mui/material/MenuItem';
 const DIFFICULTY = ['Easy', 'Medium', 'Hard'];
 
 export default function QuestionForm() {
-    const [title, setTitle] = useState("");
-    const [difficulty, setDifficulty] = useState("");
-    const [topics, setTopics] = useState<string[]>([]);
-    const [body, setBody] = useState("");
+  const [title, setTitle] = useState('');
+  const [difficulty, setDifficulty] = useState('');
+  const [topics, setTopics] = useState<string[]>([]);
+  const [body, setBody] = useState('');
 
-    return (
-        <form>
-            <div className='grid grid-cols-1 gap-y-5'>
-                {/* Title */}
-                {/* <div className='grid grid-cols-1 gap-y-2'>
+  return (
+    <form>
+      <div className="grid grid-cols-1 gap-y-5">
+        {/* Title */}
+        {/* <div className='grid grid-cols-1 gap-y-2'>
                     <label className="text-xl font-semibold text-[var(--foreground)]">Question Title</label>
                     <input
                         type='text'
@@ -29,17 +29,17 @@ export default function QuestionForm() {
                     />
                 </div> */}
 
-                <TextField
-                    required
-                    id="question-title"
-                    label="Question Title"
-                    onChange={(e) => setTitle(e.target.value)}
-                />
+        <TextField
+          required
+          id="question-title"
+          label="Question Title"
+          onChange={(e) => setTitle(e.target.value)}
+        />
 
-                {/* Difficulty and Topic */}
-                <div className='grid grid-cols-2 gap-x-5 gap-y-2'>
-                    {/* Difficulty */}
-                    {/* <div className='grid grid-cols-1 gap-y-2'>
+        {/* Difficulty and Topic */}
+        <div className="grid grid-cols-2 gap-x-5 gap-y-2">
+          {/* Difficulty */}
+          {/* <div className='grid grid-cols-1 gap-y-2'>
                         <label className="text-xl font-semibold text-[var(--foreground)]">Difficulty</label>
                         <select
                             value={difficulty}
@@ -54,30 +54,27 @@ export default function QuestionForm() {
                         </select>
                     </div> */}
 
-                    <Select
-                        required
-                        labelId="difficulty-label"
-                        id='difficulty'
-                        value={difficulty}
-                        label="Difficulty"
-                        onChange={(e) => setDifficulty(e.target.value)}
-                        displayEmpty
-                    >
-                        <MenuItem value="" disabled>
-                            Select difficulty
-                        </MenuItem>
-                        {DIFFICULTY.map((difficultyLevel) => (
-                            <MenuItem
-                                key={difficultyLevel}
-                                value={difficultyLevel}
-                            >
-                                {difficultyLevel}
-                            </MenuItem>
-                        ))}
-                    </Select>
+          <Select
+            required
+            labelId="difficulty-label"
+            id="difficulty"
+            value={difficulty}
+            label="Difficulty"
+            onChange={(e) => setDifficulty(e.target.value)}
+            displayEmpty
+          >
+            <MenuItem value="" disabled>
+              Select difficulty
+            </MenuItem>
+            {DIFFICULTY.map((difficultyLevel) => (
+              <MenuItem key={difficultyLevel} value={difficultyLevel}>
+                {difficultyLevel}
+              </MenuItem>
+            ))}
+          </Select>
 
-                    {/* Topic */}
-                    {/* <div className='grid grid-cols-1 gap-y-2'>
+          {/* Topic */}
+          {/* <div className='grid grid-cols-1 gap-y-2'>
                         <label className="text-xl font-semibold text-[var(--foreground)]">Topics</label>
                         <select
                             multiple
@@ -94,9 +91,8 @@ export default function QuestionForm() {
                             <option value="math">Math</option>
                         </select>
                     </div> */}
-
-                </div>
-            </div>
-        </form>
-    );
-};
+        </div>
+      </div>
+    </form>
+  );
+}
