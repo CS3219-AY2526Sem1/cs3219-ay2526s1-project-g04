@@ -1,5 +1,4 @@
 'use client';
-import { BorderColor } from '@mui/icons-material';
 import { createTheme } from '@mui/material/styles';
 
 const theme = createTheme({
@@ -7,6 +6,10 @@ const theme = createTheme({
   typography: {
     fontFamily: 'var(--font-open-sans)',
     body1: { fontSize: '1rem' },
+  },
+
+  palette: {
+    mode: 'light',
   },
 
   components: {
