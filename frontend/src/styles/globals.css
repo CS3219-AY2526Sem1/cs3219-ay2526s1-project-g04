@@ -14,13 +14,13 @@
   --font-mono: var(--font-source-code-pro);
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
     --heading1-color: #9CA3AF;
   }
-}
+} */
 
 body {
   background: var(--background);
