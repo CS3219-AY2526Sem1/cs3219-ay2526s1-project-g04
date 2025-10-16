@@ -11,7 +11,13 @@ export async function getPublishedWithHtml(id: string) {
   return { ...q, body_html: toSafeHtml(q.body_md) };
 }
 
-export async function listPublished(opts: any) {
+export async function listPublished(opts: {
+  difficulty?: 'Easy' | 'Medium' | 'Hard';
+  topics?: string[];
+  q?: string;
+  page?: number;
+  size?: number;
+}) {
   const rows = await Repo.listPublished(opts);
-  return rows.map((q: any) => ({ ...q, body_html: toSafeHtml(q.body_md) }));
+  return rows.map((q) => ({ ...q, body_html: toSafeHtml(q.body_md) }));
 }

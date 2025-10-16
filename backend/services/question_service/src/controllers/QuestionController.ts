@@ -15,7 +15,7 @@ export async function getById(req: Request, res: Response) {
     const q = await Repo.getPublishedById(req.params.id);
     if (!q) return res.status(404).json({ error: 'not found' });
     return res.json(q);
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: 'internal_error' });
   }
 }

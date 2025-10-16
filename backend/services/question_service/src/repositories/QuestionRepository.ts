@@ -201,13 +201,14 @@ export async function pickRandomEligible(filters: {
   }
 
   const sql = `
-    SELECT *
+    SELECT 
+      id, title, body_md, difficulty, topics, attachments,
+    status, version, rand_key, created_at, updated_at
     FROM questions
     WHERE ${clauses.join(' AND ')}
     ORDER BY rand_key
-    LIMIT 50
+    LIMIT 1
   `;
-
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       id: string;
@@ -222,15 +223,7 @@ export async function pickRandomEligible(filters: {
       created_at: Date;
       updated_at: Date;
     }>
-  >(`
-  SELECT
-    id, title, body_md, difficulty, topics, attachments,
-    status, version, rand_key, created_at, updated_at
-  FROM questions
-  WHERE status = 'published'
-    -- add your difficulty/topics/exclude filters here
-  ORDER BY rand_key
-  LIMIT 1
-`);
+  >(sql, ...params);
+
   return rows[0];
 }
