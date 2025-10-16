@@ -1,15 +1,14 @@
-name: Reusable workflow example
+name: Backend
 run-name: Backend CI
 
 on:
   workflow_call:
-  
+
 defaults:
   run:
     working-directory: backend
-  
-    
-jobs:      
+
+jobs:
   lint-services:
     runs-on: ubuntu-latest
     steps:
@@ -19,10 +18,10 @@ jobs:
       - name: Install lint
         run: npm i
       - name: lint collab service
-        run: npm run lint -- services/collaboration_service/src 
+        run: npm run lint -- services/collaboration_service/src
       - name: lint user service
-        run: npm run lint -- services/user_service/src 
+        run: npm run lint -- services/user_service/src
       - name: lint question service
-        run: npm run lint -- services/question_service/src 
+        run: npm run lint -- services/question_service/src
       - name: lint matching service
-        run: npm run lint -- services/matching_service/src 
+        run: npm run lint -- services/matching_service/src

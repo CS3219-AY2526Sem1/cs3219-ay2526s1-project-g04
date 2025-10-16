@@ -5,8 +5,8 @@
   "main": "app.js",
   "type": "module",
   "scripts": {
-    "dev": "tsx --watch src/app.ts",
-    "start": "node dist/app.js",
+    "dev": "tsx --watch src/main.ts",
+    "start": "node dist/main.js",
     "build": "tsc",
     "type-check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -15,13 +15,20 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^6.17.0",
+    "@y/websocket-server": "^0.1.1",
     "amqplib": "^0.10.9",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "prisma": "^6.17.0",
+    "ws": "^8.18.3",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
+    "@types/ws": "^8.18.1",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }

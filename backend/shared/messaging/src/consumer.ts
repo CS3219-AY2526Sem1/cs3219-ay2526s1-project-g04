@@ -27,14 +27,14 @@ export class MessageReceiver {
         
     }
 
-    public async connect() {
+    public async connect(): Promise<void> {
         if (!this.connection) {
             this.connection = await amqp.connect(this.url);
             this.channel = await this.connection.createChannel();
         } 
     }
 
-    public async listenForMessagesWithType(message_types: MESSAGE_TYPES[], message_handler: (routingKey: MESSAGE_TYPES, content: string) => any) {
+    public async listenForMessagesWithType(message_types: MESSAGE_TYPES[], message_handler: (routingKey: MESSAGE_TYPES, content: string) => any): Promise<void> {
         if (!this.channel) {
             throw new Error('Connection is not established')
         }
