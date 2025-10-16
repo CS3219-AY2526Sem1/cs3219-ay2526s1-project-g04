@@ -3,6 +3,8 @@ import { PostgresPrisma } from '../data/postgres/postgres.js';
 import { Session } from './session.js';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from '@y/websocket-server/utils';
+import type { IncomingMessage } from 'http';
+import type WebSocket from 'ws';
 
 export enum SESSIONSTATE {
   created = 'created',
@@ -26,11 +28,15 @@ export class SessionManager {
     this.db = db;
     this.wss = wss;
     this.sessions = {};
+
+    this.wss.on('connection', (ws, req) => {
+      this.handleConnection(ws, req);
+    });
   }
 
   public async createSession(matchedId: string) {
     //Get data from redis
-    const matchedData: Record<string, any> =
+    const matchedData: Record<string, string> =
       await this.redis.getMatchedUser(matchedId);
 
     //Create session id
@@ -50,8 +56,6 @@ export class SessionManager {
       matchedId: matchedId,
     };
 
-    this.handleConnection(session);
-
     //Set in redis
     this.redis.addSessionDataToUser(
       sessionId.toString(),
@@ -68,34 +72,38 @@ export class SessionManager {
     this.sessions[sessionId]?.session.end();
   }
 
-  private handleConnection(session: Session) {
-    this.wss.on('connection', (ws, req) => {
-      console.log('a client connected');
+  private handleConnection(ws: WebSocket, req: IncomingMessage) {
+    console.log('a client connected');
 
-      // Get param values
-      const fullUrl = `ws://${req.headers.host}${req.url}`;
-      const urlObj = new URL(fullUrl ?? '');
-      const params = urlObj.searchParams;
-      const userId = Number(params.get('userId'));
-      const sessionId = Number(urlObj.pathname.slice(1));
-      console.log(`sessionId in ws url :${sessionId}`);
-      console.log(`sessionId in created session obj ${session.getId()}`);
+    // Get param values
+    const fullUrl = `ws://${req.headers.host}${req.url}`;
+    const urlObj = new URL(fullUrl ?? '');
+    const params = urlObj.searchParams;
+    const userId = Number(params.get('userId'));
+    const sessionId = Number(urlObj.pathname.slice(1));
+    const session = this.getSessionById(sessionId);
 
-      // Setup y-websocket
-      setupWSConnection(ws, req);
+    if (!session) {
+      console.log(`session id not found in session manager: ${sessionId}`);
+      return;
+    }
+    console.log(`sessionId in ws url : ${sessionId}`);
+    console.log(`sessionId in created session obj ${session?.getId()}`);
 
-      // Ensures only correct user's client are added into session
-      if (sessionId === session.getId()) {
-        if (session.userNotReady(userId)) {
-          session.readyUser(userId);
-        }
+    // Setup y-websocket
+    setupWSConnection(ws, req);
+
+    // Ensures only correct user's client are added into session
+    if (sessionId === session?.getId()) {
+      if (session?.userNotReady(userId)) {
+        session?.readyUser(userId);
       }
+    }
 
-      if (session.allReady()) {
-        console.log(`all ready in ${sessionId}`);
-        this.setSessionToReady(session);
-      }
-    });
+    if (session?.allReady()) {
+      console.log(`all ready in ${sessionId}`);
+      this.setSessionToReady(session);
+    }
   }
 
   private setSessionToReady(session: Session) {
@@ -105,5 +113,9 @@ export class SessionManager {
       sessionMetaData!.matchedId,
       SESSIONSTATE.active,
     );
+  }
+
+  private getSessionById(sessionId: number): Session | undefined {
+    return this.sessions[sessionId]?.session;
   }
 }
