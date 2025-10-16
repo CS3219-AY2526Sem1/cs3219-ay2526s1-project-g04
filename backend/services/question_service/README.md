@@ -101,13 +101,20 @@ Create `.env` from the example below:
 ### 3) Start Postgres & RabbitMQ
 
 ```bash
-docker compose up -d postgres rabbitmq
+docker compose up -d postgres
 ```
 
 ### 4) Migrate DB
 
 ```bash
-npm run db:migrate   # runs SQL migrations in /migrations
+# Apply schema
+docker compose exec -T postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f - < ./migrations/0001_init.sql
+
+# Seed
+docker compose exec -T postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f - < ./migrations/999_seed_data.sql
+
+# Verify
+docker compose exec -T postgres psql -U postgres -d qs -c "SELECT status, COUNT(*) FROM questions GROUP BY 1 ORDER BY 1;"
 ```
 
 ### 5) Run the API
@@ -213,20 +220,7 @@ expires_at timestamptz not null
 
 - **Logs**: JSON with `correlation_id` (trace incoming → DB/RabbitMQ).
 - **Metrics**: request rate, latency p50/p95/p99, error %, selection success.
-- **Health**: `/healthz` (liveness), `/readyz` (readiness: DB/AMQP reachable).
-
----
-
-## 🔁 Events (RabbitMQ)
-
-- Exchange: `question.events` (type **topic**, durable)
-- Routing keys:
-  - `question.created`
-  - `question.updated`
-  - `question.published`
-  - `question.selected`
-
-- Payload (minimal): ids, `difficulty`, `topics`, `version`, `session_id` for `selected`, and `correlation_id`.
+- **Health**: `/healthz` (liveness), `/readyz` (readiness: DB reachable).
 
 ---
 
