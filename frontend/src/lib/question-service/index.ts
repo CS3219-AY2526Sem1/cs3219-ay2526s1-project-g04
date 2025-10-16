@@ -52,11 +52,10 @@ export interface AttachmentUploadSignResponse {
 }
 
 // helper type guard
-export function isValidS3SignResponse(obj: unknown): obj is AttachmentUploadSignResponse {
-  if (
-    typeof obj !== 'object' ||
-    obj === null
-  ) return false;
+export function isValidS3SignResponse(
+  obj: unknown,
+): obj is AttachmentUploadSignResponse {
+  if (typeof obj !== 'object' || obj === null) return false;
 
   const o = obj as Record<string, unknown>;
 

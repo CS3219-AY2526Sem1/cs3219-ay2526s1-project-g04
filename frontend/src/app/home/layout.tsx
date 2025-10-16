@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import * as React from 'react';
 import TopNavigationBar from '@/components/ui/home/top-nav';
 import SideNavigationBar from '@/components/ui/home/side-nav';
 import { drawerWidth } from '@/components/ui/home/side-nav';

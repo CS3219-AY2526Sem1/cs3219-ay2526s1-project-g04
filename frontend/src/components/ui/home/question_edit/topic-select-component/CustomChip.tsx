@@ -8,7 +8,11 @@ interface CustomChipProps extends ChipProps {
   label: string;
 }
 
-export default function CustomChip({ colorHex, label, ...props }: CustomChipProps) {
+export default function CustomChip({
+  colorHex,
+  label,
+  ...props
+}: CustomChipProps) {
   return (
     <Chip
       {...props}
@@ -17,7 +21,7 @@ export default function CustomChip({ colorHex, label, ...props }: CustomChipProp
       className="text-base py-2 px-2 rounded-full"
       style={{
         border: `1px solid ${colorHex}`,
-        color: `${colorHex}`
+        color: `${colorHex}`,
       }}
     />
   );

@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import * as React from 'react';
 import clsx from 'clsx';
@@ -21,15 +21,19 @@ export default function TopicFilterButton({
       onClick={onClick}
       className={clsx(
         'py-1 px-4 rounded-full border',
-        active ? 'text-white' : 'bg-transparent hover:opacity-80'
+        active ? 'text-white' : 'bg-transparent hover:opacity-80',
       )}
       style={{
         background: active ? customColor : 'transparent',
         borderColor: customColor.startsWith('#') ? customColor : '#2563EB',
-        color: active ? 'white' : customColor.startsWith('#') ? customColor : '#2563EB',
+        color: active
+          ? 'white'
+          : customColor.startsWith('#')
+            ? customColor
+            : '#2563EB',
       }}
     >
       {buttonText}
     </button>
-  )
+  );
 }

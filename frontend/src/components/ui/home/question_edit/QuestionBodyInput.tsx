@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import TextField from '@mui/material/TextField';
 
@@ -7,9 +7,12 @@ interface QuestionBodyInputProps {
   setBody: (value: string) => void;
 }
 
-export default function QuestionBodyInput({ body, setBody }: QuestionBodyInputProps) {
+export default function QuestionBodyInput({
+  body,
+  setBody,
+}: QuestionBodyInputProps) {
   return (
-    <div className='flex flex-col space-y-3'>
+    <div className="flex flex-col space-y-3">
       <label className="text-xl font-semibold text-[var(--foreground)]">
         Question Body
       </label>
@@ -17,13 +20,13 @@ export default function QuestionBodyInput({ body, setBody }: QuestionBodyInputPr
       <TextField
         required
         multiline
-        id='question-body'
+        id="question-body"
         value={body}
-        placeholder='Enter question body in Markdown format here. '
-        className='rounded-md' // dark:bg-gray-800 dark:border-gray-700
+        placeholder="Enter question body in Markdown format here. "
+        className="rounded-md" // dark:bg-gray-800 dark:border-gray-700
         rows={25}
         onChange={(e) => setBody(e.target.value)}
       />
     </div>
-  )
+  );
 }

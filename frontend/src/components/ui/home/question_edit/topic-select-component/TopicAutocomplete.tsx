@@ -1,13 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import {
-  Autocomplete,
-  FormControl,
-  TextField
-} from '@mui/material';
-import { Topic } from '@/lib/question-service/index'
-import CustomChip from './CustomChip'
+import { Autocomplete, FormControl, TextField } from '@mui/material';
+import { Topic } from '@/lib/question-service/index';
+import CustomChip from './CustomChip';
 
 interface TopicAutocompleteProps {
   topics: string[];
@@ -18,17 +14,19 @@ interface TopicAutocompleteProps {
 export default function TopicAutocomplete({
   topics,
   setTopics,
-  topicList
+  topicList,
 }: TopicAutocompleteProps) {
-
-  const handleTopicChange = (event: React.SyntheticEvent, newValue: string[]) => {
+  const handleTopicChange = (
+    event: React.SyntheticEvent,
+    newValue: string[],
+  ) => {
     setTopics(newValue);
-  }
+  };
 
   const getTopicColor = (slug: string) => {
     const found = topicList.find((t) => t.slug === slug);
-    return found ? found.color_hex : "#6B7280";
-  }
+    return found ? found.color_hex : '#6B7280';
+  };
 
   return (
     <FormControl fullWidth required>
@@ -38,7 +36,7 @@ export default function TopicAutocomplete({
 
       <Autocomplete
         multiple
-        id='question-topics'
+        id="question-topics"
         options={topicList.map((option) => option.slug)}
         value={topics}
         freeSolo
@@ -53,19 +51,19 @@ export default function TopicAutocomplete({
                 label={option}
                 colorHex={color}
               />
-            )
+            );
           })
         }
         renderInput={(params) => (
           <TextField
             {...params}
-            variant='outlined'
-            placeholder='Select topics or add new topic'
-            className='rounded-md' // dark:bg-gray-800 dark:border-gray-700
+            variant="outlined"
+            placeholder="Select topics or add new topic"
+            className="rounded-md" // dark:bg-gray-800 dark:border-gray-700
           />
         )}
         onChange={handleTopicChange}
       />
     </FormControl>
-  )
+  );
 }

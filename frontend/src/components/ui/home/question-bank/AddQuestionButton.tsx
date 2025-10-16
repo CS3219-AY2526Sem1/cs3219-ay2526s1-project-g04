@@ -9,13 +9,13 @@ export default function AddQuestionButton() {
   return (
     <button
       onClick={() => router.push('/home/question-edit')}
-      className='flex items-center gap-2 px-4 py-2 rounded-full text-white font-medium text-lg hover:opacity-90 transition'
+      className="flex items-center gap-2 px-4 py-2 rounded-full text-white font-medium text-lg hover:opacity-90 transition"
       style={{
-        background: 'linear-gradient(90deg, #2563EB, #8B5CF6)'
+        background: 'linear-gradient(90deg, #2563EB, #8B5CF6)',
       }}
     >
       <PlusIcon className="w-5 h-5" />
       Add New Question
     </button>
-  )
+  );
 }

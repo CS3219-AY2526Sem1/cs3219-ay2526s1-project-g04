@@ -4,9 +4,9 @@ import {
   FormControl,
   MenuItem,
   Select,
-  SelectChangeEvent
+  SelectChangeEvent,
 } from '@mui/material';
-import { Topic } from '@/lib/question-service/index'
+import { Topic } from '@/lib/question-service/index';
 
 interface TopicSelectProps {
   topics: string[];
@@ -14,7 +14,11 @@ interface TopicSelectProps {
   topicList: Topic[];
 }
 
-export default function TopicSelect({ topics, setTopics, topicList }: TopicSelectProps) {
+export default function TopicSelect({
+  topics,
+  setTopics,
+  topicList,
+}: TopicSelectProps) {
   const handleTopicChange = (event: SelectChangeEvent<typeof topics>) => {
     const {
       target: { value },
@@ -23,32 +27,29 @@ export default function TopicSelect({ topics, setTopics, topicList }: TopicSelec
   };
 
   return (
-    <div className='flex flex-col'>
+    <div className="flex flex-col">
       <FormControl fullWidth required>
         <label className="text-xl font-semibold text-[var(--foreground)] mb-3">
           Topics
         </label>
 
         <Select
-          id='question-topics'
+          id="question-topics"
           multiple
           value={topics}
-          className='rounded-md dark:bg-gray-800 dark:border-gray-700'
+          className="rounded-md dark:bg-gray-800 dark:border-gray-700"
           onChange={handleTopicChange}
         >
           <MenuItem value="" disabled>
             Select topics
           </MenuItem>
           {topicList.map((topic) => (
-            <MenuItem
-              key={topic.slug}
-              value={topic.slug}
-            >
+            <MenuItem key={topic.slug} value={topic.slug}>
               <span
                 className="py-1 px-3 rounded-full"
                 style={{
                   border: `1px solid ${topic.color_hex}`,
-                  color: `${topic.color_hex}`
+                  color: `${topic.color_hex}`,
                 }}
               >
                 {topic.slug}
@@ -58,5 +59,5 @@ export default function TopicSelect({ topics, setTopics, topicList }: TopicSelec
         </Select>
       </FormControl>
     </div>
-  )
+  );
 }

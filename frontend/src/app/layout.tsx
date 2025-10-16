@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { openSans, orbitron, sourceCodePro } from '@/styles/fonts';
+import { openSans, sourceCodePro } from '@/styles/fonts';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/styles/theme';
