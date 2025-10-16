@@ -20,3 +20,14 @@ services:
     restart: always
     ports:
       - 8080:8080
+
+  collaboration_service:
+    build: ./backend/services/collaboration_service  # path to your service Dockerfile
+    restart: always
+    depends_on:
+      - postgres
+    ports:
+      - '4000:4000'  # WebSocket server port
+    environment:
+      DATABASE_URL: postgres://postgres:example@postgres:5432/postgres
+      REDIS_URL: redis://redis:6379   # if using redis

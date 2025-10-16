@@ -16,15 +16,29 @@ export default function CollabMonaco() {
 
   useEffect(() => {
     const doc = new Y.Doc();
-    const roomName = 'peerprep-collab-demo-room'; 
-    const wsUrl = process.env.NEXT_PUBLIC_YJS_WS ?? 'ws://localhost:3000';
-    const provider = new WebsocketProvider(wsUrl, roomName, doc);
+
+    const sessionId = '123';  // dynamically get this from your app
+    const userId = '23';     // current user's id
+    const wsUrl = `ws://localhost:3000/${sessionId}?userId=${userId}`;
+    const provider = new WebsocketProvider(wsUrl, sessionId, doc);
+
+
 
     const yText = doc.getText('monaco');
 
     ydocRef.current = doc;
     providerRef.current = provider;
     yTextRef.current = yText;
+
+    console.log('Y.Doc:', ydocRef.current);
+    console.log('Y.Text:', yTextRef.current);
+
+    // ✅ Observe changes in the Y.Text
+    const observer = (event: Y.YTextEvent) => {
+      console.log('Text changed:', yText.toString());
+      console.log('Event details:', event);
+    };
+    yText.observe(observer);
 
     // cleanup on unmount
     return () => {
