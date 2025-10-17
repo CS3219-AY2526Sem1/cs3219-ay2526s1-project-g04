@@ -20,10 +20,14 @@ export default function CollabMonaco() {
   useEffect(() => {
     const doc = new Y.Doc();
 
-    const sessionId = '123'; // dynamically get this from your app
-    const userId = '23'; // current user's id
-    const wsUrl = `ws://localhost:3000`;
-    const provider = new WebsocketProvider(wsUrl, sessionId, doc);
+    const sessionId = '99'; // dynamically get this from your app
+    const userId = '1'; // current user's id
+    const wsUrl = `ws://localhost:3000/`;
+    const provider = new WebsocketProvider(
+      wsUrl,
+      `${sessionId}?userId=${userId}`,
+      doc,
+    );
 
     const yText = doc.getText('monaco');
 
