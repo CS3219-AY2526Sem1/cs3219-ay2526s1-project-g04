@@ -15,11 +15,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^6.17.0",
+    "@prisma/client": "^6.17.1",
     "@y/websocket-server": "^0.1.1",
     "amqplib": "^0.10.9",
     "express": "^5.1.0",
-    "prisma": "^6.17.0",
+    "prisma": "^6.17.1",
+    "redis": "^5.8.3",
     "ws": "^8.18.3",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.27"

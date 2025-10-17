@@ -22,6 +22,8 @@ export class Collab {
 
     const listener = new MessageListener(sessionManager);
     await listener.start();
+
+    this.test_send_msg_to_collab();
   }
 
   private async initDatabases() {
