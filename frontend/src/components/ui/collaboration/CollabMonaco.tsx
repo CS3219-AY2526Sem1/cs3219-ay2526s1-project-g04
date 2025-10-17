@@ -22,7 +22,7 @@ export default function CollabMonaco() {
 
     const sessionId = '123'; // dynamically get this from your app
     const userId = '23'; // current user's id
-    const wsUrl = `ws://localhost:3000/${sessionId}?userId=${userId}`;
+    const wsUrl = `ws://localhost:3000`;
     const provider = new WebsocketProvider(wsUrl, sessionId, doc);
 
     const yText = doc.getText('monaco');
