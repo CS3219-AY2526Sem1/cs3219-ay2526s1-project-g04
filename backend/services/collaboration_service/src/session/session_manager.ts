@@ -19,7 +19,7 @@ type SessionEntry = {
 
 export class SessionManager {
   private sessions: Record<string, SessionEntry>;
-  private redis: CollabRedis; 
+  private redis: CollabRedis;
   private db: PostgresPrisma;
   private wss: WebSocketServer;
 
