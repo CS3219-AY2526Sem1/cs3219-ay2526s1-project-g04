@@ -547,6 +547,32 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
+app.get('/api/users/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = await prisma.user.findUnique({
+      where: {
+        id: id,
+      },
+
+      select: {
+        username: true,
+        bio: true,
+        profilePictureUrl: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    res.status(200).json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
 /**
  * Temporary utility endpoints
  * NOT part of final product!!
