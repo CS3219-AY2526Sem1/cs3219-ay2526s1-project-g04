@@ -16,6 +16,9 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+/**
+ * Schemas
+ */
 // --- Zod Schemas for pw and email validation ---
 const signupSchema = z.object({
   email: z.string().email(),
@@ -114,6 +117,9 @@ export interface AuthRequest extends Request {
   user?: JwtPayload;
 }
 
+/**
+ * Token handling
+ */
 // checks if user's jwt token is still valid, if not need to sign in again to get assigned new token
 const authenticateToken = (
   req: AuthRequest,
@@ -132,8 +138,13 @@ const authenticateToken = (
   });
 };
 
-// --- API Endpoints ---
+/**
+ * API Endpoints
+ */
 
+/**
+ * session and authentication
+ */
 // 1. SIGN UP (for regular users)
 app.post('/api/auth/signup', async (req, res) => {
   try {
@@ -386,6 +397,10 @@ app.put(
   },
 );
 
+/**
+ * Temporary utility endpoints
+ * NOT part of final product!!
+ */
 // UTILITY TO BE DELETED !!!!!
 // list all users in db
 app.post('/api/auth/list', async (req, res) => {
@@ -397,6 +412,9 @@ app.post('/api/auth/list', async (req, res) => {
   }
 });
 
+/**
+ * port
+ */
 app.listen(PORT, () => {
   console.log(`Backend server is running on http://localhost:${PORT}`);
 });
