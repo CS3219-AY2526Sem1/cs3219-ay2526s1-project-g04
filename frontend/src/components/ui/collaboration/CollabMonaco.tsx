@@ -78,18 +78,16 @@ export default function CollabMonaco() {
   };
 
   return (
-    <div style={{ height: '100vh', width: '100%' }}>
-      <Editor
-        height="100%"
-        defaultLanguage="javascript"
-        defaultValue="// Collaborative Monaco with Yjs"
-        theme="vs-dark"
-        onMount={handleEditorDidMount}
-        options={{
-          fontSize: 14,
-          minimap: { enabled: false },
-        }}
-      />
-    </div>
+    <Editor
+      height="100%"
+      defaultLanguage="javascript"
+      defaultValue="// Collaborative Monaco with Yjs"
+      theme="vs-dark"
+      onMount={handleEditorDidMount}
+      options={{
+        fontSize: 14,
+        minimap: { enabled: false },
+      }}
+    />
   );
 }
