@@ -243,17 +243,13 @@ components:
     SelectionRequest:
       type: object
       properties:
-        session_id:
+        matching_id:
           type: string
         difficulty:
           $ref: '#/components/schemas/Difficulty'
         topics:
           type: array
           description: Topic slugs to filter by
-          items:
-            type: string
-        exclude_ids:
-          type: array
           items:
             type: string
         recent_ids:
@@ -329,10 +325,6 @@ components:
     TopicListResponse:
       type: object
       properties:
-        page:
-          type: integer
-        page_size:
-          type: integer
         total:
           type: integer
         items:
@@ -824,6 +816,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /questions/topics:
+    get:
+      tags: [Read]
+      parameters:
+        - name: difficulty
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicListResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /readyz:
     get:
       tags: [Health]
