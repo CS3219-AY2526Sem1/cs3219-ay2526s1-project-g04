@@ -94,7 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_questions_topics_gin
 -- Partial index for Published content to keep it small & fast.
 CREATE INDEX IF NOT EXISTS idx_questions_tsv_en_published
   ON questions USING GIN (tsv_en)
-  WHERE status = 'Published';
+  WHERE status = 'published';
 
 -- Topic lookup convenience
 CREATE INDEX IF NOT EXISTS idx_topics_color ON topics (color_hex);

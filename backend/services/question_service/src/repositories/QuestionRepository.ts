@@ -22,7 +22,7 @@ export async function listPublished(opts: {
   // Fast path — no search text and no topic filter → use Prisma
   if (!opts.q && !opts.topics?.length) {
     const where: Prisma.questionsWhereInput = {
-      status: 'Published',
+      status: 'published',
       ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
     };
     return prisma.questions.findMany({
@@ -52,14 +52,29 @@ export async function listPublished(opts: {
   }
 
   const sql = `
-    SELECT *
+    SELECT id, title, body_md, difficulty, topics, attachments,
+         status, version, rand_key, created_at, updated_at
     FROM questions
     WHERE ${clauses.join(' AND ')}
     ORDER BY updated_at DESC
     LIMIT ${size} OFFSET ${offset}
   `;
 
-  return prisma.$queryRawUnsafe<Question[]>(sql, ...params);
+  return prisma.$queryRawUnsafe<
+    Array<{
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      topics: unknown; // jsonb
+      attachments: unknown; // jsonb
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      rand_key: number;
+      created_at: Date | null;
+      updated_at: Date | null;
+    }>
+  >(sql, ...params);
 }
 
 export async function createDraft(q: {
@@ -85,7 +100,7 @@ export async function createDraft(q: {
             q.difficulty as unknown as Prisma.questionsCreateInput['difficulty'],
           topics: q.topics as unknown as Prisma.InputJsonValue,
           attachments: q.attachments as unknown as Prisma.InputJsonValue,
-          status: 'Draft',
+          status: 'draft',
           version: 1,
         },
       });
@@ -122,39 +137,37 @@ export async function updateDraft(
 
 export async function publish(id: string) {
   return prisma.$transaction(async (tx) => {
-    // 1) Update the source row and return the snapshot
-    const updated = await tx
-      .$queryRawUnsafe<Question[]>(
-        `
-        UPDATE questions
-        SET status = 'Published',
-            version = version + 1,
-            updated_at = now(),
-            rand_key = random()
-        WHERE id = $1
-        RETURNING *
-        `,
-        id,
-      )
-      .then((r) => r[0])
-      .catch(() => undefined);
+    // load current draft
+    const draft = await tx.questions.findUnique({ where: { id } });
+    if (!draft || draft.status !== 'draft') return null;
 
-    if (!updated) return undefined;
+    const newVersion = (draft.version ?? 1) + 1;
 
-    // 2) Normalize JSON fields for Prisma
-    const topicsJson =
-      (updated as unknown as { topics: unknown }).topics === null
-        ? Prisma.JsonNull
-        : ((updated as unknown as { topics: unknown })
-            .topics as Prisma.InputJsonValue);
+    // update live row to 'published' and bump version/rand_key
+    const updated = await tx.questions.update({
+      where: { id },
+      data: {
+        status: 'published',
+        version: newVersion,
+        rand_key: Math.random(),
+        updated_at: new Date(),
+      },
+      select: {
+        id: true,
+        title: true,
+        body_md: true,
+        difficulty: true,
+        topics: true,
+        attachments: true,
+        status: true,
+        version: true,
+        rand_key: true,
+        created_at: true,
+        updated_at: true,
+      },
+    });
 
-    const attachmentsJson =
-      (updated as unknown as { attachments: unknown }).attachments === null
-        ? Prisma.JsonNull
-        : ((updated as unknown as { attachments: unknown })
-            .attachments as Prisma.InputJsonValue);
-
-    // 3) Insert into question_versions — ONLY fields that exist
+    // snapshot to question_versions
     await tx.question_versions.create({
       data: {
         id: updated.id,
@@ -162,9 +175,9 @@ export async function publish(id: string) {
         title: updated.title,
         body_md: updated.body_md,
         difficulty: updated.difficulty,
-        topics: topicsJson,
-        attachments: attachmentsJson,
-        status: updated.status,
+        topics: updated.topics as unknown as Prisma.InputJsonValue,
+        attachments: updated.attachments as unknown as Prisma.InputJsonValue,
+        status: updated.status, // 'published'
         published_at: new Date(),
       },
     });
@@ -173,6 +186,7 @@ export async function publish(id: string) {
   });
 }
 
+// selection helper
 export async function pickRandomEligible(filters: {
   difficulty?: string;
   topics?: string[];
