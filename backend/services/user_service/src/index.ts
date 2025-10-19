@@ -169,7 +169,7 @@ const transporter = nodemailer.createTransport({
 
 // send OTP emails
 async function sendOtpEmail(email: string, otp: string) {
-  const productIconUrl = '';
+  const productIconUrl = 'https://i.ibb.co/WWJ1yBVP/peerprep-banner.png';
 
   await transporter.sendMail({
     from: '"PeerPrep" <no-reply@peerprep.com>',
@@ -184,14 +184,16 @@ async function sendOtpEmail(email: string, otp: string) {
         </head>
         <body style="font-family: sans-serif;">
           <div style="display: block; margin: auto; max-width: 600px;" class="main">
-            <img alt="PeerPrep Icon" src="${productIconUrl}" style="width: 80px; margin-bottom: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img alt="PeerPrep Banner" src="${productIconUrl}" style="width: 400px; display: inline-block;">
+            </div>
             <h1 style="font-size: 18px; font-weight: bold; margin-top: 20px">Your PeerPrep Verification Code</h1>
-            <p>Thank you for signing up. Please use the following code to verify your account. The code is valid for 10 minutes.</p>
+            <p>Thank you for signing up with PeerPrep!</p>
+            <p>Please use the following code to verify your account. The code is valid for 10 minutes.</p>
             <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #f2f2f2; padding: 10px 20px; text-align: center;">
               ${otp}
             </p>
             <p>If you did not request this, please ignore this email.</p>
-            <p>Good luck!</p>
           </div>
           <style>
             .main { background-color: white; }
