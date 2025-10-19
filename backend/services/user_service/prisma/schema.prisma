@@ -23,6 +23,9 @@ model User {
   profilePictureUrl  String?
   username     String    @unique
   refreshToken String?   @unique
+  isVerified     Boolean   @default(false)
+  verificationOtp String?
+  otpExpiresAt   DateTime?
 
   @@map("users")
 }

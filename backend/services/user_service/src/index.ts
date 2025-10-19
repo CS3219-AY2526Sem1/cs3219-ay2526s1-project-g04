@@ -6,6 +6,9 @@ import { z } from 'zod';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
+
 dotenv.config();
 
 const app = express();
@@ -52,6 +55,15 @@ const loginSchema = z.object({
 
 const refreshTokenSchema = z.object({
   token: z.string(),
+});
+
+const verifyEmailSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().length(6),
+});
+
+const resendOtpSchema = z.object({
+  email: z.string().email(),
 });
 
 const updateProfileSchema = z.object({
@@ -118,6 +130,10 @@ export interface AuthRequest extends Request {
 }
 
 /**
+ * Functions
+ */
+
+/**
  * Token handling
  */
 // checks if user's jwt token is still valid, if not need to sign in again to get assigned new token
@@ -139,6 +155,55 @@ const authenticateToken = (
 };
 
 /**
+ * OTP and emailing
+ */
+// Nodemailer Transport for Mailtrap
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT),
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// send OTP emails
+async function sendOtpEmail(email: string, otp: string) {
+  const productIconUrl = '';
+
+  await transporter.sendMail({
+    from: '"PeerPrep" <no-reply@peerprep.com>',
+    to: email,
+    subject: 'Your PeerPrep Verification Code',
+    text: `Your PeerPrep verification code is: ${otp}. It will expire in 10 minutes.`,
+    html: `
+      <!doctype html>
+      <html>
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        </head>
+        <body style="font-family: sans-serif;">
+          <div style="display: block; margin: auto; max-width: 600px;" class="main">
+            <img alt="PeerPrep Icon" src="${productIconUrl}" style="width: 80px; margin-bottom: 20px;">
+            <h1 style="font-size: 18px; font-weight: bold; margin-top: 20px">Your PeerPrep Verification Code</h1>
+            <p>Thank you for signing up. Please use the following code to verify your account. The code is valid for 10 minutes.</p>
+            <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #f2f2f2; padding: 10px 20px; text-align: center;">
+              ${otp}
+            </p>
+            <p>If you did not request this, please ignore this email.</p>
+            <p>Good luck!</p>
+          </div>
+          <style>
+            .main { background-color: white; }
+            a:hover { border-left-width: 1em; min-height: 2em; }
+          </style>
+        </body>
+      </html>
+    `,
+  });
+}
+
+/**
  * API Endpoints
  */
 
@@ -156,26 +221,52 @@ app.post('/api/auth/signup', async (req, res) => {
     });
 
     if (existingUser) {
-      return res.status(409).json({ message: 'User already exists.' });
+      if (existingUser.isVerified) {
+        return res
+          .status(409)
+          .json({ message: 'An account with this email is already verified.' });
+      } else {
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        await prisma.user.update({
+          where: { email },
+          data: { verificationOtp: otp, otpExpiresAt },
+        });
+
+        await sendOtpEmail(email, otp);
+        return res.status(200).json({
+          message:
+            'Account already exists. A new OTP has been sent to your email.',
+        });
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     // default USER role
     const newUser = await prisma.user.create({
       data: {
         email,
+        username,
         password: hashedPassword,
-        username: username,
+        isVerified: false,
+        verificationOtp: otp,
+        otpExpiresAt,
       },
     });
 
-    const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email, role: newUser.role }, // Include role in JWT
-      process.env.JWT_SECRET!,
-      { expiresIn: '24h' },
-    );
+    await sendOtpEmail(email, otp);
 
-    res.status(201).json({ message: 'User created successfully.', token });
+    res.status(201).json({
+      message:
+        'User created successfully. Please check your email for the OTP to verify your account.',
+      user: {
+        email: newUser.email,
+        username: newUser.username,
+      },
+    });
   } catch (error) {
     res.status(400).json({ message: 'Invalid request', details: error });
   }
@@ -194,6 +285,13 @@ app.post('/api/auth/login', async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid email or password.' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        message:
+          'Your account is not verified. Please check your email or request a new OTP.',
+      });
     }
 
     // assign jwt to user
@@ -396,6 +494,56 @@ app.put(
     }
   },
 );
+
+app.post('/api/auth/verify-email', async (req, res) => {
+  try {
+    const { email, otp } = verifyEmailSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.verificationOtp !== otp) {
+      return res.status(400).json({ message: 'Invalid OTP.' });
+    }
+    if (new Date() > user.otpExpiresAt!) {
+      return res.status(400).json({ message: 'OTP has expired.' });
+    }
+
+    await prisma.user.update({
+      where: { email },
+      data: { isVerified: true, verificationOtp: null, otpExpiresAt: null },
+    });
+
+    res.status(200).json({ message: 'Email verified successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
+app.post('/api/auth/resend-otp', async (req, res) => {
+  try {
+    const { email } = resendOtpSchema.parse(req.body);
+    const user = await prisma.user.findUnique({ where: { email } });
+
+    if (!user || user.isVerified) {
+      return res.status(400).json({
+        message: 'Already verified, cannot resend OTP for this account.',
+      });
+    }
+
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    await prisma.user.update({
+      where: { email },
+      data: { verificationOtp: otp, otpExpiresAt },
+    });
+
+    await sendOtpEmail(email, otp);
+
+    res.status(200).json({ message: 'A new OTP has been sent to your email.' });
+  } catch (error) {
+    res.status(400).json({ message: 'Invalid request', details: error });
+  }
+});
 
 /**
  * Temporary utility endpoints
