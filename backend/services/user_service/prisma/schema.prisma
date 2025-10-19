@@ -22,6 +22,7 @@ model User {
   bio                String?
   profilePictureUrl  String?
   username     String    @unique
+  refreshToken String?   @unique
 
   @@map("users")
 }

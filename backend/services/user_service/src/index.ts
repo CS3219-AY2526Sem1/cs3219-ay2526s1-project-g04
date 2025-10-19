@@ -47,6 +47,10 @@ const loginSchema = z.object({
   password: z.string(),
 });
 
+const refreshTokenSchema = z.object({
+  token: z.string(),
+});
+
 const updateProfileSchema = z.object({
   username: z
     .string()
@@ -99,6 +103,10 @@ interface JwtPayload {
   username: string;
   iat: number;
   exp: number;
+}
+
+interface RefreshTokenPayload {
+  userId: string;
 }
 
 // --- Middleware for Authentication & Authorization ---
@@ -177,19 +185,82 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
 
+    // assign jwt to user
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role },
       process.env.JWT_SECRET!,
-      { expiresIn: '1h' },
+      { expiresIn: '15m' },
     );
 
-    res.status(200).json({ message: 'Login successful.', token });
+    // assign refresh token to user + save in db
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      process.env.REFRESH_TOKEN_SECRET!,
+      { expiresIn: '7d' },
+    );
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: hashedRefreshToken },
+    });
+
+    res.status(200).json({ message: 'Login successful.', token, refreshToken });
   } catch (error) {
     res.status(400).json({ message: 'Invalid request', details: error });
   }
 });
 
-// Endpoints to edit user details
+app.post('/api/auth/refresh', async (req, res) => {
+  try {
+    const { token: refreshToken } = refreshTokenSchema.parse(req.body);
+    if (!refreshToken) return res.sendStatus(401);
+
+    const payload = jwt.verify(
+      refreshToken,
+      process.env.REFRESH_TOKEN_SECRET!,
+    ) as RefreshTokenPayload;
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+    });
+    if (!user || !user.refreshToken) return res.sendStatus(403);
+
+    const isTokenValid = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!isTokenValid) return res.sendStatus(403);
+
+    const newAccessToken = jwt.sign(
+      { userId: user.id, username: user.username, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: '15m' },
+    );
+
+    res.json({ accessToken: newAccessToken });
+  } catch (error) {
+    return res
+      .status(403)
+      .json({ message: 'Invalid or expired refresh token.', details: error });
+  }
+});
+
+app.post(
+  '/api/auth/logout',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      await prisma.user.update({
+        where: { id: req.user!.userId },
+        data: { refreshToken: null },
+      });
+      res.status(200).json({ message: 'Logged out successfully.' });
+    } catch (error) {
+      res.status(500).json({ message: 'Logout failed.', details: error });
+    }
+  },
+);
+
+/**
+ * Endpoints for editing user details
+ */
 app.put(
   '/api/users/me/profile',
   authenticateToken,
@@ -264,12 +335,10 @@ app.put(
         data: { email: newEmail },
       });
 
-      res
-        .status(200)
-        .json({
-          message:
-            'Email updated successfully. Please use it for your next login.',
-        });
+      res.status(200).json({
+        message:
+          'Email updated successfully. Please use it for your next login.',
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res
