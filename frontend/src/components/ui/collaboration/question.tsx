@@ -4,7 +4,6 @@ import {
   CardHeader,
   Chip,
   Stack,
-  StyledEngineProvider,
   Typography,
 } from '@mui/material';
 import '@/styles/globals.css';

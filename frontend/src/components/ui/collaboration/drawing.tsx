@@ -1,12 +1,4 @@
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  Chip,
-  Stack,
-  StyledEngineProvider,
-  Typography,
-} from '@mui/material';
+import { Card, CardContent, Typography } from '@mui/material';
 import '@/styles/globals.css';
 
 export const DrawingBoard = () => {

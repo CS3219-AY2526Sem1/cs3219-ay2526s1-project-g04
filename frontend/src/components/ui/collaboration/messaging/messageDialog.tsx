@@ -1,20 +1,5 @@
-import {
-  Avatar,
-  Card,
-  CardContent,
-  CardHeader,
-  IconButton,
-  OutlinedInput,
-  Paper,
-  Stack,
-  StyledEngineProvider,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Paper, Stack, Typography } from '@mui/material';
 import '@/styles/globals.css';
-import SendIcon from '@mui/icons-material/Send';
-import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
-import { useEffect, useRef, useState } from 'react';
 
 export const MessageDialogs = () => {
   const messages = [

@@ -1,13 +1,4 @@
-import {
-  Box,
-  Card,
-  CardContent,
-  CardHeader,
-  Chip,
-  Stack,
-  StyledEngineProvider,
-  Typography,
-} from '@mui/material';
+import { Box, Card, Stack } from '@mui/material';
 import '@/styles/globals.css';
 import { MessageBoard } from './messaging';
 import { DrawingBoard } from './drawing';

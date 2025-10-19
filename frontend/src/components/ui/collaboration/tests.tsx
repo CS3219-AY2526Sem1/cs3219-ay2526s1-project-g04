@@ -1,12 +1,8 @@
 import {
-  Box,
   Card,
   CardContent,
   CardHeader,
-  Chip,
   Stack,
-  styled,
-  StyledEngineProvider,
   Tab,
   Tabs,
   Typography,
@@ -16,7 +12,9 @@ import { useState } from 'react';
 
 interface TestCase {
   title: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   input: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   output: any[];
 }
 interface TabPanelProps {

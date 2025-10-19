@@ -1,18 +1,6 @@
 'use client';
 
-import {
-  Avatar,
-  Card,
-  CardContent,
-  CardHeader,
-  IconButton,
-  OutlinedInput,
-  Paper,
-  Stack,
-  StyledEngineProvider,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { IconButton, OutlinedInput } from '@mui/material';
 import '@/styles/globals.css';
 import SendIcon from '@mui/icons-material/Send';
 import { useState, useEffect } from 'react';

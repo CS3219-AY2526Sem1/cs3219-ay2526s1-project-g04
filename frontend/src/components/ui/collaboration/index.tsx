@@ -1,5 +1,4 @@
 import { Box, Stack } from '@mui/material';
-import TopNavigationBar from '../commons/top-nav';
 import CollabMonaco from './CollabMonaco';
 import { Communication } from './communication';
 import { QuestionCard } from './question';
