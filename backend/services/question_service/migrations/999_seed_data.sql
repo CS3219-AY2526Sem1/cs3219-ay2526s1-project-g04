@@ -1,5 +1,5 @@
 -- migrations/999_seed_data.sql
--- Question Service: Dummy Data Seed (matches 0001_init.sql schema)
+-- Question Service: Dummy Data Seed 
 
 BEGIN;
 

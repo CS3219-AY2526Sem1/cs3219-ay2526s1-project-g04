@@ -176,10 +176,9 @@ export async function publish(id: string) {
 export async function pickRandomEligible(filters: {
   difficulty?: string;
   topics?: string[];
-  excludeIds?: string[];
   recentIds?: string[];
 }) {
-  const clauses: string[] = [`status = 'Published'`];
+  const clauses: string[] = [`status = 'published'`];
   const params: unknown[] = [];
   let i = 1;
 
@@ -190,10 +189,6 @@ export async function pickRandomEligible(filters: {
   if (filters.topics?.length) {
     clauses.push(`topics ?| $${i++}::text[]`);
     params.push(filters.topics);
-  }
-  if (filters.excludeIds?.length) {
-    clauses.push(`NOT (id = ANY($${i++}::text[]))`);
-    params.push(filters.excludeIds);
   }
   if (filters.recentIds?.length) {
     clauses.push(`NOT (id = ANY($${i++}::text[]))`);
