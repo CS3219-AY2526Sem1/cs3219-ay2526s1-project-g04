@@ -9,7 +9,6 @@ export async function selectOne(body: {
   session_id: string;
   difficulty?: string;
   topics?: string[];
-  exclude_ids?: string[];
   recent_ids?: string[];
 }) {
   // if already allocated a question to session
@@ -19,7 +18,6 @@ export async function selectOne(body: {
   const choice = await Repo.pickRandomEligible({
     difficulty: body.difficulty,
     topics: body.topics,
-    excludeIds: body.exclude_ids,
     recentIds: body.recent_ids,
   });
 

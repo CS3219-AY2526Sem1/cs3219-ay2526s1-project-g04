@@ -1,7 +1,7 @@
 // src/repositories/QuestionRepository.ts
 
 import { prisma } from './prisma';
-import { Prisma, questions as Question } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { slugifyTitle } from '../utils/slug';
 
 export async function getPublishedById(id: string) {
