@@ -46,17 +46,15 @@ export async function list(req: Request, res: Response) {
  * @param res
  */
 export async function select(req: Request, res: Response) {
-  const { session_id, difficulty, topics, exclude_ids, recent_ids } =
-    req.body || {};
+  const { matching_id, difficulty, topics, recent_ids } = req.body || {};
 
-  if (!session_id)
-    return res.status(400).json({ error: 'session_id required' });
+  if (!matching_id)
+    return res.status(400).json({ error: 'matching_id required' });
 
   const result = await selectOne({
-    session_id,
+    matching_id,
     difficulty,
     topics,
-    exclude_ids,
     recent_ids,
   });
   if (!result.question_id)

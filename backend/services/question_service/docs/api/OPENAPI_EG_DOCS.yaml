@@ -488,9 +488,9 @@ paths:
 
     post:
       tags: [Admin]
-      summary: Create a question (draft) — if id omitted, server generates slug
+      summary: Create a question (draft)
       description: |
-        Creates a draft question. If 'id' is omitted, the server generates a canonical slug from 'title' and ensures uniqueness.
+        Creates a draft question.
       requestBody:
         required: true
         content:
@@ -847,7 +847,7 @@ paths:
   /readyz:
     get:
       tags: [Health]
-      summary: Readiness probe (DB/AMQP reachable)
+      summary: Readiness probe (DB reachable)
       security: []
       responses:
         '200':
