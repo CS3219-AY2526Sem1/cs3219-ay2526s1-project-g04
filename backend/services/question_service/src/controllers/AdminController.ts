@@ -129,3 +129,16 @@ export async function publish(req: Request, res: Response) {
     res.status(500).json({ error: 'internal_error' });
   }
 }
+
+export async function list(req: Request, res: Response) {
+  const { difficulty, topics, q, page, size } = req.query;
+
+  const data = await Repo.listAll({
+    difficulty,
+    topics: typeof topics === 'string' ? (topics as string).split(',') : topics,
+    q,
+    page: Number(page),
+    size: Number(size),
+  });
+  return res.json({ items: data });
+}
