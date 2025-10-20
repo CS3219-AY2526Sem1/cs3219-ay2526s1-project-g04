@@ -142,3 +142,10 @@ export async function list(req: Request, res: Response) {
   });
   return res.json({ items: data });
 }
+
+export async function archive(req: Request, res: Response) {
+  const q = await Repo.archive(req.params.id);
+  if (!q) return res.status(404).json({ error: 'not_found_or_not_published' });
+
+  return res.json(q);
+}
