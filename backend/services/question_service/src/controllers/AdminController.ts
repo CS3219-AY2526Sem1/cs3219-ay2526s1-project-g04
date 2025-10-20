@@ -130,6 +130,9 @@ export async function publish(req: Request, res: Response) {
   }
 }
 
+/**
+ * GET /admin/questions
+ */
 export async function list(req: Request, res: Response) {
   const { difficulty, topics, q, page, size } = req.query;
 
@@ -143,9 +146,25 @@ export async function list(req: Request, res: Response) {
   return res.json({ items: data });
 }
 
+/**
+ * DELETE /admin/questions/:id
+ */
 export async function archive(req: Request, res: Response) {
   const q = await Repo.archive(req.params.id);
   if (!q) return res.status(404).json({ error: 'not_found_or_not_published' });
 
   return res.json(q);
+}
+
+/**
+ * GET /admin/questions/:id
+ */
+export async function getById(req: Request, res: Response) {
+  try {
+    const q = await Repo.getQuestionById(req.params.id);
+    if (!q) return res.status(404).json({ error: 'not found' });
+    return res.json(q);
+  } catch {
+    return res.status(500).json({ error: 'internal_error' });
+  }
 }

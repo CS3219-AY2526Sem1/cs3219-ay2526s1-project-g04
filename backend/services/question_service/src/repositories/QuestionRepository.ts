@@ -8,6 +8,10 @@ export async function getPublishedById(id: string) {
   return prisma.questions.findFirst({ where: { id, status: 'published' } });
 }
 
+export async function getQuestionById(id: string) {
+  return prisma.questions.findFirst({ where: { id } });
+}
+
 export async function listPublished(opts: {
   difficulty?: 'Easy' | 'Medium' | 'Hard';
   topics?: string[];
