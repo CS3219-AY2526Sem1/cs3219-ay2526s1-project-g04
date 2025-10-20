@@ -22,7 +22,7 @@ export async function listPublished(opts: {
   // Fast path — no search text and no topic filter → use Prisma
   if (!opts.q && !opts.topics?.length) {
     const where: Prisma.questionsWhereInput = {
-      status: 'Published',
+      status: 'published',
       ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
     };
     return prisma.questions.findMany({
@@ -52,14 +52,97 @@ export async function listPublished(opts: {
   }
 
   const sql = `
-    SELECT *
+    SELECT id, title, body_md, difficulty, topics, attachments,
+         status, version, rand_key, created_at, updated_at
     FROM questions
     WHERE ${clauses.join(' AND ')}
     ORDER BY updated_at DESC
     LIMIT ${size} OFFSET ${offset}
   `;
 
-  return prisma.$queryRawUnsafe<Question[]>(sql, ...params);
+  return prisma.$queryRawUnsafe<
+    Array<{
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      topics: unknown; // jsonb
+      attachments: unknown; // jsonb
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      rand_key: number;
+      created_at: Date | null;
+      updated_at: Date | null;
+    }>
+  >(sql, ...params);
+}
+
+export async function listAll(opts: {
+  difficulty?: 'Easy' | 'Medium' | 'Hard';
+  topics?: string[];
+  q?: string;
+  page?: number;
+  size?: number;
+}) {
+  const page = Math.max(1, opts.page ?? 1);
+  const size = Math.min(100, Math.max(1, opts.size ?? 20));
+  const offset = (page - 1) * size;
+
+  // Fast path — no search text and no topic filter → use Prisma
+  if (!opts.q && !opts.topics?.length) {
+    const where: Prisma.questionsWhereInput = {
+      ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
+    };
+    return prisma.questions.findMany({
+      where,
+      orderBy: { updated_at: 'desc' },
+      skip: offset,
+      take: size,
+    });
+  }
+
+  // FTS / topics path — parameterized SQL with explicit casts
+  const clauses: string[] = ['status = $1'];
+  const params: unknown[] = [];
+  let i = params.length + 1;
+
+  if (opts.difficulty) {
+    clauses.push(`difficulty = $${i++}`);
+    params.push(opts.difficulty);
+  }
+  if (opts.topics?.length) {
+    clauses.push(`topics ?| $${i++}::text[]`);
+    params.push(opts.topics);
+  }
+  if (opts.q) {
+    clauses.push(`tsv_en @@ plainto_tsquery('english', $${i++})`);
+    params.push(opts.q);
+  }
+
+  const sql = `
+    SELECT id, title, body_md, difficulty, topics, attachments,
+         status, version, rand_key, created_at, updated_at
+    FROM questions
+    WHERE ${clauses.join(' AND ')}
+    ORDER BY updated_at DESC
+    LIMIT ${size} OFFSET ${offset}
+  `;
+
+  return prisma.$queryRawUnsafe<
+    Array<{
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      topics: unknown; // jsonb
+      attachments: unknown; // jsonb
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      rand_key: number;
+      created_at: Date | null;
+      updated_at: Date | null;
+    }>
+  >(sql, ...params);
 }
 
 export async function createDraft(q: {
