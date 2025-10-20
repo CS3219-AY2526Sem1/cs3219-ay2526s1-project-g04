@@ -120,7 +120,7 @@ ON CONFLICT (id, version) DO NOTHING;
 -- Optional: demo session reservation (for /select testing)
 -- ==============================================================
 
-INSERT INTO session_reservations (session_id, question_id, expires_at)
+INSERT INTO reservations (matching_id, question_id, expires_at)
 VALUES ('demo-session-1', 'reverse-a-string', now() + interval '10 minutes')
 ON CONFLICT (session_id) DO NOTHING;
 

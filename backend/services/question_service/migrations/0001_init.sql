@@ -36,8 +36,8 @@ CREATE TABLE IF NOT EXISTS question_versions (
   PRIMARY KEY (id, version)
 );
 
-CREATE TABLE IF NOT EXISTS session_reservations (
-  session_id     text PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS reservations (
+  matching_id     text PRIMARY KEY,
   question_id    text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   expires_at     timestamptz NOT NULL
 );
