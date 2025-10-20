@@ -926,9 +926,6 @@ paths:
       tags: [Read]
       summary: List topic tags (slug + color)
       description: Returns a paginated list of topic tags for UI rendering.
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Size'
       responses:
         '200':
           description: OK
