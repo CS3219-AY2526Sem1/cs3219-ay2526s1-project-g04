@@ -9,6 +9,7 @@ import { requireRole } from '../middleware/auth';
 const r = Router();
 
 // Read
+r.get('/questions/topics', TopicController.listPublished);
 r.get('/questions/:id', QuestionController.getById);
 r.get('/questions', QuestionController.list);
 r.post('/select', QuestionController.select);
