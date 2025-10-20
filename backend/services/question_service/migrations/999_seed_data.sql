@@ -122,6 +122,6 @@ ON CONFLICT (id, version) DO NOTHING;
 
 INSERT INTO reservations (matching_id, question_id, expires_at)
 VALUES ('demo-session-1', 'reverse-a-string', now() + interval '10 minutes')
-ON CONFLICT (session_id) DO NOTHING;
+ON CONFLICT (matching_id) DO NOTHING;
 
 COMMIT;

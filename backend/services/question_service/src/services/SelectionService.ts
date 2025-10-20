@@ -6,13 +6,13 @@ import * as Reservations from '../repositories/ReservationRepository';
 const RES_TTL = 10 * 60;
 
 export async function selectOne(body: {
-  session_id: string;
+  matching_id: string;
   difficulty?: string;
   topics?: string[];
   recent_ids?: string[];
 }) {
   // if already allocated a question to session
-  const existing = await Reservations.getReservation(body.session_id);
+  const existing = await Reservations.getReservation(body.matching_id);
   if (existing) return { question_id: existing };
 
   const choice = await Repo.pickRandomEligible({
@@ -23,6 +23,6 @@ export async function selectOne(body: {
 
   if (!choice) return { question_id: null };
 
-  await Reservations.upsertReservation(body.session_id, choice.id, RES_TTL);
+  await Reservations.upsertReservation(body.matching_id, choice.id, RES_TTL);
   return { question_id: choice.id };
 }
