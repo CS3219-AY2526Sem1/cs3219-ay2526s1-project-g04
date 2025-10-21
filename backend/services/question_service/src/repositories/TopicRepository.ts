@@ -21,3 +21,12 @@ export async function listPublished(difficulty: 'Easy' | 'Medium' | 'Hard') {
     orderBy: { slug: 'asc' },
   });
 }
+
+export async function create(slug: string, display: string, color_hex: string) {
+  return prisma.topics.upsert({
+    where: { slug },
+    update: { display, color_hex },
+    create: { slug, display, color_hex },
+    select: { slug: true, display: true, color_hex: true },
+  });
+}

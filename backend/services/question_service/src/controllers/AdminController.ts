@@ -1,7 +1,7 @@
 // src/controllers/AdminController.ts (example)
 import * as Repo from '../repositories/QuestionRepository';
 import { Request, Response } from 'express';
-import { slugifyTitle } from '../utils/slug';
+import { slugify } from '../utils/slug';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
@@ -44,7 +44,7 @@ export async function create(req: Request, res: Response) {
       });
     }
 
-    const id = slugifyTitle(title);
+    const id = slugify(title);
     if (!id)
       return res
         .status(400)

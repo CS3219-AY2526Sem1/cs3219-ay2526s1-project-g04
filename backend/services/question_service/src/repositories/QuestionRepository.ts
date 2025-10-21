@@ -2,7 +2,7 @@
 
 import { prisma } from './prisma';
 import { Prisma, questions as Question } from '@prisma/client';
-import { slugifyTitle } from '../utils/slug';
+import { slugify } from '../utils/slug';
 
 export async function getPublishedById(id: string) {
   return prisma.questions.findFirst({ where: { id, status: 'published' } });
@@ -157,7 +157,7 @@ export async function createDraft(q: {
   topics: string[];
   attachments: unknown[];
 }) {
-  const base = slugifyTitle(q.title);
+  const base = slugify(q.title);
   const MAX_SUFFIX = 50;
 
   for (let n = 0; n <= MAX_SUFFIX; n += 1) {

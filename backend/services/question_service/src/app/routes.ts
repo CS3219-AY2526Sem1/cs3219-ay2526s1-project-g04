@@ -20,6 +20,7 @@ r.post('/select', QuestionController.select);
 r.get('/topics', TopicController.list);
 
 // admin
+r.post('/admin/topics', requireRole('admin'), TopicController.create);
 r.get('/admin/questions', requireRole('admin'), AdminController.list);
 r.post('/admin/questions', requireRole('admin'), AdminController.create);
 r.delete('/admin/questions/:id', requireRole('admin'), AdminController.archive);
