@@ -348,8 +348,8 @@ export async function archive(id: string) {
         title: updated.title,
         body_md: updated.body_md,
         difficulty: updated.difficulty,
-        topics: updated.topics as any, // jsonb
-        attachments: updated.attachments as any,
+        topics: updated.topics as Prisma.InputJsonValue, // jsonb
+        attachments: updated.attachments as Prisma.InputJsonValue,
         status: updated.status, // 'archived'
         published_at: null, // archived snapshot → no publish time
       },
