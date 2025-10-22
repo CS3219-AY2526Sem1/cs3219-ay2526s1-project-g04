@@ -1,3 +1,5 @@
+# include:
+#   - ../../infrastructure/docker-compose.yml
 services:
   postgres:
     image: postgres
@@ -13,7 +15,9 @@ services:
     environment:
       POSTGRES_PASSWORD: example
     ports:
-      - '5433:5432'
+      - "5433:5432"
+    networks:
+      - peerprep-network
 
   adminer:
     image: adminer
@@ -21,13 +25,29 @@ services:
     ports:
       - 8080:8080
 
+    networks:
+      - peerprep-network
+
   collaboration_service:
-    build: .
+    build:
+      context: ../../
+      dockerfile: services/collaboration_service/Dockerfile
+
     restart: always
     depends_on:
       - postgres
+      # - redis
+      # - rabbitmq
     ports:
-      - '4000:4000' # WebSocket server port
+      - "3000:3000"
+    networks:
+      - peerprep-network
+
     environment:
-      DATABASE_URL: postgres://postgres:example@postgres:5432/postgres
-      REDIS_URL: redis://redis:6379 # if using redis
+      - DATABASE_URL=postgres://postgres:example@postgres:5432/postgres
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://admin:rabbitmq123@rabbitmq:5672
+
+networks:
+  peerprep-network:
+    external: true

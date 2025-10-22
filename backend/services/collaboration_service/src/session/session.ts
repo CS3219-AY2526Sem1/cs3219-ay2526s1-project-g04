@@ -11,7 +11,6 @@ export interface UserEntry {
 
 export class Session {
   private users: Record<string, UserEntry> = {};
-  private doc: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   private sessionId: number;
 
   constructor(sessionId: number, userAId: number, userBId: number) {
@@ -22,7 +21,6 @@ export class Session {
       state: USERSTATE.waiting,
     };
 
-    this.doc = {};
     this.sessionId = sessionId;
   }
 
