@@ -267,7 +267,7 @@ export async function pickRandomEligible(filters: {
   excludeIds?: string[];
   recentIds?: string[];
 }) {
-  const clauses: string[] = [`status = 'Published'`];
+  const clauses: string[] = [`status = 'published'`];
   const params: unknown[] = [];
   let i = 1;
 
@@ -288,14 +288,6 @@ export async function pickRandomEligible(filters: {
     params.push(filters.recentIds);
   }
 
-  const sql = `
-    SELECT *
-    FROM questions
-    WHERE ${clauses.join(' AND ')}
-    ORDER BY rand_key
-    LIMIT 50
-  `;
-
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       id: string;
@@ -311,14 +303,11 @@ export async function pickRandomEligible(filters: {
       updated_at: Date;
     }>
   >(`
-  SELECT
-    id, title, body_md, difficulty, topics, attachments,
-    status, version, rand_key, created_at, updated_at
-  FROM questions
-  WHERE status = 'published'
-    -- add your difficulty/topics/exclude filters here
-  ORDER BY rand_key
-  LIMIT 1
+  SELECT *
+    FROM questions
+    WHERE ${clauses.join(' AND ')}
+    ORDER BY rand_key
+    LIMIT 1
 `);
   return rows[0];
 }

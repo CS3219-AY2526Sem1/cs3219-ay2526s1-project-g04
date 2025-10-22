@@ -27,7 +27,7 @@ export async function list(_req: Request, res: Response) {
  * @param res
  */
 export async function listPublished(req: Request, res: Response) {
-  const diff = norm(req.query.difficulty as string | undefined);
+  const diff = norm(req.query['difficulty'] as string | undefined);
   if (!diff)
     return res.status(400).json({ error: 'invalid_or_missing_difficulty' });
   const items = await Repo.listPublished(diff);
