@@ -10,6 +10,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
 dotenv.config();
+console.log('DATABASE_URL:', process.env.DATABASE_URL); // Add this line
 
 const app = express();
 const prisma = new PrismaClient();
@@ -225,9 +226,10 @@ app.post('/api/auth/signup', async (req, res) => {
 
     if (existingUser) {
       if (existingUser.isVerified) {
-        return res
-          .status(409)
-          .json({ message: 'An account with this email is already verified.' });
+        return res.status(409).json({
+          message:
+            'An account with this email is already verified. Log in instead.',
+        });
       } else {
         const otp = crypto.randomInt(100000, 999999).toString();
         const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);

@@ -173,7 +173,7 @@ export default function DashboardPage() {
                             <Card variant="outlined" sx={{ borderRadius: 2, borderColor: '#E5E7EB', mb: 4 }}>
                                 <CardContent>
                                     <Typography sx={{ color: '#6B7280' }}>Total Solved</Typography>
-                                    <Typography variant="h3" sx={{ fontWeight: 800, color: '#4F46E5', my: 1 }}>
+                                    <Typography variant="h3" sx={{ fontWeight: 700, color: '#4F46E5', my: 1 }}>
                                         {summaryStats.totalSolved} Problems
                                     </Typography>
                                     <Stack direction="row" spacing={1}>
