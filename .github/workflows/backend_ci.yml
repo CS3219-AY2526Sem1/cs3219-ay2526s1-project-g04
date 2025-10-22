@@ -32,6 +32,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - uses: actions/setup-node@v5
+      - name: install messager
+        uses: cd shared/messaging && npm i
+      - name: install redis
+        uses: cd shared/redis && npm i
       - name: build collab service
         run: cd services/collaboration_service && npm i && npm run build
       - name: build question service
