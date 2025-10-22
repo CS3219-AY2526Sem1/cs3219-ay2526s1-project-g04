@@ -592,5 +592,4 @@ app.post('/api/auth/list', async (req, res) => {
 /**
  * port
  */
-app.listen(PORT, () => {
-});
+app.listen(PORT, () => {});
