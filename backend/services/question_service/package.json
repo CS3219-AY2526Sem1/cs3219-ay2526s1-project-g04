@@ -19,16 +19,15 @@
   "directories": {
     "doc": "docs"
   },
-  {
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "prisma:gen": "prisma generate",
-    "prisma:pull": "prisma db pull", 
+    "prisma:pull": "prisma db pull",
     "db:recreate": "docker compose exec -T postgres bash -lc \"psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c \\\"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='qs' AND pid <> pg_backend_pid();\\\" -c \\\"DROP DATABASE IF EXISTS qs;\\\" -c \\\"CREATE DATABASE qs;\\\"\"",
-    "db:migrate": "docker compose exec -T postgres bash -lc \"psql -U postgres -d qs -v ON_ERROR_STOP=1 -f - < ./migrations/0001_init.sql\"",
-    "db:seed": "docker compose exec -T postgres bash -lc \"psql -U postgres -d qs -v ON_ERROR_STOP=1 -f - < ./migrations/999_seed_data.sql\"",
+    "db:migrate": "cat ./migrations/0001_init.sql | docker compose exec -T postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f -",
+    "db:seed": "cat ./migrations/999_seed_data.sql | docker compose exec -T postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f -",
     "db:reset": "npm run db:recreate && npm run db:migrate && npm run db:seed",
     "type-check": "tsc --noEmit",
     "lint": "cd ../.. && npm run lint -- services/question_service/src",
@@ -37,8 +36,7 @@
     "format:check": "prettier --check .",
     "test": "echo \"Error: no test specified\" && exit 1",
     "smoke": "tsx scripts/prisma_smoke.ts"
-  }
-}
+  },
   "dependencies": {
     "@prisma/adapter-pg": "^6.17.1",
     "@prisma/client": "^6.17.1",
