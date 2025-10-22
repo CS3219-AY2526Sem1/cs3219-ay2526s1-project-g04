@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/main.ts",
-    "start": "node dist/main.js",
-    "build": "tsc",
+    "start": "node dist/services/collaboration_service/src/main.js",
+    "build": "prisma generate && tsc && tsc-alias",
     "type-check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "cd ../.. && npm run lint -- services/collaboration_service/src "
@@ -30,6 +30,7 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
     "@types/ws": "^8.18.1",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }
