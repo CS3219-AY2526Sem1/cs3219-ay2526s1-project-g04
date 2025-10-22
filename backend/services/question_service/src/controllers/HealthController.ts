@@ -1,3 +1,4 @@
+// src/controllers/health.ts
 import type { Request, Response } from 'express';
 import { prisma } from '../repositories/prisma.js';
 
@@ -17,27 +18,37 @@ function withTimeout<T>(p: Promise<T>, ms: number) {
   });
 }
 
+function errMsg(e: unknown) {
+  return e instanceof Error ? e.message : String(e);
+}
+
+type Check = { ok: boolean; error?: string };
+
+type Checks = { db: Check } & Record<string, Check>;
+
 export async function healthz(_req: Request, res: Response) {
-  // liveness: process is running
+  // Liveness: process is up
   res.json({ ok: true });
 }
 
 export async function readyz(_req: Request, res: Response) {
-  const checks: Record<string, { ok: boolean; error?: string }> = {
+  // Readiness: dependencies reachable
+  const checks: Checks = {
     db: { ok: false },
-    // objectStorage: {ok: false},
+    // s3: {ok: false}
   };
 
-  // db check
   try {
-    await withTimeout(prisma.$queryRaw`SELECT 1`, 1000);
+    // Using executeRaw since we don't care about rows
+    await withTimeout(prisma.$executeRaw`SELECT 1`, 1000);
     checks.db.ok = true;
-  } catch (e: any) {
+  } catch (e) {
     checks.db.ok = false;
-    checks.db.error = e?.message ?? 'unknown';
+    const message = errMsg(e);
+    // Don’t leak internals in production
+    if (process.env['NODE_ENV'] !== 'production') checks.db.error = message;
   }
 
   const allOk = Object.values(checks).every((c) => c.ok);
-  const status = allOk ? 200 : 503;
-  res.status(status).json({ ok: allOk, checks });
+  res.status(allOk ? 200 : 503).json({ ok: allOk, checks });
 }
