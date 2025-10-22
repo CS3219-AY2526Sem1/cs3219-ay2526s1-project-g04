@@ -30,7 +30,8 @@
     "format:check": "prettier --check .",
     "prisma:gen": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "smoke": "tsx scripts/prisma_smoke.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^6.17.1",

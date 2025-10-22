@@ -5,9 +5,12 @@ const prisma = new PrismaClient();
 
 async function main() {
   // quick connectivity check
-  const [{ version }] = await prisma.$queryRawUnsafe<{ version: string }[]>(
-    'select version() as version',
-  );
+  const version =
+    (
+      await prisma.$queryRawUnsafe<Array<{ version: string }>>(
+        'select version() as version',
+      )
+    )[0]?.version ?? 'unknown';
   console.log('Connected to:', version);
 
   // optional: check your "questions" table (adjust to your model name)
