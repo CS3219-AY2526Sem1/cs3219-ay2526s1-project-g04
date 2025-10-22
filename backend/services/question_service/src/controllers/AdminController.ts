@@ -20,11 +20,32 @@ function isStringArray(x: unknown): x is string[] {
   return Array.isArray(x) && x.every((i) => typeof i === 'string');
 }
 
+function parseTopics(x: unknown): string[] | undefined {
+  if (typeof x === 'string')
+    return x
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  if (Array.isArray(x)) return x.map(String);
+  return undefined;
+}
+
+function parseDifficulty(x: unknown): Difficulty | undefined {
+  const d = normalizeDifficulty(x);
+  return d ?? undefined;
+}
+
+function parseStr(x: unknown): string | undefined {
+  return typeof x === 'string' ? x : undefined;
+}
+
+function parseNum(x: unknown): number | undefined {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /**
  * POST /admin/questions
- * Creates a DRAFT question
- * @param req
- * @param res
  */
 export async function create(req: Request, res: Response) {
   try {
@@ -66,9 +87,6 @@ export async function create(req: Request, res: Response) {
 }
 /**
  * PATCH /admin/questions/:id
- * Updates a DRAFT question (partial). Server ignores immutable fields,
- * @param req
- * @param res
  */
 export async function update(req: Request, res: Response) {
   try {
@@ -134,15 +152,27 @@ export async function publish(req: Request, res: Response) {
  * GET /admin/questions
  */
 export async function list(req: Request, res: Response) {
-  const { difficulty, topics, q, page, size } = req.query;
+  const args: {
+    difficulty?: Difficulty;
+    topics?: string[];
+    q?: string;
+    page?: number;
+    size?: number;
+  } = {};
 
-  const data = await Repo.listAll({
-    difficulty,
-    topics: typeof topics === 'string' ? (topics as string).split(',') : topics,
-    q,
-    page: Number(page),
-    size: Number(size),
-  });
+  const d = parseDifficulty(req.query['difficulty']);
+  const t = parseTopics(req.query['topics']);
+  const q = parseStr(req.query['q']);
+  const p = parseNum(req.query['page']);
+  const s = parseNum(req.query['size']);
+
+  if (d !== undefined) args.difficulty = d;
+  if (t !== undefined) args.topics = t;
+  if (q !== undefined) args.q = q;
+  if (p !== undefined) args.page = p;
+  if (s !== undefined) args.size = s;
+
+  const data = await Repo.listAll(args);
   return res.json({ items: data });
 }
 
@@ -150,7 +180,10 @@ export async function list(req: Request, res: Response) {
  * DELETE /admin/questions/:id
  */
 export async function archive(req: Request, res: Response) {
-  const q = await Repo.archive(req.params.id);
+  const id = String(req.params['id'] ?? '');
+  if (!id) return res.status(400).json({ error: 'id param required' });
+
+  const q = await Repo.archive(id);
   if (!q) return res.status(404).json({ error: 'not_found_or_not_published' });
 
   return res.json(q);
@@ -161,7 +194,10 @@ export async function archive(req: Request, res: Response) {
  */
 export async function getById(req: Request, res: Response) {
   try {
-    const q = await Repo.getQuestionById(req.params.id);
+    const id = String(req.params['id'] ?? '');
+    if (!id) return res.status(400).json({ error: 'id param required' });
+
+    const q = await Repo.getQuestionById(id);
     if (!q) return res.status(404).json({ error: 'not found' });
     return res.json(q);
   } catch {
