@@ -3,9 +3,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { buildApp } from './app/ExpressApp';
-import { log } from './utils/logger';
-import { prisma } from './repositories/prisma';
+import { buildApp } from './app/ExpressApp.js';
+import { log } from './utils/logger.js';
+import { prisma } from './repositories/prisma.js';
 import http from 'http';
 
 const port = Number(process.env.PORT || 3000);
