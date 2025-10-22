@@ -1,18 +1,56 @@
 // src/controllers/QuestionController.ts
 
-import { Request, Response } from 'express';
-import * as Service from '../services/QuestionService';
-import { selectOne } from '../services/SelectionService';
-import * as Repo from '../repositories/QuestionRepository';
+import type { Request, Response } from 'express';
+import * as Service from '../services/QuestionService.js';
+import { selectOne } from '../services/SelectionService.js';
+import * as Repo from '../repositories/QuestionRepository.js';
+
+// types
+type Difficulty = 'Easy' | 'Medium' | 'Hard';
+
+// helpers
+function normalizeDifficulty(d: unknown): Difficulty | null {
+  if (typeof d !== 'string') return null;
+  const v = d.toLowerCase();
+  if (v === 'easy') return 'Easy';
+  if (v === 'medium') return 'Medium';
+  if (v === 'hard') return 'Hard';
+  return null;
+}
+
+function parseTopics(x: unknown): string[] | undefined {
+  if (typeof x === 'string')
+    return x
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  if (Array.isArray(x)) return x.map(String);
+  return undefined;
+}
+
+function parseDifficulty(x: unknown): Difficulty | undefined {
+  const d = normalizeDifficulty(x);
+  return d ?? undefined;
+}
+
+function parseStr(x: unknown): string | undefined {
+  return typeof x === 'string' ? x : undefined;
+}
+
+function parseNum(x: unknown): number | undefined {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /**
  * GET /questions/:id
- * Gets a question from repository by its ID
- * @param req
- * @param res
  */
 export async function getById(req: Request, res: Response) {
   try {
-    const q = await Repo.getPublishedById(req.params.id);
+    const id = String(req.params['id'] ?? '');
+    if (!id) return res.status(400).json({ error: 'id param required' });
+
+    const q = await Repo.getPublishedById(id);
     if (!q) return res.status(404).json({ error: 'not found' });
     return res.json(q);
   } catch {
@@ -22,41 +60,45 @@ export async function getById(req: Request, res: Response) {
 
 /**
  * GET /questions
- * Gets a list of published questions
- * @param req
- * @param res
  */
 export async function list(req: Request, res: Response) {
-  const { difficulty, topics, q, page, size } = req.query;
+  const args: {
+    difficulty?: Difficulty;
+    topics?: string[];
+    q?: string;
+    page?: number;
+    size?: number;
+  } = {};
 
-  const data = await Service.listPublished({
-    difficulty,
-    topics: typeof topics === 'string' ? (topics as string).split(',') : topics,
-    q,
-    page: Number(page),
-    size: Number(size),
-  });
+  const d = parseDifficulty(req.query['difficulty']);
+  const t = parseTopics(req.query['topics']);
+  const qq = parseStr(req.query['q']);
+  const p = parseNum(req.query['page']);
+  const s = parseNum(req.query['size']);
+
+  if (d !== undefined) args.difficulty = d;
+  if (t !== undefined) args.topics = t;
+  if (qq !== undefined) args.q = qq;
+  if (p !== undefined) args.page = p;
+  if (s !== undefined) args.size = s;
+
+  const data = await Service.listPublished(args);
   return res.json({ items: data });
 }
 
 /**
  * POST /select
- * Selects a question
- * @param req
- * @param res
  */
 export async function select(req: Request, res: Response) {
-  const { session_id, difficulty, topics, exclude_ids, recent_ids } =
-    req.body || {};
+  const { matching_id, difficulty, topics, recent_ids } = req.body || {};
 
-  if (!session_id)
-    return res.status(400).json({ error: 'session_id required' });
+  if (!matching_id)
+    return res.status(400).json({ error: 'matching_id required' });
 
   const result = await selectOne({
-    session_id,
+    matching_id,
     difficulty,
     topics,
-    exclude_ids,
     recent_ids,
   });
   if (!result.question_id)

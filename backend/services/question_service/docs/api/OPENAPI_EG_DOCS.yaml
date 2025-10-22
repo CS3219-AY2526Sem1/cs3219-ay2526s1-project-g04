@@ -349,6 +349,20 @@ components:
           pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
       required: [slug, color_hex]
 
+    TopicCreate:
+      type: object
+      properties:
+        display:
+          type: string
+          description: Topic name to be displayed
+          example: Arrays
+        color_hex:
+          type: string
+          description: Hex color for frontend rendering
+          example: '#3B82F6'
+          pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
+      required: [display, color_hex]
+
 security:
   - bearerAuth: []
 
@@ -488,9 +502,9 @@ paths:
 
     post:
       tags: [Admin]
-      summary: Create a question (draft) — if id omitted, server generates slug
+      summary: Create a question (draft)
       description: |
-        Creates a draft question. If 'id' is omitted, the server generates a canonical slug from 'title' and ensures uniqueness.
+        Creates a draft question.
       requestBody:
         required: true
         content:
@@ -705,7 +719,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TopicTag'
+              $ref: '#/components/schemas/TopicCreate'
       responses:
         '201':
           description: Created
@@ -847,7 +861,7 @@ paths:
   /readyz:
     get:
       tags: [Health]
-      summary: Readiness probe (DB/AMQP reachable)
+      summary: Readiness probe (DB reachable)
       security: []
       responses:
         '200':
@@ -926,9 +940,6 @@ paths:
       tags: [Read]
       summary: List topic tags (slug + color)
       description: Returns a paginated list of topic tags for UI rendering.
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Size'
       responses:
         '200':
           description: OK

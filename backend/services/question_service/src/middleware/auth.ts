@@ -1,6 +1,6 @@
 // src/middleware/auth.ts (mvp gate for admin)
 
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 
 export function requireRole(role: 'admin' | 'service') {
   return (req: Request, res: Response, next: NextFunction) => {

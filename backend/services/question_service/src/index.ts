@@ -3,12 +3,12 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
-import { buildApp } from './app/ExpressApp';
-import { log } from './utils/logger';
-import { prisma } from './repositories/prisma';
+import { buildApp } from './app/ExpressApp.js';
+import { log } from './utils/logger.js';
+import { prisma } from './repositories/prisma.js';
 import http from 'http';
 
-const port = Number(process.env.PORT || 3000);
+const port = Number(process.env['PORT'] || 3000);
 
 async function main() {
   const app = buildApp();
@@ -24,9 +24,9 @@ async function main() {
     log.info(
       {
         port,
-        env: process.env.NODE_ENV || 'development',
-        issuer: process.env.JWT_ISSUER,
-        jwks: process.env.JWKS_URL,
+        env: process.env['NODE_ENV'] || 'development',
+        issuer: process.env['JWT_ISSUER'],
+        jwks: process.env['JWKS_URL'],
       },
       'Question Service listening',
     );

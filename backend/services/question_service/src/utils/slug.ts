@@ -1,6 +1,6 @@
 // src/utils/slug.ts
 
-export function slugifyTitle(title: string) {
+export function slugify(title: string) {
   return (
     title
       .normalize('NFKD')

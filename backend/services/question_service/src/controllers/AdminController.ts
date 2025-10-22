@@ -1,7 +1,7 @@
 // src/controllers/AdminController.ts (example)
-import * as Repo from '../repositories/QuestionRepository';
-import { Request, Response } from 'express';
-import { slugifyTitle } from '../utils/slug';
+import * as Repo from '../repositories/QuestionRepository.js';
+import type { Request, Response } from 'express';
+import { slugify } from '../utils/slug.js';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
@@ -20,11 +20,32 @@ function isStringArray(x: unknown): x is string[] {
   return Array.isArray(x) && x.every((i) => typeof i === 'string');
 }
 
+function parseTopics(x: unknown): string[] | undefined {
+  if (typeof x === 'string')
+    return x
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+  if (Array.isArray(x)) return x.map(String);
+  return undefined;
+}
+
+function parseDifficulty(x: unknown): Difficulty | undefined {
+  const d = normalizeDifficulty(x);
+  return d ?? undefined;
+}
+
+function parseStr(x: unknown): string | undefined {
+  return typeof x === 'string' ? x : undefined;
+}
+
+function parseNum(x: unknown): number | undefined {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 /**
  * POST /admin/questions
- * Creates a DRAFT question
- * @param req
- * @param res
  */
 export async function create(req: Request, res: Response) {
   try {
@@ -44,7 +65,7 @@ export async function create(req: Request, res: Response) {
       });
     }
 
-    const id = slugifyTitle(title);
+    const id = slugify(title);
     if (!id)
       return res
         .status(400)
@@ -66,9 +87,6 @@ export async function create(req: Request, res: Response) {
 }
 /**
  * PATCH /admin/questions/:id
- * Updates a DRAFT question (partial). Server ignores immutable fields,
- * @param req
- * @param res
  */
 export async function update(req: Request, res: Response) {
   try {
@@ -127,5 +145,62 @@ export async function publish(req: Request, res: Response) {
     res.json(q);
   } catch {
     res.status(500).json({ error: 'internal_error' });
+  }
+}
+
+/**
+ * GET /admin/questions
+ */
+export async function list(req: Request, res: Response) {
+  const args: {
+    difficulty?: Difficulty;
+    topics?: string[];
+    q?: string;
+    page?: number;
+    size?: number;
+  } = {};
+
+  const d = parseDifficulty(req.query['difficulty']);
+  const t = parseTopics(req.query['topics']);
+  const q = parseStr(req.query['q']);
+  const p = parseNum(req.query['page']);
+  const s = parseNum(req.query['size']);
+
+  if (d !== undefined) args.difficulty = d;
+  if (t !== undefined) args.topics = t;
+  if (q !== undefined) args.q = q;
+  if (p !== undefined) args.page = p;
+  if (s !== undefined) args.size = s;
+
+  const data = await Repo.listAll(args);
+  return res.json({ items: data });
+}
+
+/**
+ * DELETE /admin/questions/:id
+ */
+export async function archive(req: Request, res: Response) {
+  const id = String(req.params['id'] ?? '');
+  if (!id) return res.status(400).json({ error: 'id param required' });
+
+  const q = await Repo.archive(id);
+  if (!q) return res.status(404).json({ error: 'not_found_or_not_published' });
+
+  return res.json(q);
+}
+
+/**
+ * GET /admin/questions/:id
+ */
+export async function getById(req: Request, res: Response) {
+  try {
+    const id = String(req.params['id'] ?? '');
+    if (!id) return res.status(400).json({ error: 'id param required' });
+
+    const q = await Repo.getQuestionById(id);
+    if (!q) return res.status(404).json({ error: 'not found' });
+    return res.json(q);
+  } catch {
+    return res.status(500).json({ error: 'internal_error' });
   }
 }
