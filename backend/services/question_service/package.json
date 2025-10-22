@@ -2,29 +2,35 @@
   "name": "question_service",
   "version": "1.0.0",
   "description": "Microservice to manage and serve coding interview questions.",
+  "author": "Chin Yi Ling",
+  "license": "ISC",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "repository": {
     "type": "git",
-    "url": "tized on read; images via signed URLs"
+    "url": "https://github.com/CS3219-AY2526Sem1/cs3219-ay2526s1-project-g04.git"
   },
-  "license": "ISC",
-  "author": "Chin Yi Ling",
-  "type": "commonjs",
-  "main": "- Selection API (idempotent by session_id)",
   "directories": {
     "doc": "docs"
   },
   "scripts": {
     "dev": "tsx --watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "build": "tsc",
     "type-check": "tsc --noEmit",
-    "lint": "cd ../.. && npm run lint -- services/question_service/src ",
+    "lint": "cd ../.. && npm run lint -- services/question_service/src",
     "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prisma:gen": "npx prisma generate",
-    "prisma:migrate": "npx prisma migrate dev --name init"
+    "prisma:gen": "prisma generate",
+    "prisma:migrate": "prisma migrate dev --name init",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^6.17.1",

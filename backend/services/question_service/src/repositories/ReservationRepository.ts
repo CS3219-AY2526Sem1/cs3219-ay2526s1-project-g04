@@ -1,6 +1,6 @@
 // src/repositories/ReservationRepository.ts
 
-import { prisma } from './prisma';
+import { prisma } from './prisma.js';
 
 // retrieve the currently active reservation's question id for the session, only if it has not expired
 export async function getReservation(matchingId: string) {

@@ -1,6 +1,5 @@
-import { Request, Response } from 'express';
-import { prisma } from '../repositories/prisma';
-import { resolve } from 'path';
+import type { Request, Response } from 'express';
+import { prisma } from '../repositories/prisma.js';
 
 function withTimeout<T>(p: Promise<T>, ms: number) {
   return new Promise<T>((resolve, reject) => {

@@ -1,7 +1,7 @@
 // src/controllers/AdminController.ts (example)
-import * as Repo from '../repositories/QuestionRepository';
-import { Request, Response } from 'express';
-import { slugify } from '../utils/slug';
+import * as Repo from '../repositories/QuestionRepository.js';
+import type { Request, Response } from 'express';
+import { slugify } from '../utils/slug.js';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';

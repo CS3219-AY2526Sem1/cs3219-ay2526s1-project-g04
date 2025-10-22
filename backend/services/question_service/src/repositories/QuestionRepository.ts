@@ -1,8 +1,9 @@
 // src/repositories/QuestionRepository.ts
 
-import { prisma } from './prisma';
-import { Prisma, questions as Question } from '@prisma/client';
-import { slugify } from '../utils/slug';
+import { prisma } from './prisma.js';
+import { Prisma } from '@prisma/client';
+import type { questions as Question } from '@prisma/client';
+import { slugify } from '../utils/slug.js';
 
 export async function getPublishedById(id: string) {
   return prisma.questions.findFirst({ where: { id, status: 'published' } });

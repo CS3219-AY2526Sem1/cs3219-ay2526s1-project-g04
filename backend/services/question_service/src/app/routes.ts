@@ -1,11 +1,11 @@
 // app/routes.ts
 
 import { Router } from 'express';
-import * as QuestionController from '../controllers/QuestionController';
-import * as AdminController from '../controllers/AdminController';
-import * as TopicController from '../controllers/TopicController';
-import * as HealthController from '../controllers/HealthController';
-import { requireRole } from '../middleware/auth';
+import * as QuestionController from '../controllers/QuestionController.js';
+import * as AdminController from '../controllers/AdminController.js';
+import * as TopicController from '../controllers/TopicController.js';
+import * as HealthController from '../controllers/HealthController.js';
+import { requireRole } from '../middleware/auth.js';
 
 const r = Router();
 

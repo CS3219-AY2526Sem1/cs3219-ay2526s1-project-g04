@@ -1,7 +1,7 @@
 // src/services/QuestionService.ts
 
-import * as Repo from '../repositories/QuestionRepository';
-import { toSafeHtml } from './MarkdownService';
+import * as Repo from '../repositories/QuestionRepository.js';
+import { toSafeHtml } from './MarkdownService.js';
 
 export async function getPublishedWithHtml(id: string) {
   const q = await Repo.getPublishedById(id);

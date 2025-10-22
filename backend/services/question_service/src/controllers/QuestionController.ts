@@ -1,9 +1,9 @@
 // src/controllers/QuestionController.ts
 
-import { Request, Response } from 'express';
-import * as Service from '../services/QuestionService';
-import { selectOne } from '../services/SelectionService';
-import * as Repo from '../repositories/QuestionRepository';
+import type { Request, Response } from 'express';
+import * as Service from '../services/QuestionService.js';
+import { selectOne } from '../services/SelectionService.js';
+import * as Repo from '../repositories/QuestionRepository.js';
 /**
  * GET /questions/:id
  * Gets a question from repository by its ID

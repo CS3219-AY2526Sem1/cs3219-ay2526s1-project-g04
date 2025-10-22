@@ -1,7 +1,7 @@
 // src/services/SelectionService.ts
 
-import * as Repo from '../repositories/QuestionRepository';
-import * as Reservations from '../repositories/ReservationRepository';
+import * as Repo from '../repositories/QuestionRepository.js';
+import * as Reservations from '../repositories/ReservationRepository.js';
 
 const RES_TTL = 10 * 60;
 

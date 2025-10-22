@@ -1,7 +1,7 @@
 // src/controllers/TopicController.ts
-import * as Repo from '../repositories/TopicRepository';
-import { Request, Response } from 'express';
-import { slugify } from '../utils/slug';
+import * as Repo from '../repositories/TopicRepository.js';
+import type { Request, Response } from 'express';
+import { slugify } from '../utils/slug.js';
 
 const norm = (d?: string) => {
   if (!d) return undefined;
