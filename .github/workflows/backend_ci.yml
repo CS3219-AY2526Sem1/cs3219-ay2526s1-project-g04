@@ -25,20 +25,3 @@ jobs:
         run: npm run lint -- services/question_service/src
       - name: lint matching service
         run: npm run lint -- services/matching_service/src
-
-  build-services:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
-      - name: install messager
-        run: cd shared/messaging && npm i
-      - name: install redis
-        run: cd shared/redis && npm i
-      - name: build collab service
-        run: cd services/collaboration_service && npm i && npm run build
-      - name: build question service
-        run: cd services/question_service && npm i && npm run build
-      - name: build user service
-        run: cd services/user_service && npm i && npm run build
