@@ -50,7 +50,7 @@ export async function getById(req: Request, res: Response) {
     const id = String(req.params['id'] ?? '');
     if (!id) return res.status(400).json({ error: 'id param required' });
 
-    const q = await Repo.getPublishedById(id);
+    const q = await Service.getPublishedWithHtml(id);
     if (!q) return res.status(404).json({ error: 'not found' });
     return res.json(q);
   } catch {
