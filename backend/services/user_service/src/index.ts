@@ -169,7 +169,8 @@ const transporter = nodemailer.createTransport({
 
 // send OTP emails
 async function sendOtpEmail(email: string, otp: string) {
-  const productIconUrl = 'https://i.ibb.co/WWJ1yBVP/peerprep-banner.png';
+  const productIconUrl =
+    'https://s3.ap-southeast-2.amazonaws.com/peerprep.prep/peerprep_banner.png';
 
   await transporter.sendMail({
     from: '"PeerPrep" <no-reply@peerprep.com>',
@@ -591,6 +592,4 @@ app.post('/api/auth/list', async (req, res) => {
 /**
  * port
  */
-app.listen(PORT, () => {
-  console.log(`Backend server is running on http://localhost:${PORT}`);
-});
+app.listen(PORT, () => {});
