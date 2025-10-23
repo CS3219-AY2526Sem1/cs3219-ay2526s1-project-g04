@@ -3,7 +3,6 @@
 import type { Request, Response } from 'express';
 import * as Service from '../services/QuestionService.js';
 import { selectOne } from '../services/SelectionService.js';
-import * as Repo from '../repositories/QuestionRepository.js';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';

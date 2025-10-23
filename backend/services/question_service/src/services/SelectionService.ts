@@ -2,7 +2,18 @@
 import * as Repo from '../repositories/QuestionRepository.js';
 import * as Reservations from '../repositories/ReservationRepository.js';
 
+type Difficulty = 'Easy' | 'Medium' | 'Hard';
+
 const RES_TTL = 10 * 60; // seconds
+
+function toDifficulty(input?: string): Difficulty | undefined {
+  if (!input) return undefined;
+  const s = input.trim().toLowerCase();
+  if (s === 'easy') return 'Easy';
+  if (s === 'medium') return 'Medium';
+  if (s === 'hard') return 'Hard';
+  return undefined;
+}
 
 export async function selectOne(body: {
   matching_id: string;
@@ -14,12 +25,13 @@ export async function selectOne(body: {
   const existing = await Reservations.getReservation(body.matching_id);
   if (existing) return { question_id: existing };
 
-  // Omit undefined keys to satisfy exactOptionalPropertyTypes
-  const args = {
-    ...(body.difficulty !== undefined ? { difficulty: body.difficulty } : {}),
-    ...(body.topics !== undefined ? { topics: body.topics } : {}),
-    ...(body.recent_ids !== undefined ? { recentIds: body.recent_ids } : {}),
-  } as const;
+  const args: Parameters<typeof Repo.pickRandomEligible>[0] = {};
+
+  const normalized = toDifficulty(body.difficulty);
+  if (normalized) args.difficulty = normalized;
+  if (body.topics && body.topics.length) args.topics = body.topics;
+  if (body.recent_ids && body.recent_ids.length)
+    args.recentIds = body.recent_ids;
 
   const choice = await Repo.pickRandomEligible(args);
 
