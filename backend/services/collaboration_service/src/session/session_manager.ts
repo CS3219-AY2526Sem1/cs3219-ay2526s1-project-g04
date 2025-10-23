@@ -84,13 +84,10 @@ export class SessionManager {
     ) {
       setInterval(async () => {
         try {
-          // 1️⃣ Load the Yjs document state from PostgreSQL
           const ydoc = await pgdb.getYDoc(docName);
 
-          // 2️⃣ Extract the Y.Text type named 'monaco' (if that’s what you used)
           const yText = ydoc.getText('monaco');
 
-          // 3️⃣ Print the current text content
           console.log(
             `\n[Y.PostgreSQL Snapshot @${new Date().toLocaleTimeString()}]`,
           );
