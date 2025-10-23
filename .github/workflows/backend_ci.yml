@@ -40,5 +40,7 @@ jobs:
         run: cd services/collaboration_service && npm i && npm run build
       - name: build question service
         run: cd services/question_service && npm i && npm run build
+      - name: build matching service
+        run: cd services/matching_service && npm i && npm run build
       - name: build user service
         run: cd services/user_service && npm i && npm run build
