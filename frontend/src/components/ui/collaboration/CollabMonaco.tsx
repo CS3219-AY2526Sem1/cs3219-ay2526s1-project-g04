@@ -21,8 +21,8 @@ export default function CollabMonaco() {
   useEffect(() => {
     const doc = new Y.Doc();
 
-    const sessionId = '30'; // dynamically get this from your app
-    const userId = '4'; // current user's id
+    const sessionId = '40'; // dynamically get this from your app
+    const userId = '5'; // current user's id
     const wsUrl = `ws://localhost:3000/`;
     const provider = new WebsocketProvider(
       wsUrl,

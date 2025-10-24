@@ -43,9 +43,15 @@ export class PostgresPrisma {
           OR: [{ UserAId: userId }, { UserBId: userId }],
         },
       },
-      include: {
-        codeDocument: true,
-        users: true,
+      select: {
+        id: true,
+        questionId: true,
+        users: {
+          select: {
+            UserAId: true,
+            UserBId: true,
+          },
+        },
       },
     });
   }
