@@ -5,7 +5,7 @@ info:
   description: |
     Microservice to manage and serve coding interview questions.
     - Read APIs for users/services
-    - Selection API (idempotent by session_id)
+    - Selection API (idempotent by matching_id)
     - Admin CRUD + publish/versioning
     - Markdown sanitized on read; images via signed URLs
 
@@ -259,7 +259,7 @@ components:
         seed:
           type: number
           description: Deterministic selection seed (testing)
-      required: [session_id]
+      required: [matching_id]
 
     SignUploadRequest:
       type: object
@@ -889,7 +889,7 @@ paths:
       tags: [Selection]
       summary: Select one eligible question for a session (idempotent)
       description: |
-        Returns one **matching, published** question. Idempotent for the same `session_id` for 10 minutes.
+        Returns one **matching, published** question. Idempotent for the same `matching_id` for 10 minutes.
         Requires role `service` (or `admin`).
       requestBody:
         required: true
@@ -900,7 +900,7 @@ paths:
             examples:
               basic:
                 value:
-                  session_id: 'sess-123'
+                  matching_id: 'sess-123'
                   difficulty: 'medium'
                   topics: ['graphs']
                   exclude_ids: ['two-sum']

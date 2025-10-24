@@ -126,7 +126,7 @@ export async function listAll(opts: {
 
   const sql = `
     SELECT id, title, body_md, difficulty, topics, attachments,
-         status, version, rand_key, created_at, updated_at
+         status, version, created_at, updated_at
     FROM questions
     WHERE ${clauses.join(' AND ')}
     ORDER BY updated_at DESC
@@ -173,7 +173,7 @@ export async function createDraft(q: {
             q.difficulty as unknown as Prisma.questionsCreateInput['difficulty'],
           topics: q.topics as unknown as Prisma.InputJsonValue,
           attachments: q.attachments as unknown as Prisma.InputJsonValue,
-          status: 'Draft',
+          status: 'draft',
           version: 1,
         },
       });
@@ -215,12 +215,13 @@ export async function publish(id: string) {
       .$queryRawUnsafe<Question[]>(
         `
         UPDATE questions
-        SET status = 'Published',
+        SET status = 'published',
             version = version + 1,
             updated_at = now(),
             rand_key = random()
         WHERE id = $1
-        RETURNING *
+        RETURNING id, title, body_md, difficulty, topics, attachments,
+         status, version, created_at, updated_at
         `,
         id,
       )
@@ -262,7 +263,7 @@ export async function publish(id: string) {
 }
 
 export async function pickRandomEligible(filters: {
-  difficulty?: string;
+  difficulty?: 'Easy' | 'Medium' | 'Hard';
   topics?: string[];
   excludeIds?: string[];
   recentIds?: string[];
@@ -288,6 +289,15 @@ export async function pickRandomEligible(filters: {
     params.push(filters.recentIds);
   }
 
+  const sql = `
+    SELECT id, title, body_md, difficulty, topics, attachments,
+         status, version, created_at, updated_at
+    FROM questions
+    WHERE ${clauses.length ? clauses.join(' AND ') : 'TRUE'}
+    ORDER BY rand_key
+    LIMIT 1
+  `;
+
   const rows = await prisma.$queryRawUnsafe<
     Array<{
       id: string;
@@ -302,13 +312,8 @@ export async function pickRandomEligible(filters: {
       created_at: Date;
       updated_at: Date;
     }>
-  >(`
-  SELECT *
-    FROM questions
-    WHERE ${clauses.join(' AND ')}
-    ORDER BY rand_key
-    LIMIT 1
-`);
+  >(sql, ...params);
+
   return rows[0];
 }
 
