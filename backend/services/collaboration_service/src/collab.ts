@@ -73,8 +73,8 @@ export class Collab {
         });
       },
 
-      writeState: async (docName, ydoc) => {
-        console.log(`[y-postgres] writeState called for ${docName}`);
+      writeState: async (docName) => {
+        console.log(`[y-postgres] writeState called for ${docName}}`);
         return Promise.resolve();
       },
     });
