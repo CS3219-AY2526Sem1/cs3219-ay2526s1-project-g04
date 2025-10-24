@@ -139,7 +139,7 @@ The following are the data structures in Redis used by the matching service:
      - `topics` (_list of chosen topics_)
      - `last_seen = now`
      - `joinedTimestamp = now`
-   - New job of `{ 'match_user', 'userId' }` is pushed into `entry_queue`.
+   - New job of `{ 'match_user', userId, joinedTimestamp }` is pushed into `entry_queue`.
    - _If the user already exists in `status_hset`, the match request is rejected._
 
 2. **Job Queue Handling**
@@ -150,7 +150,7 @@ The following are the data structures in Redis used by the matching service:
    {
        job: 'match_user';
        userId : string;
-       userData: HashData;
+       joinedTimestamp: number;
    }
    ```
 
@@ -160,6 +160,7 @@ The following are the data structures in Redis used by the matching service:
    {
        job: 'clear_user';
        userId: string;
+       joinedTimestamp: number;
        userData: HashData;
    }
    ```
@@ -174,8 +175,14 @@ The following are the data structures in Redis used by the matching service:
 
 4. **Matching a User**
    - Matching Worker pops `userId` from the `entry_queue` and attempts to match that user.
-   - Matching Worker will first check the eligibility of the user (i.e. whether it should handle the user): - `status == waiting`. - User not disconnected/cancelled. - `joinedTimestamp` matches the one in the job. - TTL > 10 seconds remaining (to ensure enough time to complete matching job).
-     If valid, sets the user's `status = 'matching'` and attempts to find a match.
+   - Matching Worker will first check the eligibility of the user (i.e. whether it should handle the user):
+     - `status == waiting`.
+     - User not disconnected/cancelled.
+     - `joinedTimestamp` matches the one in the job.
+     - TTL > 10 seconds remaining (to ensure enough time to complete matching job).
+
+     _If valid, sets the user's `status = 'matching'` and attempts to find a match._
+
    - Matching service will check `matching_pool[difficulty][topic]` queues and get a set of potential matches, `potential_matches`.
      - If `potential_matches` is empty (i.e. no match), add the user to relevant queues in the `matching_pool` and the `fcfs_queue`.
    - If there are one or more users in `potential_matches`, pick the earliest user in `fcfs_queue` and pair them if a `questionId` can be returned for their list of common topics.
