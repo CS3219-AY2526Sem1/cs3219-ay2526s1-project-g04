@@ -6,5 +6,12 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - peerprep-network
+
 volumes:
   redis_data:
+
+networks:
+  peerprep-network:
+    external: true
