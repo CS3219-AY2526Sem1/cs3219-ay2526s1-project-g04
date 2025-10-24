@@ -1,18 +1,69 @@
 {
   "name": "question_service",
   "version": "1.0.0",
-  "description": "question service for peerprep",
-  "main": "index.js",
+  "description": "Microservice to manage and serve coding interview questions.",
+  "author": "Chin Yi Ling",
+  "license": "ISC",
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CS3219-AY2526Sem1/cs3219-ay2526s1-project-g04.git"
+  },
   "directories": {
     "doc": "docs"
   },
   "scripts": {
+    "dev": "tsx --watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "prisma:gen": "prisma generate",
+    "prisma:pull": "prisma db pull",
+    "db:recreate": "docker compose exec -T postgres bash -lc \"psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c \\\"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='qs' AND pid <> pg_backend_pid();\\\" -c \\\"DROP DATABASE IF EXISTS qs;\\\" -c \\\"CREATE DATABASE qs;\\\"\"",
+    "db:migrate": "cat ./migrations/0001_init.sql | docker compose exec -T postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f -",
+    "db:seed": "cat ./migrations/999_seed_data.sql | docker compose exec -T postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f -",
+    "db:reset": "npm run db:recreate && npm run db:migrate && npm run db:seed",
+    "type-check": "tsc --noEmit",
+    "lint": "cd ../.. && npm run lint -- services/question_service/src",
+    "lint:fix": "eslint --fix .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "cd ../.. && npm run lint -- services/collaboration_service/src "
+    "smoke": "tsx scripts/prisma_smoke.ts"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "express": "^5.1.0"
+    "@prisma/adapter-pg": "^6.17.1",
+    "@prisma/client": "^6.17.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-jwt": "^8.5.1",
+    "helmet": "^8.1.0",
+    "jwks-rsa": "^3.2.0",
+    "marked": "^16.4.0",
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3",
+    "sanitize-html": "^2.17.0",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@tsconfig/node22": "^22.0.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.7.0",
+    "@types/sanitize-html": "^2.16.0",
+    "eslint": "^9.37.0",
+    "eslint-plugin-perfectionist": "^4.15.1",
+    "prettier": "^3.6.2",
+    "prisma": "^6.17.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
   }
 }

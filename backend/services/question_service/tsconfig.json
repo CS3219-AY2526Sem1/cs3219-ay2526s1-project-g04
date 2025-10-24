@@ -1,0 +1,37 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "rootDirs": ["./src", "./scripts"],
+
+    "module": "nodenext",
+    "target": "esnext",
+    "types": ["node"],
+
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noPropertyAccessFromIndexSignature": true,
+
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*.ts", "scripts/**/*.ts"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "../../shared/**/tests/**",
+    "../../shared/**/dist/**",
+    "../../shared/**/node_modules/**"
+  ]
+}
