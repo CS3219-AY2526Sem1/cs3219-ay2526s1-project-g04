@@ -1,0 +1,3 @@
+include:
+  - broker/docker-compose.yml
+  - redis/docker-compose.yml

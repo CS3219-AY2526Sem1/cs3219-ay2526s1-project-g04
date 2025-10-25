@@ -1,0 +1,17 @@
+{
+  "name": "message_broker_service",
+  "version": "1.0.0",
+  "description": "Async communications between services",
+  "type": "module",
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.2"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.2",
+    "@types/amqplib": "^0.10.7",
+    "@types/node": "^24.5.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.2"
+  }
+}

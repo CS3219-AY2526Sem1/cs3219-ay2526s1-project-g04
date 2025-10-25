@@ -1,0 +1,9 @@
+services/collaboration_service/node_modules
+services/collaboration_service/dist
+services/collaboration_service/.git
+services/collaboration_service/Dockerfile
+
+node_modules
+dist
+.git
+Dockerfile

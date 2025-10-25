@@ -1,0 +1,14 @@
+services:
+  frontend:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+
+    ports:
+      - "3100:3100"
+    networks:
+      - peerprep-network
+
+networks:
+  peerprep-network:
+    external: true
