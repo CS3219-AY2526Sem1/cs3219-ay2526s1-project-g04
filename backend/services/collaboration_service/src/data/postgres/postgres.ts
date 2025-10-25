@@ -34,4 +34,25 @@ export class PostgresPrisma {
     });
     return sessionDataObj.id;
   }
+
+  public async getPastSessionsByUser(userId: number) {
+    return await this.prismaClient.session.findMany({
+      where: {
+        terminationStatus: 1,
+        users: {
+          OR: [{ UserAId: userId }, { UserBId: userId }],
+        },
+      },
+      select: {
+        id: true,
+        questionId: true,
+        users: {
+          select: {
+            UserAId: true,
+            UserBId: true,
+          },
+        },
+      },
+    });
+  }
 }
