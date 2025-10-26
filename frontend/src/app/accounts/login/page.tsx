@@ -59,7 +59,7 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (response.ok) {
-        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('accessToken', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
         router.push('/home/dashboard');
       } else if (response.status === 403) {
