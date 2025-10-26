@@ -215,7 +215,7 @@ async function sendOtpEmail(email: string, otp: string) {
  * session and authentication
  */
 // 1. SIGN UP (for regular users)
-app.post('/api/auth/signup', async (req, res) => {
+app.post('/user/auth/signup', async (req, res) => {
   try {
     const { email, password, username } = signupSchema.parse(req.body);
     const existingUser = await prisma.user.findFirst({
@@ -278,7 +278,7 @@ app.post('/api/auth/signup', async (req, res) => {
 });
 
 // 2. LOG IN (for user or admin)
-app.post('/api/auth/login', async (req, res) => {
+app.post('/user/auth/login', async (req, res) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
@@ -324,7 +324,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/refresh', async (req, res) => {
+app.post('/user/auth/refresh', async (req, res) => {
   try {
     const { token: refreshToken } = refreshTokenSchema.parse(req.body);
     if (!refreshToken) return res.sendStatus(401);
@@ -357,7 +357,7 @@ app.post('/api/auth/refresh', async (req, res) => {
 });
 
 app.post(
-  '/api/auth/logout',
+  '/user/auth/logout',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -376,7 +376,7 @@ app.post(
  * Endpoints for editing user details
  */
 app.put(
-  '/api/users/me/profile',
+  '/user/me/profile',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -421,7 +421,7 @@ app.put(
 );
 
 app.put(
-  '/api/users/me/email',
+  '/user/me/email',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -465,7 +465,7 @@ app.put(
 );
 
 app.put(
-  '/api/users/me/password',
+  '/user/me/password',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -500,7 +500,7 @@ app.put(
   },
 );
 
-app.post('/api/auth/verify-email', async (req, res) => {
+app.post('/user/auth/verify-email', async (req, res) => {
   try {
     const { email, otp } = verifyEmailSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
@@ -523,7 +523,7 @@ app.post('/api/auth/verify-email', async (req, res) => {
   }
 });
 
-app.post('/api/auth/resend-otp', async (req, res) => {
+app.post('/user/auth/resend-otp', async (req, res) => {
   try {
     const { email } = resendOtpSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
@@ -550,7 +550,31 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
-app.get('/api/users/:id', async (req: Request, res: Response) => {
+// username availability check
+app.get('/user/check-username', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.query;
+
+    if (!username || typeof username !== 'string') {
+      return res
+        .status(400)
+        .json({ message: 'Username query parameter is required.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { username: username },
+      select: { id: true },
+    });
+
+    res.status(200).json({ isAvailable: !user });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Internal server error checking username.', error });
+  }
+});
+
+app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const user = await prisma.user.findUnique({
@@ -582,7 +606,7 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
  */
 // UTILITY TO BE DELETED !!!!!
 // list all users in db
-app.post('/api/auth/list', async (req, res) => {
+app.post('/user/utility/list', async (req, res) => {
   try {
     const allUsers = await prisma.user.findMany();
     res.status(200).json({ message: 'List successful', details: allUsers });
