@@ -15,6 +15,7 @@ console.log('DATABASE_URL:', process.env.DATABASE_URL); // Add this line
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
+const OTP_COOLDOWN_SECONDS = 60;
 
 // --- Middleware ---
 app.use(cors());
@@ -215,42 +216,39 @@ async function sendOtpEmail(email: string, otp: string) {
  * session and authentication
  */
 // 1. SIGN UP (for regular users)
+// in src/index.ts
+
 app.post('/user/auth/signup', async (req, res) => {
   try {
     const { email, password, username } = signupSchema.parse(req.body);
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: email }, { username: username }],
-      },
-    });
 
-    if (existingUser) {
-      if (existingUser.isVerified) {
-        return res.status(409).json({
-          message:
-            'An account with this email is already verified. Log in instead.',
-        });
-      } else {
-        const otp = crypto.randomInt(100000, 999999).toString();
-        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    // --- UPDATED LOGIC ---
+    // 1. Check if EMAIL already exists
+    const userByEmail = await prisma.user.findUnique({ where: { email } });
 
-        await prisma.user.update({
-          where: { email },
-          data: { verificationOtp: otp, otpExpiresAt },
-        });
-
-        await sendOtpEmail(email, otp);
-        return res.status(200).json({
-          message:
-            'Account already exists. A new OTP has been sent to your email.',
-        });
-      }
+    if (userByEmail) {
+      // If email exists (verified OR unverified), block the signup immediately
+      return res.status(409).json({
+        message: 'An account with this email already exists. Please log in.',
+      });
     }
 
+    // 2. Check if USERNAME already exists (only if email is new)
+    const userByUsername = await prisma.user.findUnique({
+      where: { username },
+    });
+    if (userByUsername) {
+      return res
+        .status(409)
+        .json({ message: 'This username is already taken.' });
+    }
+
+    // --- If both email and username are available, proceed to create ---
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    // default USER role
+    const now = new Date();
+
     const newUser = await prisma.user.create({
       data: {
         email,
@@ -259,6 +257,7 @@ app.post('/user/auth/signup', async (req, res) => {
         isVerified: false,
         verificationOtp: otp,
         otpExpiresAt,
+        otpLastSentAt: now,
       },
     });
 
@@ -267,13 +266,15 @@ app.post('/user/auth/signup', async (req, res) => {
     res.status(201).json({
       message:
         'User created successfully. Please check your email for the OTP to verify your account.',
-      user: {
-        email: newUser.email,
-        username: newUser.username,
-      },
+      user: { email: newUser.email, username: newUser.username },
     });
   } catch (error) {
-    res.status(400).json({ message: 'Invalid request', details: error });
+    if (error instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid input', details: error.issues });
+    }
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -533,13 +534,22 @@ app.post('/user/auth/resend-otp', async (req, res) => {
         message: 'Already verified, cannot resend OTP for this account.',
       });
     }
-
+    if (
+      user.otpLastSentAt &&
+      new Date().getTime() - user.otpLastSentAt.getTime() <
+        OTP_COOLDOWN_SECONDS * 1000
+    ) {
+      return res.status(429).json({
+        message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      });
+    }
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const now = new Date();
 
     await prisma.user.update({
       where: { email },
-      data: { verificationOtp: otp, otpExpiresAt },
+      data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
     });
 
     await sendOtpEmail(email, otp);

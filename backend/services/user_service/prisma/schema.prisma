@@ -26,6 +26,7 @@ model User {
   isVerified     Boolean   @default(false)
   verificationOtp String?
   otpExpiresAt   DateTime?
+  otpLastSentAt  DateTime?
 
   @@map("users")
 }
