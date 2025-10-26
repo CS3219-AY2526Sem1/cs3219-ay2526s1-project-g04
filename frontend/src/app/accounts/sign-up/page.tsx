@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
     AppBar,
@@ -12,11 +12,23 @@ import {
     Toolbar,
     Typography,
     CircularProgress,
+    FormHelperText,
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 
+function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
+    let timeout: NodeJS.Timeout | null = null;
+    return (...args: Parameters<T>) => {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(() => {
+            func(...args);
+        }, wait);
+    };
+}
+
 export default function SignUpPage() {
-    // --- UPDATED: State management for the two-step form ---
     const [formStep, setFormStep] = useState('signup'); // 'signup' or 'verifyOtp'
     const [email, setEmail] = useState('');
     const [username, setUsername] = useState(''); // Added username
@@ -26,6 +38,25 @@ export default function SignUpPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+
+    const [usernameError, setUsernameError] = useState('');
+    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+    const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
+
+    const [isResendingOtp, setIsResendingOtp] = useState(false);
+    const [resendMessage, setResendMessage] = useState('');
+
+    // --- Username Format Validation ---
+    const usernameFormatRequirements = useMemo(() => {
+        const hasMinLength = username.length >= 3;
+        const hasValidChars = /^[a-z0-9_]+$/.test(username) || username.length === 0; // Allow empty initially
+        return {
+            lengthMet: hasMinLength,
+            charsMet: hasValidChars,
+        };
+    }, [username]);
+
+    const isUsernameFormatValid = usernameFormatRequirements.lengthMet && usernameFormatRequirements.charsMet;
 
     // --- Password validation logic (from previous step) ---
     const passwordRequirements = useMemo(() => {
@@ -44,6 +75,39 @@ export default function SignUpPage() {
     const isPasswordValid = passwordRequirements.every((req) => req.met);
     const doPasswordsMatch = password === confirmPassword && password !== '';
 
+    // fe username validity + accuracy check
+    const checkUsernameAvailability = useCallback(
+        debounce(async (uname: string) => {
+            if (!uname || !isUsernameFormatValid) {
+                setIsUsernameAvailable(null);
+                setIsCheckingUsername(false);
+                return;
+            }
+            setIsCheckingUsername(true);
+            setUsernameError('');
+            try {
+                const response = await fetch(`http://localhost:3001/user/check-username?username=${encodeURIComponent(uname)}`);
+                if (!response.ok) { throw new Error('Network response was not ok'); }
+                const data = await response.json();
+                setIsUsernameAvailable(data.isAvailable);
+                if (!data.isAvailable) {
+                    setUsernameError('Username is already taken.');
+                }
+            } catch (err) {
+                setUsernameError('Could not check username. Please try again.');
+                setIsUsernameAvailable(null);
+            } finally {
+                setIsCheckingUsername(false);
+            }
+        }, 500), // Debounce for 500ms
+        [isUsernameFormatValid]);
+
+    useEffect(() => {
+        setIsUsernameAvailable(null);
+        setUsernameError('');
+        checkUsernameAvailability(username);
+    }, [username, checkUsernameAvailability]);
+
     // --- UPDATED: API call for the initial signup ---
     const handleSignupSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -51,11 +115,19 @@ export default function SignUpPage() {
             setError('Please ensure your password meets all requirements.');
             return;
         }
+        if (!isUsernameFormatValid) {
+            setUsernameError('Username format is invalid.');
+            return;
+        }
+        if (isCheckingUsername || isUsernameAvailable === false) {
+            setError('Please choose an available username.');
+            return;
+        }
         setIsLoading(true);
         setError('');
 
         try {
-            const response = await fetch('http://localhost:3001/api/auth/signup', {
+            const response = await fetch('http://localhost:3001/user/auth/signup', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, username, password }),
@@ -64,7 +136,6 @@ export default function SignUpPage() {
             const data = await response.json();
 
             if (response.ok) {
-                // On success, switch to the OTP verification step
                 setFormStep('verifyOtp');
             } else {
                 setError(data.message || 'An unknown error occurred.');
@@ -84,7 +155,7 @@ export default function SignUpPage() {
 
         try {
             const response = await fetch(
-                'http://localhost:3001/api/auth/verify-email',
+                'http://localhost:3001/user/auth/verify-email',
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -108,6 +179,34 @@ export default function SignUpPage() {
             setIsLoading(false);
         }
     };
+
+    const handleResendOtp = async () => {
+        setIsResendingOtp(true);
+        setError('');
+        setResendMessage('');
+
+        try {
+            const response = await fetch('http://localhost:3001/user/auth/resend-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setResendMessage('A new OTP has been sent.');
+            } else {
+                setError(data.message || 'Failed to resend OTP.');
+            }
+        } catch (err) {
+            setError('Failed to connect to the server. Please try again.');
+        } finally {
+            setIsResendingOtp(false);
+        }
+    };
+
+    const isSignupFormValid = isPasswordValid && doPasswordsMatch && isUsernameFormatValid && isUsernameAvailable === true;
 
     return (
         <main
@@ -175,9 +274,22 @@ export default function SignUpPage() {
                                 </Typography>
 
                                 <TextField label="Email" type="email" required fullWidth value={email} onChange={(e) => setEmail(e.target.value)}/>
-                                <TextField label="Username" required fullWidth value={username} onChange={(e) => setUsername(e.target.value)}/>
+                                <TextField
+                                    label="Username"
+                                    required
+                                    fullWidth
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    error={!!usernameError || (username.length > 0 && !isUsernameFormatValid)}
+                                />
+                                <FormHelperText error={!!usernameError || (username.length > 0 && !isUsernameFormatValid)}>
+                                    {username.length > 0 && !usernameFormatRequirements.lengthMet && "Must be at least 3 characters. "}
+                                    {username.length > 0 && !usernameFormatRequirements.charsMet && "Only lowercase letters, numbers, and underscores (_). "}
+                                    {usernameError}
+                                    {isCheckingUsername && "Checking availability..."}
+                                    {!isCheckingUsername && isUsernameAvailable === true && username.length > 0 && <span style={{ color: 'green' }}>Username available!</span>}
+                                </FormHelperText>
                                 <TextField label="Password" type="password" required fullWidth value={password} onChange={(e) => setPassword(e.target.value)}/>
-
                                 {password && (
                                     <Box>
                                         {passwordRequirements.map((req) => (
@@ -187,7 +299,6 @@ export default function SignUpPage() {
                                         ))}
                                     </Box>
                                 )}
-
                                 <TextField
                                     label="Confirm Password" type="password" required fullWidth
                                     value={confirmPassword}
@@ -204,7 +315,7 @@ export default function SignUpPage() {
 
                                 <Button
                                     type="submit" variant="contained" fullWidth
-                                    disabled={!isPasswordValid || !doPasswordsMatch || isLoading}
+                                    disabled={!isPasswordValid || !doPasswordsMatch || isLoading || !isSignupFormValid || isCheckingUsername}
                                     sx={{
                                         py: 1.5,
                                         backgroundColor: '#8B5CF6',
@@ -256,7 +367,15 @@ export default function SignUpPage() {
                                 >
                                     {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Verify and Log In'}
                                 </Button>
-                                {/* Add a 'Resend OTP' button here if you like */}
+                                <Button
+                                    variant="text"
+                                    onClick={handleResendOtp}
+                                    disabled={isResendingOtp}
+                                    sx={{ textTransform: 'none', color: '#8B5CF6', fontWeight: 600 }}
+                                >
+                                    {isResendingOtp ? <CircularProgress size={16} sx={{ mr: 1 }} /> : null}
+                                    Resend Code
+                                </Button>
                             </Stack>
                         </form>
                     )}
