@@ -105,92 +105,92 @@ export default function TopNavigationBar({
   };
 
   return (
-      <>
-        <AppBar
-            ref={appBarRef}
-            position="fixed"
-            className="bg-[var(--background)] text-[var(--foreground)] border-b border-white/20 shadow-[0_4px_20px_rgba(0,0,0,0.25)] py-1 z-[1100]"
-            {...props}
-        >
-          <Toolbar className="flex justify-between items-center">
-            {/* Logo */}
-            <div className="flex items-center flex-grow">
-              <Tooltip title="Dashboard">
-                <Link href="/home/dashboard">
-                  <img
-                      src="/logo.png"
-                      alt="PeerPrep Logo"
-                      className="h-[40px] sm:h-[56px] md:h-[72px] object-contain"
-                  />
-                </Link>
-              </Tooltip>
-            </div>
+    <>
+      <AppBar
+          ref={appBarRef}
+          position="fixed"
+          className="bg-[var(--background)] text-[var(--foreground)] border-b border-white/20 shadow-[0_4px_20px_rgba(0,0,0,0.25)] py-1 z-[1100]"
+          {...props}
+      >
+        <Toolbar className="flex justify-between items-center">
+          {/* Logo */}
+          <div className="flex items-center flex-grow">
+            <Tooltip title="Dashboard">
+              <Link href="/home/dashboard">
+                <img
+                    src="/logo.png"
+                    alt="PeerPrep Logo"
+                    className="h-[40px] sm:h-[56px] md:h-[72px] object-contain"
+                />
+              </Link>
+            </Tooltip>
+          </div>
 
-            {/* Top Navigation Bar right elements */}
-            <div className="flex flex-row space-x-2">
-              <Tooltip title="settings">
-                <IconButton className="text-[var(--foreground)]">
-                  <SettingsOutlined />
-                </IconButton>
-              </Tooltip>
+          {/* Top Navigation Bar right elements */}
+          <div className="flex flex-row space-x-2">
+            <Tooltip title="settings">
+              <IconButton className="text-[var(--foreground)]">
+                <SettingsOutlined />
+              </IconButton>
+            </Tooltip>
 
-              <Tooltip title="notifications">
-                <IconButton className="text-[var(--foreground)]">
-                  <NotificationsOutlined />
-                </IconButton>
-              </Tooltip>
+            <Tooltip title="notifications">
+              <IconButton className="text-[var(--foreground)]">
+                <NotificationsOutlined />
+              </IconButton>
+            </Tooltip>
 
-              <Tooltip title="profile">
-                <IconButton
-                    onClick={handleMenuOpen}
-                    className="text-[var(--foreground)]"
-                >
-                  <AccountCircleOutlined />
-                </IconButton>
-              </Tooltip>
-            </div>
-          </Toolbar>
-        </AppBar>
+            <Tooltip title="profile">
+              <IconButton
+                  onClick={handleMenuOpen}
+                  className="text-[var(--foreground)]"
+              >
+                <AccountCircleOutlined />
+              </IconButton>
+            </Tooltip>
+          </div>
+        </Toolbar>
+      </AppBar>
 
-        <Menu
-            anchorEl={anchorEl}
-            open={openMenu}
-            onClose={handleMenuClose}
-            MenuListProps={{
-              'aria-labelledby': 'basic-button',
-            }}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-        >
-          <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
-          <MenuItem onClick={handleSettingsClick}>Account Settings</MenuItem>
-          <MenuItem onClick={handleLogoutClick}>
-            <Logout sx={{ mr: 1, color: 'action.active' }} />
+      <Menu
+          anchorEl={anchorEl}
+          open={openMenu}
+          onClose={handleMenuClose}
+          MenuListProps={{
+            'aria-labelledby': 'basic-button',
+          }}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'right',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'right',
+          }}
+      >
+        <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
+        <MenuItem onClick={handleSettingsClick}>Account Settings</MenuItem>
+        <MenuItem onClick={handleLogoutClick}>
+          <Logout sx={{ mr: 1, color: 'action.active' }} />
+          Logout
+        </MenuItem>
+      </Menu>
+
+      {/* --- Logout Confirmation Dialog --- */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth={true} maxWidth="xs">
+        <DialogTitle sx={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center' }}>
+          Logout Confirmation
+        </DialogTitle>
+        <DialogTitle sx={{ fontSize: '1rem', textAlign: 'center' }}>
+          Are you sure you want to log out?
+        </DialogTitle>
+        <DialogActions>
+          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleConfirmLogout} color="primary" autoFocus>
             Logout
-          </MenuItem>
-        </Menu>
-
-        {/* --- Logout Confirmation Dialog --- */}
-        <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth={true} maxWidth="xs">
-          <DialogTitle sx={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center' }}>
-            Logout Confirmation
-          </DialogTitle>
-          <DialogTitle sx={{ fontSize: '1rem', textAlign: 'center' }}>
-            Are you sure you want to log out?
-          </DialogTitle>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>Cancel</Button>
-            <Button onClick={handleConfirmLogout} color="primary" autoFocus>
-              Logout
-            </Button>
-          </DialogActions>
-        </Dialog>
-      </>
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
