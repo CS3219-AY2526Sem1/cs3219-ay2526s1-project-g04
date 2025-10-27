@@ -17,6 +17,12 @@ export class Redis {
     await this.client.quit();
   }
 
+  public async subscribe(channel: string, callback: (message: string) => void) {
+    const subscriber = this.client.duplicate();
+    await subscriber.connect();
+    await subscriber.subscribe(channel, callback);
+  }
+
   // String Operations
   public async setStringValueByKey(
     key: string,
@@ -88,5 +94,23 @@ export class Redis {
   // clear
   public async clearDataByKey(key: string | string[]): Promise<void> {
     await this.client.del(key);
+  }
+
+  // TTL
+  public async setExpire(key: string, seconds: number): Promise<void> {
+    await this.client.expire(key, seconds);
+  }
+
+  public async getTTL(key: string): Promise<number> {
+    return await this.client.ttl(key);
+  }
+
+  public async persistTTL(key: string): Promise<void> {
+    await this.client.persist(key);
+  }
+
+  // numbers
+  public async incrementKey(key: string): Promise<number> {
+    return await this.client.incr(key);
   }
 }
