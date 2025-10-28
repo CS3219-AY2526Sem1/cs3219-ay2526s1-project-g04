@@ -7,9 +7,22 @@ import {
 import { logger } from '../logger/logger.js';
 import { getQuestionId } from '../clients/question_service_client.js';
 
-const DISCONNECT_THRESHOLD = 30 * 1000; // 30 seconds
-const MIN_TTL_TO_HANDLE = 10; // 10 seconds
+/**
+ * Threshold to detect for disconnected users. (in ms)
+ */
+const DISCONNECT_THRESHOLD = 30 * 1000;
 
+/**
+ * Minimum TTL needed for MatchingWorker to handle users.(in secs)
+ */
+const MIN_TTL_TO_HANDLE = 10;
+
+/**
+ * MatchingWorker
+ *
+ * This class is responsible for matching users via a 'match_user' job,
+ * or clearing out users from the matching pool and fcfs list via a 'clear_user' job.
+ */
 export class MatchingWorker {
   private static instance: MatchingWorker;
   private matchingRedis: MatchingServiceRedis;
@@ -57,6 +70,12 @@ export class MatchingWorker {
     }
   }
 
+  /**
+   * Handles a 'clear_user' job and clears the given user within the job from the matching pool and
+   * fcfs list.
+   *
+   * @param job Job containing the userId and data of user to clear.
+   */
   public async handleClearJob(job: EntryQueueData): Promise<void> {
     if (job.jobType !== 'clear_user') {
       logger.error(`[handleClearJob] Function called for wrong job type.`);
@@ -84,6 +103,15 @@ export class MatchingWorker {
     }
   }
 
+  /**
+   * Handles a 'match_user' job by:
+   * * Checking if the user is eligible for matching.
+   * * Finding potential matches.
+   * * Selecting another user out of all potential matches to match with.
+   * * Finalising the match.
+   *
+   * @param job Job containing the userId, sessionKey of the user to match.
+   */
   public async handleMatchJob(job: EntryQueueData): Promise<void> {
     if (job.jobType !== 'match_user') {
       logger.error(
@@ -168,6 +196,17 @@ export class MatchingWorker {
     }
   }
 
+  /**
+   * Checks if a match job should be carried out by checking:
+   * * Session key to check that job is not outdated.
+   * * Last seen to check that user is not disconnected.
+   * * TTL remaining to ensure enough TTL remaining for matching worker to complete matching.
+   * * Status to check user is still available for matching.
+   *
+   * @param job Job containing information to check for eligibility.
+   * @param userData User data from status hash to check job against.
+   * @returns True if matching job can be carried out, false if job is not eligible.
+   */
   public async canMatchUser(
     job: EntryQueueData,
     userData: HashData,
@@ -224,6 +263,15 @@ export class MatchingWorker {
     return true;
   }
 
+  /**
+   * Scans the matching pool, reads from the head for each queue and gets a dictionary of potential matches and common topics.
+   * The function also checks if match is eligible (not timed-out, not disconnected, not outdated)
+   *
+   * @param job Match job.
+   * @param difficulty difficulty queues to scan.
+   * @param topics topic queues to scan.
+   * @returns A dictionary with key: potential users to match(id), value: matching pool data, common topics matched on.
+   */
   public async getPotentialMatches(
     job: EntryQueueData,
     difficulty: string,
@@ -339,6 +387,10 @@ export class MatchingWorker {
     return result;
   }
 
+  /**
+   * Adds a user to the matching pool (with id and session key), then sets user's status back to 'waiting'.
+   * @param job Job containing information of user to add to the matching pool.
+   */
   public async addUserToMatchingPool(job: EntryQueueData): Promise<void> {
     try {
       const userData = await this.matchingRedis.statusHash.getUserData(
@@ -410,6 +462,17 @@ export class MatchingWorker {
     }
   }
 
+  /**
+   * Selects a match from list of potential matches.
+   * * Gets position of user from FCFS list.
+   * * Check user is not outdated, disconnected, timed-out, cancelled.
+   * * Checks if user and match can obtain a matching ID from the question service.
+   *
+   * @param potentialMatches list of potential matches and the common topics
+   * @param difficulty difficulty selected by users (to get question)
+   * @param matchingId assigned matching id for the match
+   * @returns user ID of matched user and question id
+   */
   public async getMatch(
     potentialMatches: Record<
       string,
@@ -509,6 +572,14 @@ export class MatchingWorker {
     return null;
   }
 
+  /**
+   * Finalises match by removing user from matching pool, setting matching status to 'matched' and setting matching Id
+   * Sets matched hash in redis for collab service and publishes message to collab service.
+   * @param matchingId matching ID assigned to match
+   * @param userAId id of user
+   * @param userBId id of matched user (to remove from matching pool)
+   * @param questionId question id of question assigned to match
+   */
   public async finaliseMatch(
     matchingId: string,
     userAId: string,
