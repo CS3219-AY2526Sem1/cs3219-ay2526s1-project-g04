@@ -127,8 +127,10 @@ export async function signUploadUrl(
     adminUserId,
     filename,
     contentType: content_type,
-    suggestedPrefix: suggested_prefix,
-    sessionUlid,
+    ...(suggested_prefix !== undefined
+      ? { suggestedPrefix: suggested_prefix }
+      : {}),
+    ...(sessionUlid !== undefined ? { sessionUlid } : {}),
   });
 
   const put = new PutObjectCommand({
@@ -200,7 +202,11 @@ export async function finalizeStagedAttachments(
 
     await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: srcKey }));
 
-    out.push({ object_key: destKey, mime: att.mime, alt: att.alt });
+    out.push(
+      att.alt !== undefined
+        ? { object_key: destKey, mime: att.mime, alt: att.alt }
+        : { object_key: destKey, mime: att.mime },
+    );
   }
 
   return out;
