@@ -4,6 +4,7 @@ import type { Request, Response } from 'express';
 import { slugify } from '../utils/slug.js';
 import { finalizeStagedAttachments } from '../services/AttachmentService.js';
 import type { AttachmentInput } from '../types/attachments.js';
+import { log } from '../utils/logger.js';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
@@ -18,18 +19,19 @@ function normalizeDifficulty(d: unknown): Difficulty | null {
   return null;
 }
 
+function isAttachment(obj: unknown): obj is AttachmentInput {
+  if (typeof obj !== 'object' || obj === null) return false;
+
+  // Narrow via safe property lookups
+  const o = obj as Partial<AttachmentInput> & Record<string, unknown>;
+  const hasKey = typeof o.object_key === 'string';
+  const hasMime = typeof o.mime === 'string';
+  const hasValidAlt = o.alt === undefined || typeof o.alt === 'string';
+  return hasKey && hasMime && hasValidAlt;
+}
+
 function isAttachmentArray(x: unknown): x is AttachmentInput[] {
-  return (
-    Array.isArray(x) &&
-    x.every(
-      (i) =>
-        i &&
-        typeof i === 'object' &&
-        typeof (i as any).object_key === 'string' &&
-        typeof (i as any).mime === 'string' &&
-        ((i as any).alt === undefined || typeof (i as any).alt === 'string'),
-    )
-  );
+  return Array.isArray(x) && x.every(isAttachment);
 }
 
 function isStringArray(x: unknown): x is string[] {
@@ -113,7 +115,8 @@ export async function create(req: Request, res: Response) {
 
     // 4) return created entity
     return res.status(201).location(`/admin/questions/${saved.id}`).json(saved);
-  } catch (e) {
+  } catch (err) {
+    log.error('AdminController.create failed:', err);
     return res.status(500).json({ error: 'internal_error' });
   }
 }
@@ -172,7 +175,8 @@ export async function update(req: Request, res: Response) {
     const q = await Repo.updateDraft(id, patch);
     if (!q) return res.status(404).json({ error: 'not_found' });
     return res.json(q);
-  } catch {
+  } catch (err) {
+    log.error('AdminController.update failed:', err);
     return res.status(500).json({ error: 'internal_error' });
   }
 }
@@ -189,7 +193,8 @@ export async function publish(req: Request, res: Response) {
     const q = await Repo.publish(id);
     if (!q) return res.status(404).json({ error: 'not_found' });
     res.json(q);
-  } catch {
+  } catch (err) {
+    log.error('AdminController.publish failed:', err);
     res.status(500).json({ error: 'internal_error' });
   }
 }
@@ -246,7 +251,8 @@ export async function getById(req: Request, res: Response) {
     const q = await Repo.getQuestionById(id);
     if (!q) return res.status(404).json({ error: 'not found' });
     return res.json(q);
-  } catch {
+  } catch (err) {
+    log.error('AdminController.getById failed:', err);
     return res.status(500).json({ error: 'internal_error' });
   }
 }

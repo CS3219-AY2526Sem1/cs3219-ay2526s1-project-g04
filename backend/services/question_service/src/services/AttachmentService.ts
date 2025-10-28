@@ -10,13 +10,15 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3, S3_BUCKET, SIGNED_URL_TTL_SECONDS } from '../utils/s3.js';
 
+const SAFE_NAME_RE = /[^\w.-]+/g;
+
 /**
- * Sanitizes a filename by replacing any non-word characters (except for periods, underscores and hyphens) with hyphens and truncating to 150 characters.
+ * Sanitizes a filename by removing any characters that are not alphanumeric, hyphens, periods, or underscores, and then truncates the result to 150 characters.
  * @param {string} name - The filename to sanitize.
  * @returns {string} The sanitized filename.
  */
 function sanitizeFilename(name: string) {
-  return name.replace(/[^\w.\-]+/g, '-').slice(0, 150);
+  return name.replace(SAFE_NAME_RE, '-').slice(0, 150);
 }
 
 /**
