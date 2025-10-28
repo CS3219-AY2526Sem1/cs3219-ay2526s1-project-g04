@@ -4,6 +4,7 @@ import { prisma } from './prisma.js';
 import { Prisma } from '@prisma/client';
 import type { questions as Question } from '@prisma/client';
 import { slugify } from '../utils/slug.js';
+import type { AttachmentInput } from '../types/attachments.js';
 
 export async function getPublishedById(id: string) {
   return prisma.questions.findFirst({ where: { id, status: 'published' } });
@@ -107,9 +108,9 @@ export async function listAll(opts: {
   }
 
   // FTS / topics path — parameterized SQL with explicit casts
-  const clauses: string[] = ['status = $1'];
+  const clauses: string[] = [];
   const params: unknown[] = [];
-  let i = params.length + 1;
+  let i = 1;
 
   if (opts.difficulty) {
     clauses.push(`difficulty = $${i++}`);
@@ -124,11 +125,12 @@ export async function listAll(opts: {
     params.push(opts.q);
   }
 
+  const whereSql = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const sql = `
     SELECT id, title, body_md, difficulty, topics, attachments,
-         status, version, created_at, updated_at
+           status, version, rand_key, created_at, updated_at
     FROM questions
-    WHERE ${clauses.join(' AND ')}
+    ${whereSql}
     ORDER BY updated_at DESC
     LIMIT ${size} OFFSET ${offset}
   `;
@@ -156,7 +158,7 @@ export async function createDraft(q: {
   body_md: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   topics: string[];
-  attachments: unknown[];
+  attachments: AttachmentInput[];
 }) {
   const base = slugify(q.title);
   const MAX_SUFFIX = 50;
@@ -361,5 +363,15 @@ export async function archive(id: string) {
     });
 
     return updated;
+  });
+}
+
+export async function updateQuestionAttachments(
+  id: string,
+  attachments: AttachmentInput[],
+) {
+  return prisma.questions.update({
+    where: { id },
+    data: { attachments },
   });
 }

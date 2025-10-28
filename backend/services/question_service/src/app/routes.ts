@@ -1,6 +1,7 @@
 // app/routes.ts
 
 import { Router } from 'express';
+import * as AdminAttachmentController from '../controllers/AdminAttachmentController.js';
 import * as QuestionController from '../controllers/QuestionController.js';
 import * as AdminController from '../controllers/AdminController.js';
 import * as TopicController from '../controllers/TopicController.js';
@@ -20,6 +21,7 @@ r.post('/select', QuestionController.select);
 r.get('/topics', TopicController.list);
 
 // admin
+r.post('/admin/attachments/sign-upload', AdminAttachmentController.signUpload);
 r.post('/admin/topics', requireRole('admin'), TopicController.create);
 r.get('/admin/questions', requireRole('admin'), AdminController.list);
 r.post('/admin/questions', requireRole('admin'), AdminController.create);

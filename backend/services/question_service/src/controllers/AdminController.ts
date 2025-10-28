@@ -1,7 +1,9 @@
-// src/controllers/AdminController.ts (example)
+// src/controllers/AdminController.ts
 import * as Repo from '../repositories/QuestionRepository.js';
 import type { Request, Response } from 'express';
 import { slugify } from '../utils/slug.js';
+import { finalizeStagedAttachments } from '../services/AttachmentService.js';
+import type { AttachmentInput } from '../types/attachments.js';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
@@ -14,6 +16,20 @@ function normalizeDifficulty(d: unknown): Difficulty | null {
   if (v === 'medium') return 'Medium';
   if (v === 'hard') return 'Hard';
   return null;
+}
+
+function isAttachmentArray(x: unknown): x is AttachmentInput[] {
+  return (
+    Array.isArray(x) &&
+    x.every(
+      (i) =>
+        i &&
+        typeof i === 'object' &&
+        typeof (i as any).object_key === 'string' &&
+        typeof (i as any).mime === 'string' &&
+        ((i as any).alt === undefined || typeof (i as any).alt === 'string'),
+    )
+  );
 }
 
 function isStringArray(x: unknown): x is string[] {
@@ -46,6 +62,8 @@ function parseNum(x: unknown): number | undefined {
 
 /**
  * POST /admin/questions
+ * - Accepts attachments with possible `staging/...` keys.
+ * - Will finalize them to `questions/<id>/...`.
  */
 export async function create(req: Request, res: Response) {
   try {
@@ -54,44 +72,60 @@ export async function create(req: Request, res: Response) {
     if (typeof title !== 'string' || !title.trim()) {
       return res.status(400).json({ error: 'title is required' });
     }
-    if (typeof body_md !== 'string' || !title.trim()) {
+    if (typeof body_md !== 'string' || !body_md.trim()) {
       return res.status(400).json({ error: 'body_md is required' });
     }
     const diff = normalizeDifficulty(difficulty);
     if (!diff) {
-      return res.status(400).json({
-        error:
-          'difficulty needs to be one of the following: Easy, Medium, Hard',
-      });
+      return res
+        .status(400)
+        .json({ error: 'difficulty must be: Easy, Medium, Hard' });
     }
 
+    // 1) create the draft so we have a canonical id/slug
     const id = slugify(title);
-    if (!id)
+    if (!id) {
       return res
         .status(400)
         .json({ error: 'invalid title (cannot derive a slug)' });
+    }
 
-    const created = await Repo.createDraft({
+    const draft = await Repo.createDraft({
       id,
       title,
       body_md,
       difficulty: diff,
       topics: isStringArray(topics) ? topics : [],
-      attachments: Array.isArray(attachments) ? attachments : [],
+      attachments: [], // set after finalize
     });
 
-    res.status(201).location(`/admin/questions/${created.id}`).json(created);
-  } catch {
-    res.status(500).json({ error: 'internal_error' });
+    // 2) finalize any staging keys → questions/<id>/...
+    const inputAttachments: AttachmentInput[] = isAttachmentArray(attachments)
+      ? attachments
+      : [];
+    const finalized = await finalizeStagedAttachments(
+      draft.id,
+      inputAttachments,
+    );
+
+    // 3) persist finalized attachments
+    const saved = await Repo.updateQuestionAttachments(draft.id, finalized);
+
+    // 4) return created entity
+    return res.status(201).location(`/admin/questions/${saved.id}`).json(saved);
+  } catch (e) {
+    return res.status(500).json({ error: 'internal_error' });
   }
 }
+
 /**
  * PATCH /admin/questions/:id
+ * - Expects full attachments array (usually under `questions/<id>/...`).
+ * - If any `staging/...` keys are passed, we will also finalize them for convenience.
  */
 export async function update(req: Request, res: Response) {
   try {
     const { id } = req.params;
-
     if (!id) return res.status(400).json({ error: 'id param required' });
 
     const patch: Partial<{
@@ -99,11 +133,12 @@ export async function update(req: Request, res: Response) {
       body_md: string;
       difficulty: Difficulty;
       topics: string[];
-      attachments: string[];
+      attachments: AttachmentInput[];
     }> = {};
 
     if (typeof req.body?.title === 'string') patch.title = req.body.title;
     if (typeof req.body?.body_md === 'string') patch.body_md = req.body.body_md;
+
     if (req.body?.difficulty !== undefined) {
       const diff = normalizeDifficulty(req.body.difficulty);
       if (!diff)
@@ -112,22 +147,33 @@ export async function update(req: Request, res: Response) {
           .json({ error: 'difficulty must be one of: easy, medium, hard' });
       patch.difficulty = diff;
     }
+
     if (req.body?.topics !== undefined) {
       if (!isStringArray(req.body.topics))
         return res.status(400).json({ error: 'topics must be string[]' });
       patch.topics = req.body.topics;
     }
+
     if (req.body?.attachments !== undefined) {
-      if (!isStringArray(req.body.attachments))
-        return res.status(400).json({ error: 'attachments must be string[]' });
-      patch.attachments = req.body.attachments;
+      if (!isAttachmentArray(req.body.attachments)) {
+        return res.status(400).json({
+          error:
+            'attachments must be [{ object_key: string, mime: string, alt?: string }]',
+        });
+      }
+      // If any key is in staging/, finalize it to questions/<id>/...
+      const finalized = await finalizeStagedAttachments(
+        id,
+        req.body.attachments,
+      );
+      patch.attachments = finalized;
     }
 
     const q = await Repo.updateDraft(id, patch);
     if (!q) return res.status(404).json({ error: 'not_found' });
-    res.json(q);
+    return res.json(q);
   } catch {
-    res.status(500).json({ error: 'internal_error' });
+    return res.status(500).json({ error: 'internal_error' });
   }
 }
 

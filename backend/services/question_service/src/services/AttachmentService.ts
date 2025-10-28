@@ -160,7 +160,7 @@ export async function signUploadUrl(
  * @param {Array<{ object_key: string; mime: string; alt?: string }>} attachments - The array of attachments to finalize.
  * @returns {Promise<Array<{ object_key: string; mime: string; alt?: string }>>} A promise that resolves with an array of attachments with their final object keys and MIME types.
  */
-export async function finalizeStageAttachments(
+export async function finalizeStagedAttachments(
   questionId: string,
   attachments: Array<{ object_key: string; mime: string; alt?: string }>,
 ): Promise<Array<{ object_key: string; mime: string; alt?: string }>> {
