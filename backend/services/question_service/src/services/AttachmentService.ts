@@ -6,6 +6,7 @@ import {
   CopyObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  GetObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3, S3_BUCKET, SIGNED_URL_TTL_SECONDS } from '../utils/s3.js';
@@ -61,6 +62,18 @@ export type SignUploadResponse = {
   upload_url: string; // presigned PUT URL
   expires_at: string; // ISO timestamp
   max_bytes: number; // soft limit (PUT can't strictly enforce; front-end should)
+};
+
+export type SignViewOptions = {
+  asAttachment?: boolean; // force browser download instead of inline view
+  filename?: string; // override filename shown in browser save dialog
+  contentTypeHint?: string; // optional content type hint to hint to s3 (helps some browsers)
+};
+
+export type SignViewResponse = {
+  object_key: string;
+  view_url: string;
+  expires_at: string;
 };
 
 /**
@@ -210,4 +223,43 @@ export async function finalizeStagedAttachments(
   }
 
   return out;
+}
+
+export async function signViewUrl(
+  objectKey: string,
+  opts?: SignViewOptions,
+): Promise<SignViewResponse> {
+  // ensure object exists first
+  await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: objectKey }));
+
+  const dispositionType = opts?.asAttachment ? 'attachment' : 'inline';
+  const contentDisposition =
+    opts?.filename && opts.filename.trim()
+      ? `${dispositionType}; filename="${opts.filename.replace(/"/g, '')}"`
+      : dispositionType;
+
+  // Only include optional params when defined (exactOptionalPropertyTypes-safe)
+  const getParams: Parameters<typeof getSignedUrl>[1]['input'] =
+    new GetObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: objectKey,
+      ...(opts?.contentTypeHint
+        ? { ResponseContentType: opts.contentTypeHint }
+        : {}),
+      ...(contentDisposition
+        ? { ResponseContentDisposition: contentDisposition }
+        : {}),
+    }).input as any; // GetObjectCommand already builds proper input; this is fine.
+
+  const getCmd = new GetObjectCommand(getParams as any);
+
+  const view_url = await getSignedUrl(s3, getCmd, {
+    expiresIn: SIGNED_URL_TTL_SECONDS,
+  });
+
+  const expires_at = new Date(
+    Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
+  ).toISOString();
+
+  return { object_key: objectKey, view_url, expires_at };
 }

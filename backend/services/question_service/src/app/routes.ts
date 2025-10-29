@@ -22,6 +22,7 @@ r.get('/topics', TopicController.list);
 
 // admin
 r.post('/admin/attachments/sign-upload', AdminAttachmentController.signUpload);
+r.post('/admin/attachments/sign-view', AdminAttachmentController.signView);
 r.post('/admin/topics', requireRole('admin'), TopicController.create);
 r.get('/admin/questions', requireRole('admin'), AdminController.list);
 r.post('/admin/questions', requireRole('admin'), AdminController.create);
