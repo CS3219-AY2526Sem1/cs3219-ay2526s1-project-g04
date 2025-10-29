@@ -1,5 +1,5 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
-import { EntryQueueData, HashData } from '../clients/redis/types.js';
+import { EntryQueueData } from '../clients/redis/types.js';
 import { logger } from '../logger/logger.js';
 
 const INTERVAL = 10000;

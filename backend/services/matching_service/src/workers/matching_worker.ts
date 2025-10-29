@@ -1,4 +1,5 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
+import { MatchingMessenger } from '../clients/messenger/messenger_client.js';
 import {
   EntryQueueData,
   MatchingPoolData,
@@ -26,15 +27,24 @@ const MIN_TTL_TO_HANDLE = 10;
 export class MatchingWorker {
   private static instance: MatchingWorker;
   private matchingRedis: MatchingServiceRedis;
+  private matchingMessenger: MatchingMessenger;
 
-  private constructor(matchingRedis: MatchingServiceRedis) {
+  private constructor(
+    matchingRedis: MatchingServiceRedis,
+    matchingMessenger: MatchingMessenger,
+  ) {
     this.matchingRedis = matchingRedis;
+    this.matchingMessenger = matchingMessenger;
   }
 
   public static async getInstance(): Promise<MatchingWorker> {
     if (!MatchingWorker.instance) {
       const matchingRedis = await MatchingServiceRedis.getInstance();
-      MatchingWorker.instance = new MatchingWorker(matchingRedis);
+      const matchingMessenger = await MatchingMessenger.getInstance();
+      MatchingWorker.instance = new MatchingWorker(
+        matchingRedis,
+        matchingMessenger,
+      );
     }
     return MatchingWorker.instance;
   }
@@ -610,6 +620,9 @@ export class MatchingWorker {
         userBId,
         questionId,
       );
+
+      // send matching id to collaboration service
+      this.matchingMessenger.publishToCollaborationService(matchingId);
 
       // remove user B from matching pool and fcfs queue (user A shouldn't be in matching pool)
       const userBData =

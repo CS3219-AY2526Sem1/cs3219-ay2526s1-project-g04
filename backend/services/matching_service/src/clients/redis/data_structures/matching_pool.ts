@@ -1,4 +1,4 @@
-import { Redis } from '@shared/redis';
+import { Redis } from '../../../../../../shared/redis/dist/redis.js';
 import { MatchingPoolData } from '../types.js';
 import { logger } from '../../../logger/logger.js';
 

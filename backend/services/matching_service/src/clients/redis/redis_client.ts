@@ -1,4 +1,4 @@
-import { Redis } from '@shared/redis';
+import { Redis } from '../../../../../shared/redis/dist/redis.js';
 import { MatchedValue } from '../../../../../shared/redis/dist/models/match_model.js';
 import { EntryQueue } from './data_structures/entry_queue.js';
 import { FCFSList } from './data_structures/fcfs_list.js';

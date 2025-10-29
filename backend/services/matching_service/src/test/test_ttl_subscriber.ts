@@ -1,4 +1,3 @@
-import { Hash } from 'crypto';
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
 import { TTLSubscriber } from '../clients/redis/ttl_subscriber.js';
 import { HashData } from '../clients/redis/types.js';

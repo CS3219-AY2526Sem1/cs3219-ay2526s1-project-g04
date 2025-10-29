@@ -8,6 +8,7 @@ import { logger } from './logger/logger.js';
 // import { test_matching_worker } from './test/test_matching_worker.js';
 // import { test_data_structures } from './test/test_data_structures.js';
 // import { test_ttl_subscriber } from './test/test_ttl_subscriber.js';
+// import { test_messenger } from './test/test_messenger.js';
 
 /**
  * Entry point to matching service.
@@ -33,7 +34,8 @@ async function main() {
     // await test_data_structures();
     // await test_matching_worker();
     // await test_ttl_subscriber();
-    await test_disconnect_sweeper();
+    // await test_disconnect_sweeper();
+    // await test_messenger();
   } catch (err) {
     logger.error('[main] Error: ', err);
     process.exit(1);
