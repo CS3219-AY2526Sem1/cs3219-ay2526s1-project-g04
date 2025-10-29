@@ -372,6 +372,6 @@ export async function updateQuestionAttachments(
 ) {
   return prisma.questions.update({
     where: { id },
-    data: { attachments },
+    data: { attachments: attachments as unknown as Prisma.InputJsonValue },
   });
 }

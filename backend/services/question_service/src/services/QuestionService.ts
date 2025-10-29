@@ -1,14 +1,20 @@
 // src/services/QuestionService.ts
 
 import * as Repo from '../repositories/QuestionRepository.js';
-import { toSafeHtml } from './MarkdownService.js';
+import {
+  renderQuestionMarkdown,
+  type AttachmentLike,
+} from './MarkdownService.js';
 
 export async function getPublishedWithHtml(id: string) {
   const q = await Repo.getPublishedById(id);
 
   if (!q) return undefined;
 
-  return { ...q, body_html: toSafeHtml(q.body_md) };
+  const attachments = (q.attachments ?? []) as AttachmentLike[];
+
+  const body_html = await renderQuestionMarkdown(q.body_md, attachments);
+  return { ...q, body_html };
 }
 
 export async function listPublished(opts: {
@@ -19,5 +25,11 @@ export async function listPublished(opts: {
   size?: number;
 }) {
   const rows = await Repo.listPublished(opts);
-  return rows.map((q) => ({ ...q, body_html: toSafeHtml(q.body_md) }));
+  return Promise.all(
+    rows.map(async (q) => {
+      const attachments = (q.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(q.body_md, attachments);
+      return { ...q, body_html };
+    }),
+  );
 }
