@@ -1,6 +1,5 @@
 import { MatchingServiceRedis } from './clients/redis/redis_client.js';
 import { MatchingWorker } from './workers/matching_worker.js';
-import { test_disconnect_sweeper } from './test/test_disconnect_sweeper.js';
 import { TTLHandler } from './workers/ttl_handler.js';
 import { TTLSubscriber } from './clients/redis/ttl_subscriber.js';
 import { DisconnectSweeper } from './workers/disconnect_sweeper.js';

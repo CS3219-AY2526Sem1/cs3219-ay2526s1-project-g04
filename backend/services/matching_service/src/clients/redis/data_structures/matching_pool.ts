@@ -96,7 +96,7 @@ export class MatchingPool {
       }
     } catch (error) {
       logger.error(
-        `[MatchingPool] Failed to peek from queue with difficulty=${difficulty} and topic=${topic}.`,
+        `[MatchingPool] Failed to peek from queue with difficulty=${difficulty} and topic=${topic}. err: ${error}`,
       );
       return null;
     }

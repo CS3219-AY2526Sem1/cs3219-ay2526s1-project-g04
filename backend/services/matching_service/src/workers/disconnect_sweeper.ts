@@ -11,7 +11,7 @@ export class DisconnectSweeper {
 
   constructor(matchingRedis: MatchingServiceRedis, isSweeping: boolean) {
     this.matchingRedis = matchingRedis;
-    this.isSweeping = false;
+    this.isSweeping = isSweeping;
   }
 
   public start(): void {

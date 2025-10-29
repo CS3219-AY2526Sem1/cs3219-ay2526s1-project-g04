@@ -501,6 +501,7 @@ export class MatchingWorker {
 
     const idPositions: { userId: string; position: number }[] = [];
     for (const userId of userIds) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { data, topics } = potentialMatches[userId];
       const position = await this.matchingRedis.fcfsList.getUserPosition(data);
 

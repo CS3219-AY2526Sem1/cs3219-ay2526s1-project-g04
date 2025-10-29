@@ -1,5 +1,5 @@
 {
-  "name": "@shared/messaging",
+  "name": "message_broker_service",
   "version": "1.0.0",
   "description": "Async communications between services",
   "type": "module",

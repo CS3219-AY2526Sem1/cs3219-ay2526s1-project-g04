@@ -1,5 +1,5 @@
 {
-  "name": "@shared/redis",
+  "name": "redis_service",
   "version": "1.0.0",
   "description": "redis",
   "main": "dist/redis.js",

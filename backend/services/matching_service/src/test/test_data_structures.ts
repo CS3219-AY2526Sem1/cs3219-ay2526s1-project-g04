@@ -4,7 +4,6 @@ import {
   HashData,
   MatchingPoolData,
 } from '../clients/redis/types.js';
-import { MatchingWorker } from '../workers/matching_worker.js';
 import { Users } from './test_data.js';
 import { logger } from '../logger/logger.js';
 
