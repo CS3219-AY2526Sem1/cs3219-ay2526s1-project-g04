@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/main.ts",
-    "start": "node dist/main.js",
-    "build": "tsc",
+    "start": "node dist/services/collaboration_service/src/main.js",
+    "build": "prisma generate && tsc && tsc-alias",
     "type-check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "cd ../.. && npm run lint -- services/collaboration_service/src "
@@ -15,12 +15,14 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^6.17.0",
+    "@prisma/client": "^6.17.1",
     "@y/websocket-server": "^0.1.1",
     "amqplib": "^0.10.9",
     "express": "^5.1.0",
-    "prisma": "^6.17.0",
+    "prisma": "^6.17.1",
+    "redis": "^5.8.3",
     "ws": "^8.18.3",
+    "y-postgresql": "^1.0.1",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.27"
   },
@@ -29,6 +31,7 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.5.2",
     "@types/ws": "^8.18.1",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   }

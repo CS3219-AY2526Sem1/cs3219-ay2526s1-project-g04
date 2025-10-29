@@ -3,8 +3,9 @@
   // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
     // File Layout
-    "rootDirs": ["./src", "../../shared"],
+    "rootDirs": ["./src", "../../shared", "./prisma"],
     "outDir": "./dist",
+    "declarationDir": "./dist",
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module

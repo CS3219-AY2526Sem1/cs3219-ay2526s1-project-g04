@@ -3,6 +3,8 @@ import { PostgresPrisma } from '../data/postgres/postgres.js';
 import { Session } from './session.js';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from '@y/websocket-server/utils';
+import { PostgresqlPersistence } from 'y-postgresql';
+import * as Y from 'yjs';
 import type { IncomingMessage } from 'http';
 import type WebSocket from 'ws';
 
@@ -22,12 +24,19 @@ export class SessionManager {
   private redis: CollabRedis;
   private db: PostgresPrisma;
   private wss: WebSocketServer;
+  private pgdb: PostgresqlPersistence;
 
-  constructor(redis: CollabRedis, db: PostgresPrisma, wss: WebSocketServer) {
+  constructor(
+    redis: CollabRedis,
+    db: PostgresPrisma,
+    wss: WebSocketServer,
+    pgdb: PostgresqlPersistence,
+  ) {
     this.redis = redis;
     this.db = db;
     this.wss = wss;
     this.sessions = {};
+    this.pgdb = pgdb;
 
     this.wss.on('connection', (ws, req) => {
       this.handleConnection(ws, req);
@@ -62,6 +71,35 @@ export class SessionManager {
       matchedId,
       SESSIONSTATE.created,
     );
+
+    // const sessionId = await this.db.createSessionDataModel(...);
+    const ydoc = new Y.Doc();
+    const docName = sessionId.toString();
+    this.pgdb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
+    console.log(`[y-postgres] Document initialized for session ${docName}`);
+
+    async function logPersistedDoc(
+      pgdb: PostgresqlPersistence,
+      docName: string,
+    ) {
+      setInterval(async () => {
+        try {
+          const ydoc = await pgdb.getYDoc(docName);
+
+          const yText = ydoc.getText('monaco');
+
+          console.log(
+            `\n[Y.PostgreSQL Snapshot @${new Date().toLocaleTimeString()}]`,
+          );
+          console.log(`Document: ${docName}`);
+          console.log(yText.toString() || '(empty)');
+        } catch (err) {
+          console.error(`Failed to load persisted doc ${docName}:`, err);
+        }
+      }, 20_000); // every 20 seconds
+    }
+
+    logPersistedDoc(this.pgdb, sessionId.toString());
   }
 
   public saveSession(sessionId: string) {
@@ -91,7 +129,7 @@ export class SessionManager {
     console.log(`sessionId in created session obj ${session?.getId()}`);
 
     // Setup y-websocket
-    setupWSConnection(ws, req);
+    setupWSConnection(ws, req, { docName: sessionId.toString() });
 
     // Ensures only correct user's client are added into session
     if (sessionId === session?.getId()) {

@@ -1,0 +1,2 @@
+include:
+  - ./collaboration_service/docker-compose.yml
