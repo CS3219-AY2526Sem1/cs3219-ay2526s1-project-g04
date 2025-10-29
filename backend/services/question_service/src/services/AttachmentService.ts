@@ -7,6 +7,7 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
   GetObjectCommand,
+  type GetObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3, S3_BUCKET, SIGNED_URL_TTL_SECONDS } from '../utils/s3.js';
@@ -225,11 +226,19 @@ export async function finalizeStagedAttachments(
   return out;
 }
 
+/**
+ * Signs a URL for viewing an attachment.
+ * @param {string} objectKey - The S3 object key to sign.
+ * @param {SignViewOptions} opts - An object containing the required fields for signing the URL.
+ * - `asAttachment` (boolean): If true, the object will be signed as an attachment.
+ * - `filename` (string): An optional filename to include in the signed URL's Content-Disposition header.
+ * - `contentTypeHint` (string): An optional MIME type to include in the signed URL's Content-Type header.
+ * @returns {Promise<SignViewResponse>} A promise that resolves with an object containing the signed view URL, object key, and expiration time of the signed URL.
+ */
 export async function signViewUrl(
   objectKey: string,
   opts?: SignViewOptions,
 ): Promise<SignViewResponse> {
-  // ensure object exists first
   await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: objectKey }));
 
   const dispositionType = opts?.asAttachment ? 'attachment' : 'inline';
@@ -238,20 +247,18 @@ export async function signViewUrl(
       ? `${dispositionType}; filename="${opts.filename.replace(/"/g, '')}"`
       : dispositionType;
 
-  // Only include optional params when defined (exactOptionalPropertyTypes-safe)
-  const getParams: Parameters<typeof getSignedUrl>[1]['input'] =
-    new GetObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: objectKey,
-      ...(opts?.contentTypeHint
-        ? { ResponseContentType: opts.contentTypeHint }
-        : {}),
-      ...(contentDisposition
-        ? { ResponseContentDisposition: contentDisposition }
-        : {}),
-    }).input as any; // GetObjectCommand already builds proper input; this is fine.
+  // Build a properly typed input (no `any`)
+  const getParams: GetObjectCommandInput = {
+    Bucket: S3_BUCKET,
+    Key: objectKey,
+    ...(opts?.contentTypeHint
+      ? { ResponseContentType: opts.contentTypeHint }
+      : {}),
+    // always a string; safe to include unconditionally
+    ResponseContentDisposition: contentDisposition,
+  };
 
-  const getCmd = new GetObjectCommand(getParams as any);
+  const getCmd = new GetObjectCommand(getParams);
 
   const view_url = await getSignedUrl(s3, getCmd, {
     expiresIn: SIGNED_URL_TTL_SECONDS,
