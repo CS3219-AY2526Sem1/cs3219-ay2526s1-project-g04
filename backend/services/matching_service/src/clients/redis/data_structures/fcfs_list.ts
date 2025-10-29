@@ -1,4 +1,4 @@
-import { Redis } from '../../../../../../shared/redis/dist/redis.js';
+import { Redis } from '@shared/redis/src/redis.js';
 import { MatchingPoolData } from '../types.js';
 import { logger } from '../../../logger/logger.js';
 
@@ -79,6 +79,6 @@ export class FCFSList {
 
   public async clearList(): Promise<void> {
     await this.redis.clearDataByKey(this.FCFS_KEY);
-    logger.info('FCFS List cleared.');
+    logger.info('[FCFSList] FCFS List cleared.');
   }
 }

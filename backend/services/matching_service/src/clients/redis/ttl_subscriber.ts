@@ -1,4 +1,4 @@
-import { Redis } from '../../../../../shared/redis/dist/redis.js';
+import { Redis } from '@shared/redis/src/redis.js';
 import { TTLHandler } from '../../workers/ttl_handler.js';
 import { logger } from '../../logger/logger.js';
 

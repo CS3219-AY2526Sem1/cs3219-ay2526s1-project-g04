@@ -1,4 +1,9 @@
 {
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "shared/*"
+  ],
   "scripts": {
     "lint": "eslint",
     "lint:fix": "eslint \"{src,apps,libs}/**/*.ts\" --fix",

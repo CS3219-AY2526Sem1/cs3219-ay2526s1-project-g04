@@ -1,5 +1,5 @@
-import { MESSAGE_TYPES } from '../../../../../shared/messaging/dist/src/constants.js';
-import { MessagePublisher } from '../../../../../shared/messaging/dist/src/publisher.js';
+import { MESSAGE_TYPES } from '@shared/messaging/src/constants.js';
+import { MessagePublisher } from '@shared/messaging/src/publisher.js';
 import { logger } from '../../logger/logger.js';
 
 export class MatchingMessenger {

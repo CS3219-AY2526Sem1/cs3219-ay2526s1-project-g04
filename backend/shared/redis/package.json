@@ -1,8 +1,12 @@
 {
-  "name": "redis_service",
+  "name": "@shared/redis",
   "version": "1.0.0",
   "description": "redis",
+  "main": "dist/redis.js",
   "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
     "@types/node": "^24.6.2",

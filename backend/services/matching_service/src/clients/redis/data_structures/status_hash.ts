@@ -1,4 +1,4 @@
-import { Redis } from '../../../../../../shared/redis/dist/redis.js';
+import { Redis } from '@shared/redis/src/redis.js';
 import { HashData, UserStatus } from '../types.js';
 import { logger } from '../../../logger/logger.js';
 

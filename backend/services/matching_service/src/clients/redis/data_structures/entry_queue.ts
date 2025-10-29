@@ -1,4 +1,4 @@
-import { Redis } from '../../../../../../shared/redis/dist/redis.js';
+import { Redis } from '@shared/redis/src/redis.js';
 import { EntryQueueData } from '../types.js';
 import { logger } from '../../../logger/logger.js';
 
@@ -50,6 +50,6 @@ export class EntryQueue {
    */
   public async clearQueue(): Promise<void> {
     await this.redis.clearDataByKey(this.ENTRY_QUEUE_KEY);
-    logger.info('Entry Queue cleared.');
+    logger.info('[EntryQueue] Entry Queue cleared.');
   }
 }

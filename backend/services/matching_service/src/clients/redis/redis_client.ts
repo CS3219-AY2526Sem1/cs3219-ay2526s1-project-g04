@@ -1,5 +1,5 @@
-import { Redis } from '../../../../../shared/redis/dist/redis.js';
-import { MatchedValue } from '../../../../../shared/redis/dist/models/match_model.js';
+import { Redis } from '@shared/redis/src/redis.js';
+import { MatchedValue } from '@shared/redis/src/models/match_model.js';
 import { EntryQueue } from './data_structures/entry_queue.js';
 import { FCFSList } from './data_structures/fcfs_list.js';
 import { MatchingPool } from './data_structures/matching_pool.js';
@@ -30,7 +30,7 @@ export class MatchingServiceRedis {
 
     await this.initDataStructures();
 
-    console.log('Matching Service Redis connected. ');
+    logger.info('[MatchingServiceRedis] Matching Service Redis connected. ');
   }
 
   public static async getInstance(): Promise<MatchingServiceRedis> {
@@ -42,13 +42,15 @@ export class MatchingServiceRedis {
   }
 
   public async initDataStructures(): Promise<void> {
-    console.log('Initializing Redis data structures.');
+    logger.info('[MatchingServiceRedis] Initializing Redis data structures.');
     await this.entryQueue.clearQueue();
     await this.fcfsList.clearList();
     await this.statusHash.clearAllUsers();
     await this.statusHash.clearAllTTLs();
     await this.matchingPool.clearAllQueues();
-    console.log('✅ Redis data structures initialized (old data cleared).');
+    logger.info(
+      '[MatchingServiceRedis] ✅ Redis data structures initialized (old data cleared).',
+    );
   }
 
   public async getNextMatchId(): Promise<string> {
