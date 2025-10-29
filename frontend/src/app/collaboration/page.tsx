@@ -1,3 +1,7 @@
+'use client';
+
+import { Collaboration } from '@/components/ui/collaboration';
+
 export default function Page() {
-  return <p>Collaboration Page</p>;
+  return <Collaboration></Collaboration>;
 }
