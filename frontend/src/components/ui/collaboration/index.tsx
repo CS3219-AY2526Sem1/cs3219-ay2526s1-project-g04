@@ -4,11 +4,16 @@ import { Communication } from './communication';
 import { QuestionCard } from './question';
 import { TestCases } from './tests';
 
-export const Collaboration = () => {
+interface CollaborationProps {
+  sessionId: string;
+}
+
+export const Collaboration = (p: CollaborationProps) => {
+  const { sessionId } = p;
   return (
     <Stack spacing={2} direction="row" className="h-full w-full">
       <Stack spacing={2} className="h-full w-1/2">
-        <QuestionCard></QuestionCard>
+        <QuestionCard sessionId={sessionId}></QuestionCard>
         <Communication></Communication>
       </Stack>
       <Stack spacing={2} className="h-full w-1/2">
