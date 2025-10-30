@@ -18,9 +18,11 @@ export class PostgresPrisma {
   public async createSessionDataModel(
     UserAId: number,
     userBId: number,
+    questionId: string,
   ): Promise<number> {
     const sessionDataObj = await this.prismaClient.session.create({
       data: {
+        questionId: questionId,
         codeDocument: {
           create: {},
         },
@@ -54,5 +56,20 @@ export class PostgresPrisma {
         },
       },
     });
+  }
+
+  public async getQuestionIdBySessionId(
+    sessionId: number,
+  ): Promise<string | null | undefined> {
+    const session = await this.prismaClient.session.findUnique({
+      where: {
+        id: sessionId,
+      },
+      select: {
+        questionId: true,
+      },
+    });
+
+    return session?.questionId;
   }
 }

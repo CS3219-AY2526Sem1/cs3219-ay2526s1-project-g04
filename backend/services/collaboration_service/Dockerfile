@@ -27,7 +27,6 @@ RUN ls -la
 # Copy Prisma generated folder into dist
 RUN mkdir -p ./dist/services/collaboration_service/generated && cp -r ./generated/prisma ./dist/services/collaboration_service/generated/prisma
 
-
-EXPOSE 3000
+EXPOSE 3009
 
 CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]
