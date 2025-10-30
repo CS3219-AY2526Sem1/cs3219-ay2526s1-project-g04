@@ -51,12 +51,12 @@ export default function TopNavigationBar({
   };
 
   const handleProfileClick = () => {
-    router.push('/home/profile');
+    router.push('/accounts/profile');
     handleMenuClose();
   };
 
   const handleSettingsClick = () => {
-    router.push('/home/account-settings');
+    router.push('/accounts/account-settings');
     handleMenuClose();
   };
 

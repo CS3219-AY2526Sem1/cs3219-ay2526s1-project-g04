@@ -336,6 +336,7 @@ export default function SignUpPage() {
                     !!usernameError ||
                     (username.length > 0 && !isUsernameFormatValid)
                   }
+                  inputProps={{ maxLength: 30 }}
                 />
                 <FormHelperText
                   error={

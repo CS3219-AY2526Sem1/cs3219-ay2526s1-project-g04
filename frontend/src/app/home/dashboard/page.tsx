@@ -92,7 +92,6 @@ const summaryStats = {
 };
 // --- End of Mock Data ---
 
-// Helper function to get the color for the difficulty chip
 const getDifficultyColor = (difficulty: string) => {
   switch (difficulty.toLowerCase()) {
     case 'easy':
