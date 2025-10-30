@@ -22,15 +22,15 @@
     "@tsconfig/node22": "^22.0.2",
     "@types/express": "^5.0.3",
     "@types/node": "^24.8.0",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
-    "tsc-alias": "^1.8.16"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "express": "^5.1.0",
-    "winston": "^3.18.3",
     "amqplib": "^0.10.9",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
     "redis": "^5.8.3",
-    "dotenv": "^17.2.2"
+    "winston": "^3.18.3"
   }
 }
