@@ -12,8 +12,14 @@ export interface UserEntry {
 export class Session {
   private users: Record<string, UserEntry> = {};
   private sessionId: number;
+  private questionId: string;
 
-  constructor(sessionId: number, userAId: number, userBId: number) {
+  constructor(
+    sessionId: number,
+    userAId: number,
+    userBId: number,
+    questionId: string,
+  ) {
     this.users[userAId] = {
       state: USERSTATE.waiting,
     };
@@ -22,6 +28,7 @@ export class Session {
     };
 
     this.sessionId = sessionId;
+    this.questionId = questionId;
   }
 
   public allReady(): boolean {
@@ -61,5 +68,9 @@ export class Session {
 
   public getId() {
     return this.sessionId;
+  }
+
+  public getQuestionId() {
+    return this.questionId;
   }
 }

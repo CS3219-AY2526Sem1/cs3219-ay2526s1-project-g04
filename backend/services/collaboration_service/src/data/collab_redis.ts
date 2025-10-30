@@ -20,7 +20,7 @@ export class CollabRedis {
     return CollabRedis.instance;
   }
 
-  public async getMatchedUser(
+  public async getMatchedData(
     matchedId: string,
   ): Promise<Record<string, string>> {
     const matchedData: Record<string, string> =

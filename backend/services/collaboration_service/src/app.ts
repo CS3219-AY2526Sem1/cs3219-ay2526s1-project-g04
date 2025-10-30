@@ -1,11 +1,11 @@
 import express from 'express';
+import cors from 'cors';
 import { PostgresPrisma } from './data/postgres/postgres.js';
 import { PostgresqlPersistence } from 'y-postgresql';
+import { error } from 'console';
 
 export const app = express();
 const db = PostgresPrisma.getInstance();
-app.use(express.json());
-
 const pgdb = await PostgresqlPersistence.build(
   {
     host: process.env['PG_HOST'] ?? 'localhost',
@@ -20,6 +20,9 @@ const pgdb = await PostgresqlPersistence.build(
     flushSize: 200,
   },
 );
+
+app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(express.json());
 
 app.get('/', (req, res) => {
   res.status(200).send('Collab service is alive');
@@ -58,5 +61,22 @@ app.get('/document/:sessionId', async (req, res) => {
   } catch (err) {
     console.error(`Failed to load persisted doc ${req.params.sessionId}:`, err);
     res.status(500).json({ error: 'Failed to load document' });
+  }
+});
+
+app.get('/question/:sessionId', async (req, res) => {
+  const sessionId = req.params.sessionId;
+  console.log(sessionId);
+  try {
+    const questionId = await db.getQuestionIdBySessionId(Number(sessionId));
+    if (!questionId) {
+      throw error;
+    }
+
+    res.status(200).json({
+      question_id: questionId,
+    });
+  } catch (err) {
+    console.error(`Error fetching questionId for sesssion: ${sessionId}`, err);
   }
 });
