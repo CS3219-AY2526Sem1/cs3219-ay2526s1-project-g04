@@ -53,7 +53,7 @@ export class Collab {
   }
 
   private initServer(app: Express, pgdb: PostgresqlPersistence) {
-    const PORT = 3000;
+    const PORT = 3009;
     const server = http.createServer(app);
 
     server.listen(PORT, () => {
@@ -94,7 +94,7 @@ export class Collab {
       MESSAGE_TYPES.CollaborationService,
       JSON.stringify({
         type: 'matched',
-        matchedId: '456',
+        matchedId: '123',
       }),
     );
   }
