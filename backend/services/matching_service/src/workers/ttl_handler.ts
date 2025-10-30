@@ -1,6 +1,6 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
-import { EntryQueueData } from '../clients/redis/types.js';
 import { logger } from '../logger/logger.js';
+import type { EntryQueueData } from '../clients/redis/types.js';
 
 const TTL_EXTENSION = 60;
 const MATCHING_TTL_EXTENSION = 10;

@@ -1,5 +1,5 @@
 import { Redis } from '@shared/redis/src/redis.js';
-import { EntryQueueData } from '../types.js';
+import type { EntryQueueData } from '../types.js';
 import { logger } from '../../../logger/logger.js';
 
 export class EntryQueue {

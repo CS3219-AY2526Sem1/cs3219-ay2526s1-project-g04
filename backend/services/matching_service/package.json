@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "tsx --watch src/main.ts",
-    "start": "node dist/main.js",
+    "start": "node dist/services/matching_service/src/main.js",
     "build": "tsc",
     "type-check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",

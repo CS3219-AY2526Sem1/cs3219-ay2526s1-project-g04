@@ -1,5 +1,5 @@
 import { Redis } from '@shared/redis/src/redis.js';
-import { MatchingPoolData } from '../types.js';
+import type { MatchingPoolData } from '../types.js';
 import { logger } from '../../../logger/logger.js';
 
 export class FCFSList {

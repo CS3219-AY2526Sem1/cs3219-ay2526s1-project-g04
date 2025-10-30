@@ -1,6 +1,6 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
-import { EntryQueueData } from '../clients/redis/types.js';
 import { logger } from '../logger/logger.js';
+import type { EntryQueueData } from '../clients/redis/types.js';
 
 const INTERVAL = 10000;
 const DISCONNECT_THRESHOLD = 30 * 1000;
@@ -64,7 +64,7 @@ export class DisconnectSweeper {
         }
       }
     } catch (err) {
-      console.error('[DisconnectSweeper] Error during sweep:', err);
+      logger.error('[DisconnectSweeper] Error during sweep:', err);
     } finally {
       this.isSweeping = false;
       logger.info(`[DisconnectSweeper] Sweeping completed.`);

@@ -1,5 +1,5 @@
 import { Redis } from '@shared/redis/src/redis.js';
-import { HashData, UserStatus } from '../types.js';
+import type { HashData, UserStatus } from '../types.js';
 import { logger } from '../../../logger/logger.js';
 
 const USER_TTL = 600; // 10 minutes
@@ -113,7 +113,7 @@ export class StatusHash {
     try {
       const exists = await this.getUserData(userId);
       if (exists) {
-        console.warn(
+        logger.info(
           `User ${userId} already exists in status_hset. Skipping add.`,
         );
         return;

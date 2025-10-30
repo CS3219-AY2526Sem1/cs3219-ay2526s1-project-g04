@@ -19,7 +19,14 @@ export class TTLSubscriber {
       try {
         if (!expiredKey.startsWith('user_ttl:')) return;
 
-        const userId = expiredKey.split(':')[1];
+        const parts = expiredKey.split(':');
+        const userId = parts[1];
+        if (!userId) {
+          logger.warn(
+            `[TTLSubscriber] No userId found in expired key: ${expiredKey}.`,
+          );
+          return;
+        }
 
         logger.info(`[TTLSubscriber] TTL expired for user ${userId}.`);
         await this.ttlHandler.handleUserExpiry(userId);

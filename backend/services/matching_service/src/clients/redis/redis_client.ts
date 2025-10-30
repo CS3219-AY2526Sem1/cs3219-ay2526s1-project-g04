@@ -1,10 +1,10 @@
 import { Redis } from '@shared/redis/src/redis.js';
-import { MatchedValue } from '@shared/redis/src/models/match_model.js';
 import { EntryQueue } from './data_structures/entry_queue.js';
 import { FCFSList } from './data_structures/fcfs_list.js';
 import { MatchingPool } from './data_structures/matching_pool.js';
 import { StatusHash } from './data_structures/status_hash.js';
 import { logger } from '../../logger/logger.js';
+import type { MatchedValue } from '@shared/redis/src/models/match_model.js';
 
 export class MatchingServiceRedis {
   private static instance: MatchingServiceRedis;

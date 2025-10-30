@@ -1,9 +1,9 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
 import { TTLSubscriber } from '../clients/redis/ttl_subscriber.js';
-import { HashData } from '../clients/redis/types.js';
 import { logger } from '../logger/logger.js';
 import { TTLHandler } from '../workers/ttl_handler.js';
 import { Users } from './test_data.js';
+import type { HashData } from '../clients/redis/types.js';
 
 export async function test_ttl_subscriber() {
   try {
@@ -18,6 +18,14 @@ export async function test_ttl_subscriber() {
     logger.info(`[test_ttl_subscriber] Populating test data.`);
     // waiting
     const waiting_user = Users[0];
+
+    if (!waiting_user) {
+      logger.warn(
+        `[test_ttl_subscriber] No waiting user found in Users array.`,
+      );
+      return;
+    }
+
     const waiting_status: HashData = {
       sessionKey: Date.now(),
       status: 'waiting',
@@ -33,6 +41,14 @@ export async function test_ttl_subscriber() {
 
     // matching
     const matching_user = Users[1];
+
+    if (!matching_user) {
+      logger.warn(
+        `[test_ttl_subscriber] No matching user found in Users array.`,
+      );
+      return;
+    }
+
     const matching_status: HashData = {
       sessionKey: Date.now(),
       status: 'matching',
@@ -51,6 +67,14 @@ export async function test_ttl_subscriber() {
 
     // matched, timeout, disconnected, cancelled
     const matched_user = Users[2];
+
+    if (!matched_user) {
+      logger.warn(
+        `[test_ttl_subscriber] No matched user found in Users array.`,
+      );
+      return;
+    }
+
     const matched_status: HashData = {
       sessionKey: Date.now(),
       status: 'matched',

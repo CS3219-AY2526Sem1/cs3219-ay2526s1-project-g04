@@ -1,11 +1,11 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
-import {
+import { Users } from './test_data.js';
+import { logger } from '../logger/logger.js';
+import type {
   EntryQueueData,
   HashData,
   MatchingPoolData,
 } from '../clients/redis/types.js';
-import { Users } from './test_data.js';
-import { logger } from '../logger/logger.js';
 
 export async function test_data_structures() {
   try {
@@ -68,12 +68,21 @@ export async function test_data_structures() {
       `[test_data_structure] Position of unadded user: ${fake_user_position}.`,
     );
 
-    const user_to_remove: MatchingPoolData = {
-      userId: Users[0].userId,
+    const user_to_remove = Users[0];
+
+    if (!user_to_remove) {
+      logger.warn(
+        `[test_data_structures] User to remove is not found in Users array.`,
+      );
+      return;
+    }
+
+    const user_to_remove_data: MatchingPoolData = {
+      userId: user_to_remove.userId,
       sessionKey: 1,
     };
-    await redis.fcfsList.removeUser(user_to_remove);
-    logger.info(`[test_data_structure] Removed user ${Users[0].userId}.`);
+    await redis.fcfsList.removeUser(user_to_remove_data);
+    logger.info(`[test_data_structure] Removed user ${user_to_remove.userId}.`);
 
     logger.info('[test_data_structure] Getting positions in FCFS list again.');
     for (const user of Users) {
@@ -120,17 +129,26 @@ export async function test_data_structures() {
       }
     }
 
-    const removed_user_1: MatchingPoolData = {
-      userId: Users[0].userId,
+    const removed_user_1 = Users[0];
+
+    if (!removed_user_1) {
+      logger.warn(
+        `[test_data_strucutures] removed_user_1 not found in Users array.`,
+      );
+      return;
+    }
+
+    const removed_user_1_data: MatchingPoolData = {
+      userId: removed_user_1.userId,
       sessionKey: 1,
     };
     await redis.matchingPool.removeUser(
-      removed_user_1,
-      Users[0].difficulty,
-      Users[0].topics,
+      removed_user_1_data,
+      removed_user_1.difficulty,
+      removed_user_1.topics,
     );
     logger.info(
-      `[test_data_structures] User ${Users[0].userId} removed from queues difficulty=${Users[0].difficulty} with topics=${Users[0].topics}.`,
+      `[test_data_structures] User ${removed_user_1.userId} removed from queues difficulty=${removed_user_1.difficulty} with topics=${removed_user_1.topics}.`,
     );
 
     logger.info('[test_data_structures] Testing peek queue.');
@@ -213,12 +231,25 @@ export async function test_data_structures() {
       }
     }
 
-    await redis.statusHash.removeUser(Users[0].userId);
-    logger.info(`[test_data_structures] Removed user ${Users[0].userId}.`);
+    const user_to_remove_from_hash = Users[0];
 
-    const userData = await redis.statusHash.getUserData(Users[0].userId);
+    if (!user_to_remove_from_hash) {
+      logger.warn(
+        `[test_data_structures] user_to_remove_from_hash not found in Users array.`,
+      );
+      return;
+    }
+
+    await redis.statusHash.removeUser(user_to_remove_from_hash.userId);
     logger.info(
-      `[test_data_structures] Data retrieved for user ${Users[0].userId}: ${JSON.stringify(userData)}.`,
+      `[test_data_structures] Removed user ${user_to_remove_from_hash.userId}.`,
+    );
+
+    const userData = await redis.statusHash.getUserData(
+      user_to_remove_from_hash.userId,
+    );
+    logger.info(
+      `[test_data_structures] Data retrieved for user ${user_to_remove_from_hash.userId}: ${JSON.stringify(userData)}.`,
     );
 
     logger.info(`[test_data_structures] Waiting for 10 seconds.`);
@@ -243,18 +274,29 @@ export async function test_data_structures() {
       );
     }
 
-    await redis.statusHash.removeUserTTL(Users[0].userId);
+    const user_to_remove_ttl = Users[0];
+
+    if (!user_to_remove_ttl) {
+      logger.warn(
+        `[test_data_structures] user_to_remove_ttl not found in Users array.`,
+      );
+      return;
+    }
+
+    await redis.statusHash.removeUserTTL(user_to_remove_ttl.userId);
     logger.info(
-      `[test_data_structures] Removed TTL for user ${Users[0].userId}.`,
+      `[test_data_structures] Removed TTL for user ${user_to_remove_ttl.userId}.`,
     );
 
-    const removedUserTTL = await redis.statusHash.getUserTTL(Users[0].userId);
+    const removedUserTTL = await redis.statusHash.getUserTTL(
+      user_to_remove_ttl.userId,
+    );
     logger.info(
-      `[test_data_structures] User TTL for user ${Users[0].userId}: ${removedUserTTL}.`,
+      `[test_data_structures] User TTL for user ${user_to_remove_ttl.userId}: ${removedUserTTL}.`,
     );
     logger.info('==== test status hash concluded ====');
   } catch (err) {
-    console.error('Error: ', err);
+    logger.error('[test_data_structures] Error: ', err);
     process.exit(1);
   }
 }

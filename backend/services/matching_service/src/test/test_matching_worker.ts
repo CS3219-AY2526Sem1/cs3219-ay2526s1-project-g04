@@ -1,8 +1,8 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
-import { EntryQueueData, HashData } from '../clients/redis/types.js';
 import { MatchingWorker } from '../workers/matching_worker.js';
 import { Users } from './test_data.js';
 import { logger } from '../logger/logger.js';
+import type { EntryQueueData, HashData } from '../clients/redis/types.js';
 
 export async function test_matching_worker() {
   try {
@@ -84,6 +84,14 @@ export async function test_matching_worker() {
       '[test_matching_worker] ==== Testing handling of outdated jobs (i.e. session key of job != session key of hash data). ====',
     );
     const outdated_user = Users[0];
+
+    if (!outdated_user) {
+      logger.warn(
+        `[test_matching_worker] outdated_user not found in Users array.`,
+      );
+      return;
+    }
+
     const sessionKey = Date.now();
     const outdatedHash: HashData = {
       sessionKey: sessionKey + 10,
@@ -122,6 +130,14 @@ export async function test_matching_worker() {
       `[test_matching_worker] ==== Testing handling of disconnected users (i.e. last seen > 30 seconds ago). ====`,
     );
     const disconnected_user = Users[1];
+
+    if (!disconnected_user) {
+      logger.warn(
+        `[test_matching_worker] disconnected_user not found in Users array.`,
+      );
+      return;
+    }
+
     const disconnected_hash: HashData = {
       sessionKey: Date.now(),
       status: 'waiting',
@@ -157,6 +173,12 @@ export async function test_matching_worker() {
       `[test_matching_worker] ==== Testing handling of users with too little TTL (TTL left < 10) ====`,
     );
     const ttl_user = Users[2];
+
+    if (!ttl_user) {
+      logger.warn(`[test_matching_worker] ttl_user not found in Users array.`);
+      return;
+    }
+
     const ttl_hash_data: HashData = {
       sessionKey: Date.now(),
       status: 'waiting',
@@ -192,7 +214,7 @@ export async function test_matching_worker() {
       `[test_matching_worker] Enqueued clear job: ${JSON.stringify(ttl_clear_job)}.`,
     );
   } catch (err) {
-    console.error('Error: ', err);
+    logger.error('[test_matching_worker] Error: ', err);
     process.exit(1);
   }
 }

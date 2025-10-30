@@ -1,4 +1,4 @@
-import { Difficulty } from '../clients/redis/types.js';
+import type { Difficulty } from '../clients/redis/types.js';
 
 export type UserInput = {
   userId: string;

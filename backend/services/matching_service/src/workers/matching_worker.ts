@@ -1,12 +1,12 @@
 import { MatchingServiceRedis } from '../clients/redis/redis_client.js';
 import { MatchingMessenger } from '../clients/messenger/messenger_client.js';
-import {
+import { logger } from '../logger/logger.js';
+import { getQuestionId } from '../clients/question_service_client.js';
+import type {
   EntryQueueData,
   MatchingPoolData,
   HashData,
 } from '../clients/redis/types.js';
-import { logger } from '../logger/logger.js';
-import { getQuestionId } from '../clients/question_service_client.js';
 
 /**
  * Threshold to detect for disconnected users. (in ms)
@@ -382,13 +382,15 @@ export class MatchingWorker {
         }
 
         // potential match found
-        if (!result[user.userId]) {
-          result[user.userId] = { data: user, topics: [] };
+        let candidate = result[user.userId];
+        if (!candidate) {
+          candidate = { data: user, topics: [] };
+          result[user.userId] = candidate;
         }
-        result[user.userId].topics.push(topic);
+        candidate.topics.push(topic);
 
         logger.info(
-          `[getPotentialMatches] Found potential match: user=${user.userId}, topics=${result[user.userId].topics.join(', ')}`,
+          `[getPotentialMatches] Found potential match: user=${user.userId}, topics=${candidate.topics.join(', ')}`,
         );
 
         done = true;
@@ -501,8 +503,15 @@ export class MatchingWorker {
 
     const idPositions: { userId: string; position: number }[] = [];
     for (const userId of userIds) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { data, topics } = potentialMatches[userId];
+      const matchCandidate = potentialMatches[userId];
+      if (!matchCandidate) {
+        logger.info(
+          `[getMatch] User ${userId} not in potentialMatches, skipping.`,
+        );
+        continue;
+      }
+
+      const { data } = matchCandidate;
       const position = await this.matchingRedis.fcfsList.getUserPosition(data);
 
       if (!position) {
@@ -526,13 +535,19 @@ export class MatchingWorker {
     );
 
     for (const { userId } of sortedIds) {
+      const matchCandidate = potentialMatches[userId];
+      if (!matchCandidate) {
+        logger.info(`[getMatch] Skipping ${userId}, not in potentialMatches.`);
+        continue;
+      }
+
       const userData = await this.matchingRedis.statusHash.getUserData(userId);
 
       // checks
       if (
         !userData ||
         userData.status !== 'waiting' ||
-        potentialMatches[userId].data.sessionKey !== userData.sessionKey
+        matchCandidate.data.sessionKey !== userData.sessionKey
       ) {
         logger.info(`[getMatch] Skipping ${userId}, not valid for matching.`);
         continue;
@@ -559,7 +574,7 @@ export class MatchingWorker {
         continue;
       }
 
-      const commonTopics = potentialMatches[userId].topics;
+      const commonTopics = matchCandidate.topics;
       const questionId = await getQuestionId(
         matchingId,
         difficulty,
