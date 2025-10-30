@@ -4,7 +4,7 @@ import { TTLHandler } from './workers/ttl_handler.js';
 import { TTLSubscriber } from './clients/redis/ttl_subscriber.js';
 import { DisconnectSweeper } from './workers/disconnect_sweeper.js';
 import { logger } from './logger/logger.js';
-import { initServer } from './server.js';
+import { initServer } from './api/server.js';
 // import { test_matching_worker } from './test/test_matching_worker.js';
 // import { test_data_structures } from './test/test_data_structures.js';
 // import { test_ttl_subscriber } from './test/test_ttl_subscriber.js';
@@ -28,7 +28,7 @@ async function main() {
     subscriber.subscribe();
     sweeper.start();
 
-    await initServer();
+    await initServer(matchingRedis);
 
     // await test_data_structures();
     // await test_matching_worker();

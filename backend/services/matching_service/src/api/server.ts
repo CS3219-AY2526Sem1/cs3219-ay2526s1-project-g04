@@ -1,16 +1,20 @@
 import express from 'express';
+import type { MatchingServiceRedis } from '../clients/redis/redis_client.js';
+import { logger } from '../logger/logger.js';
+import { registerMatchRoutes } from './routes.js';
 import type { Request, Response } from 'express';
-import { logger } from './logger/logger.js';
 
-const app = express();
-const port: number = 3003;
+export async function initServer(redis: MatchingServiceRedis) {
+  const app = express();
+  const port: number = 3003;
 
-export async function initServer() {
   app.use(express.json());
 
   app.get('/', (req: Request, res: Response) => {
     res.send('Hello World!');
   });
+
+  await registerMatchRoutes(app, redis);
 
   const server = app.listen(port, () =>
     logger.info(`[Server] Matching service running on port ${port}`),
