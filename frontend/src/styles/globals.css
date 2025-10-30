@@ -1,10 +1,10 @@
 @layer theme, base, mui, components, utilities;
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
   --foreground: #111827;
-  --heading1-color: #6B7280;
+  --heading1-color: #6b7280;
 }
 
 @theme inline {

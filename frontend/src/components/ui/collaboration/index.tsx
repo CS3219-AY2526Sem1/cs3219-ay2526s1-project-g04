@@ -3,6 +3,7 @@ import CollabMonaco from './CollabMonaco';
 import { Communication } from './communication';
 import { QuestionCard } from './question';
 import { TestCases } from './tests';
+import { CollabProvider } from './CollabProvider';
 
 export const Collaboration = () => {
   return (
@@ -13,7 +14,9 @@ export const Collaboration = () => {
       </Stack>
       <Stack spacing={2} className="h-full w-1/2">
         <Box className="flex w-full h-55/100">
-          <CollabMonaco></CollabMonaco>
+          <CollabProvider>
+            <CollabMonaco></CollabMonaco>
+          </CollabProvider>
         </Box>
         <Box className="flex w-full h-45/100">
           <TestCases></TestCases>

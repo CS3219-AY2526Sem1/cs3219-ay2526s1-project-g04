@@ -75,6 +75,16 @@ export class SessionManager {
     // const sessionId = await this.db.createSessionDataModel(...);
     const ydoc = new Y.Doc();
     const docName = sessionId.toString();
+
+    const yText = ydoc.getText('monaco');
+    yText.insert(
+      0,
+      `def twoSum(nums, target):
+        # Write your solution here
+        pass
+    `,
+    );
+
     this.pgdb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
     console.log(`[y-postgres] Document initialized for session ${docName}`);
 
