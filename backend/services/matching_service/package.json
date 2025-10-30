@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "tsx --watch src/main.ts",
     "start": "node dist/services/matching_service/src/main.js",
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "type-check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "cd ../.. && npm run lint -- services/matching_service/src "
@@ -23,10 +23,14 @@
     "@types/express": "^5.0.3",
     "@types/node": "^24.8.0",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "tsc-alias": "^1.8.16"
   },
   "dependencies": {
     "express": "^5.1.0",
-    "winston": "^3.18.3"
+    "winston": "^3.18.3",
+    "amqplib": "^0.10.9",
+    "redis": "^5.8.3",
+    "dotenv": "^17.2.2"
   }
 }
