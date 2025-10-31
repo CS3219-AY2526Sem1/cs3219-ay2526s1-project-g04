@@ -34,7 +34,30 @@ export async function getPublishedById(id: string) {
 }
 
 export async function getQuestionById(id: string) {
-  return prisma.questions.findFirst({ where: { id } });
+  return prisma.questions.findFirst({
+    where: { id },
+    select: {
+      id: true,
+      title: true,
+      body_md: true,
+      difficulty: true,
+      status: true,
+      version: true,
+      attachments: true,
+      created_at: true,
+      updated_at: true,
+      question_topics: {
+        select: {
+          topics: {
+            select: {
+              slug: true,
+              color_hex: true,
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 export async function listPublished(opts: {
@@ -135,62 +158,58 @@ export async function listAll(opts: {
   const size = Math.min(100, Math.max(1, opts.size ?? 20));
   const offset = (page - 1) * size;
 
-  // Fast path — no search text and no topic filter → use Prisma
-  if (!opts.q && !opts.topics?.length) {
-    const where: Prisma.questionsWhereInput = {
-      ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
-    };
-    return prisma.questions.findMany({
-      where,
-      orderBy: { updated_at: 'desc' },
-      skip: offset,
-      take: size,
-    });
-  }
+  const where: Prisma.questionsWhereInput = {
+    ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
 
-  // FTS / topics path — parameterized SQL with explicit casts
-  const clauses: string[] = [];
-  const params: unknown[] = [];
-  let i = 1;
+    // topics filter (if provided)
+    ...(opts.topics?.length
+      ? {
+          question_topics: {
+            some: {
+              topic_slug: { in: opts.topics },
+            },
+          },
+        }
+      : {}),
 
-  if (opts.difficulty) {
-    clauses.push(`difficulty = $${i++}`);
-    params.push(opts.difficulty);
-  }
-  if (opts.topics?.length) {
-    clauses.push(`topics ?| $${i++}::text[]`);
-    params.push(opts.topics);
-  }
-  if (opts.q) {
-    clauses.push(`tsv_en @@ plainto_tsquery('english', $${i++})`);
-    params.push(opts.q);
-  }
+    // q filter (very naive for now: match title OR body_md contains substring, case-insensitive)
+    ...(opts.q
+      ? {
+          OR: [
+            { title: { contains: opts.q, mode: 'insensitive' } },
+            { body_md: { contains: opts.q, mode: 'insensitive' } },
+          ],
+        }
+      : {}),
+  };
 
-  const whereSql = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
-  const sql = `
-    SELECT id, title, body_md, difficulty, topics, attachments,
-           status, version, rand_key, created_at, updated_at
-    FROM questions
-    ${whereSql}
-    ORDER BY updated_at DESC
-    LIMIT ${size} OFFSET ${offset}
-  `;
-
-  return prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      title: string;
-      body_md: string;
-      difficulty: 'Easy' | 'Medium' | 'Hard';
-      topics: unknown; // jsonb
-      attachments: unknown; // jsonb
-      status: 'draft' | 'published' | 'archived';
-      version: number;
-      rand_key: number;
-      created_at: Date | null;
-      updated_at: Date | null;
-    }>
-  >(sql, ...params);
+  return prisma.questions.findMany({
+    where,
+    orderBy: { updated_at: 'desc' },
+    skip: offset,
+    take: size,
+    select: {
+      id: true,
+      title: true,
+      body_md: true,
+      difficulty: true,
+      status: true,
+      version: true,
+      attachments: true,
+      created_at: true,
+      updated_at: true,
+      question_topics: {
+        select: {
+          topics: {
+            select: {
+              slug: true,
+              color_hex: true,
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 export async function createDraft(q: {
