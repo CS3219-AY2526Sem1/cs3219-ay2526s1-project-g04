@@ -70,10 +70,18 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
+      - name: Build and push question image
         uses: docker/build-push-action@v6
         with:
           context: ./backend/services/question_service
           file: ./backend/services/question_service/Dockerfile
           push: true
           tags: peerprep4/peerprep4:question_service
+
+      - name: Build and push collab image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/services/collaboration_service/Dockerfile
+          push: true
+          tags: peerprep4/peerprep4:collaboration_service
