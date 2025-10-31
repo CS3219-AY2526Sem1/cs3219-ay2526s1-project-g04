@@ -12,5 +12,7 @@ on:
 jobs:
   run-backend:
     uses: ./.github/workflows/backend_ci.yml
+    secrets: inherit
   run-frontend:
     uses: ./.github/workflows/frontend_ci.yml
+    secrets: inherit
