@@ -2,7 +2,7 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "./dist",
-    "rootDirs": ["./src", "./scripts"],
+    "rootDirs": ["./src", "./scripts", "./prisma"],
 
     "module": "nodenext",
     "target": "esnext",
