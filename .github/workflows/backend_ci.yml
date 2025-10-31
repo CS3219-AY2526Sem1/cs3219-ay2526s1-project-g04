@@ -59,6 +59,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Debug secret presence
+        run: |
+          if [ -z "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "❌ DOCKER_USERNAME is missing"
+          else
+            echo "✅ DOCKER_USERNAME is set"
+          fi
+
+          if [ -z "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "❌ DOCKER_PASSWORD is missing"
+          else
+            echo "✅ DOCKER_PASSWORD is set"
+          fi
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
