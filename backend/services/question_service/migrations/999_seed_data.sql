@@ -1,5 +1,5 @@
 -- migrations/999_seed_data.sql
--- Question Service: Dummy Data Seed (raw markdown body_md, no auto wrapper)
+-- Question Service: Dummy Data Seed
 
 BEGIN;
 
@@ -482,6 +482,344 @@ SELECT q.id, topic_slug
 FROM upsert_questions q,
 LATERAL jsonb_array_elements_text(q.topics) AS topic_slug
 WHERE topic_slug IN (SELECT slug FROM topics)
+ON CONFLICT DO NOTHING;
+
+-- ==============================================================
+-- Python starter code for each question
+-- ==============================================================
+
+-- NOTE:
+-- We only seed starter code for a subset of questions that are "coding style".
+-- SQL / probability style questions can be left without a starter row.
+
+INSERT INTO question_python_starter (question_id, starter_code) VALUES
+  (
+    'reverse-a-string',
+    'class Solution:
+    def reverseString(self, s: list[str]) -> None:
+        """
+        Do not return anything, modify s in-place instead.
+        Example:
+        s = ["h","e","l","l","o"] -> ["o","l","l","e","h"]
+        """
+        # TODO: two-pointer swap
+        left, right = 0, len(s) - 1
+        while left < right:
+            s[left], s[right] = s[right], s[left]
+            left += 1
+            right -= 1
+'
+  ),
+  (
+    'linked-list-cycle-detection',
+    'class Solution:
+    def hasCycle(self, head: "ListNode | None") -> bool:
+        """
+        Given head of a singly linked list, return True if there is a cycle.
+        Use O(1) extra space.
+        """
+        slow = head
+        fast = head
+        while fast and fast.next:
+            slow = slow.next
+            fast = fast.next.next
+            if slow is fast:
+                return True
+        return False
+'
+  ),
+  (
+    'rotate-image',
+    'class Solution:
+    def rotate(self, matrix: list[list[int]]) -> None:
+        """
+        Do not return anything, modify matrix in-place instead.
+
+        Goal: rotate 90 degrees clockwise.
+        Steps:
+        1. Transpose (swap matrix[i][j] with matrix[j][i] for j>i)
+        2. Reverse each row
+        """
+        n = len(matrix)
+        # transpose
+        for i in range(n):
+            for j in range(i + 1, n):
+                matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
+        # reverse rows
+        for row in matrix:
+            row.reverse()
+'
+  ),
+  (
+    'validate-binary-search-tree',
+    'class Solution:
+    def isValidBST(self, root: "TreeNode | None") -> bool:
+        """
+        Return True if the tree is a valid BST.
+        A valid BST has all left < node.val < all right, recursively.
+        """
+
+        def helper(node, low, high):
+            if not node:
+                return True
+            if not (low < node.val < high):
+                return False
+            return helper(node.left, low, node.val) and helper(node.right, node.val, high)
+
+        return helper(root, float("-inf"), float("inf"))
+'
+  ),
+  (
+    'lru-cache',
+    'class LRUCache:
+    """
+    Implement LRU cache with get/put in O(1).
+    Hint: dict + doubly linked list.
+    """
+
+    def __init__(self, capacity: int):
+        # TODO: init your data structures
+        pass
+
+    def get(self, key: int) -> int:
+        # TODO
+        return -1
+
+    def put(self, key: int, value: int) -> None:
+        # TODO
+        return
+'
+  ),
+  (
+    'longest-common-subsequence',
+    'class Solution:
+    def longestCommonSubsequence(self, text1: str, text2: str) -> int:
+        """
+        Return length of LCS of text1 and text2.
+        Classic DP.
+        """
+        # TODO: bottom-up DP
+        n, m = len(text1), len(text2)
+        dp = [[0]*(m+1) for _ in range(n+1)]
+        for i in range(n-1, -1, -1):
+            for j in range(m-1, -1, -1):
+                if text1[i] == text2[j]:
+                    dp[i][j] = 1 + dp[i+1][j+1]
+                else:
+                    dp[i][j] = max(dp[i+1][j], dp[i][j+1])
+        return dp[0][0]
+'
+  ),
+  (
+    'sliding-window-maximum',
+    'from collections import deque
+
+class Solution:
+    def maxSlidingWindow(self, nums: list[int], k: int) -> list[int]:
+        """
+        Return array of max for each window of size k.
+        Hint: use a deque of indices in decreasing nums[] order.
+        """
+        # TODO
+        dq = deque()  # store indices
+        res: list[int] = []
+
+        for i, val in enumerate(nums):
+            # pop left if out of window
+            while dq and dq[0] <= i - k:
+                dq.popleft()
+
+            # maintain decreasing order
+            while dq and nums[dq[1-1]] < val:
+                dq.pop()
+
+            dq.append(i)
+
+            if i >= k - 1:
+                res.append(nums[dq[0]])
+        return res
+'
+  )
+ON CONFLICT (question_id) DO UPDATE
+  SET starter_code = EXCLUDED.starter_code;
+
+-- ==============================================================
+-- Test cases for each question
+--   visibility = 'sample'  -> we can show in UI
+--   visibility = 'hidden'  -> NOT shown pre-run
+-- ==============================================================
+
+-- reverse-a-string
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'reverse-a-string',
+    'sample',
+    '["h","e","l","l","o"]',
+    '["o","l","l","e","h"]',
+    0
+  ),
+  (
+    'reverse-a-string',
+    'hidden',
+    '["H","a","n","n","a","h"]',
+    '["h","a","n","n","a","H"]',
+    1
+  )
+ON CONFLICT DO NOTHING;
+
+-- linked-list-cycle-detection
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'linked-list-cycle-detection',
+    'sample',
+    '{"list":[3,2,0,-4],"pos":1}',
+    'true',
+    0
+  ),
+  (
+    'linked-list-cycle-detection',
+    'hidden',
+    '{"list":[1,2],"pos":0}',
+    'true',
+    1
+  ),
+  (
+    'linked-list-cycle-detection',
+    'hidden',
+    '{"list":[1],"pos":-1}',
+    'false',
+    2
+  )
+ON CONFLICT DO NOTHING;
+
+-- rotate-image
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'rotate-image',
+    'sample',
+    '[[1,2,3],[4,5,6],[7,8,9]]',
+    '[[7,4,1],[8,5,2],[9,6,3]]',
+    0
+  ),
+  (
+    'rotate-image',
+    'hidden',
+    '[[5,1,9,11],[2,4,8,10],[13,3,6,7],[15,14,12,16]]',
+    '[[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]]',
+    1
+  )
+ON CONFLICT DO NOTHING;
+
+-- longest-common-subsequence
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'longest-common-subsequence',
+    'sample',
+    '{"text1":"abcde","text2":"ace"}',
+    '3',
+    0
+  ),
+  (
+    'longest-common-subsequence',
+    'hidden',
+    '{"text1":"abc","text2":"abc"}',
+    '3',
+    1
+  ),
+  (
+    'longest-common-subsequence',
+    'hidden',
+    '{"text1":"abc","text2":"def"}',
+    '0',
+    2
+  )
+ON CONFLICT DO NOTHING;
+
+-- sliding-window-maximum
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'sliding-window-maximum',
+    'sample',
+    '{"nums":[1,3,-1,-3,5,3,6,7],"k":3}',
+    '[3,3,5,5,6,7]',
+    0
+  ),
+  (
+    'sliding-window-maximum',
+    'hidden',
+    '{"nums":[9,8,7,6,5,4,3],"k":2}',
+    '[9,8,7,6,5,4]',
+    1
+  )
+ON CONFLICT DO NOTHING;
+
+-- validate-binary-search-tree
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'validate-binary-search-tree',
+    'sample',
+    '{"tree":[2,1,3]}',
+    'true',
+    0
+  ),
+  (
+    'validate-binary-search-tree',
+    'hidden',
+    '{"tree":[5,1,4,null,null,3,6]}',
+    'false',
+    1
+  )
+ON CONFLICT DO NOTHING;
+
+-- lru-cache
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'lru-cache',
+    'sample',
+    '{"ops":["LRUCache","put","put","get","put","get","put","get","get","get"],"args":[[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]}',
+    '[null,null,null,1,null,-1,null,-1,3,4]',
+    0
+  )
+ON CONFLICT DO NOTHING;
+
+-- serialize-and-deserialize-binary-tree
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'serialize-and-deserialize-binary-tree',
+    'sample',
+    '{"tree":[1,2,3,null,null,4,5]}',
+    '"1,2,3,null,null,4,5"',
+    0
+  )
+ON CONFLICT DO NOTHING;
+
+-- n-queens
+INSERT INTO question_test_cases
+  (question_id, visibility, input_data, expected_output, ordinal)
+VALUES
+  (
+    'n-queens',
+    'sample',
+    '{"n":4}',
+    '[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]',
+    0
+  )
 ON CONFLICT DO NOTHING;
 
 -- ==============================================================
