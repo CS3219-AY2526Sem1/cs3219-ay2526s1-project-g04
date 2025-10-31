@@ -74,6 +74,6 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./backend/services/question_service
-          file: .
+          file: ./backend/services/question_service/Dockerfile
           push: true
           tags: peerprep4/peerprep4:question_service
