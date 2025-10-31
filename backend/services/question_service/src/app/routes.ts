@@ -1,17 +1,21 @@
 // src/app/routes.ts
+
 import { Router } from 'express';
 import * as AdminAttachmentController from '../controllers/AdminAttachmentController.js';
 import * as QuestionController from '../controllers/QuestionController.js';
 import * as AdminController from '../controllers/AdminController.js';
 import * as TopicController from '../controllers/TopicController.js';
 import * as HealthController from '../controllers/HealthController.js';
-import { requireAuth, requireRole } from '../middleware/auth.js'; // ⬅️ add requireAuth
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import * as DebugController from '../controllers/DebugController.js';
 
 const r = Router();
 
 // Health
 r.get('/healthz', HealthController.healthz);
 r.get('/readyz', HealthController.readyz);
+
+r.get('/debug/questions/:id', DebugController.previewQuestion);
 
 // Public read
 r.get('/questions/topics', TopicController.listPublished);
