@@ -21,21 +21,19 @@ export async function previewQuestion(req: Request, res: Response) {
     return res.status(404).send('not found');
   }
 
-  // Debug logging just so you can see what's going on in the server console
-  console.log(
-    'DEBUG previewQuestion publicView.body_html =',
-    publicView.body_html,
-  );
-  console.log('DEBUG previewQuestion publicView.body_md =', publicView.body_md);
-
   // Build pills for topics if present
   const topicPills: Array<{ slug: string; color_hex?: string }> = Array.isArray(
     publicView.topics,
   )
-    ? publicView.topics.map((t: any) => ({
-        slug: String(t.slug ?? ''),
-        color_hex: typeof t.color_hex === 'string' ? t.color_hex : undefined,
-      }))
+    ? publicView.topics.map((t) => {
+        const pill: { slug: string; color_hex?: string } = {
+          slug: typeof t.slug === 'string' ? t.slug : String(t.slug ?? ''),
+        };
+        if (typeof t.color_hex === 'string') {
+          pill.color_hex = t.color_hex;
+        }
+        return pill;
+      })
     : [];
 
   // 🔓 OVERRIDE CSP FOR THIS RESPONSE:

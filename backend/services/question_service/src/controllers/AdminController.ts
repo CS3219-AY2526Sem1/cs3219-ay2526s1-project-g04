@@ -148,6 +148,12 @@ export async function create(req: Request, res: Response) {
       attachments: finalized as unknown as AttachmentInput[],
     });
 
+    if (!saved) {
+      // extremely unlikely, but keeps TS and runtime happy
+      log.error('updateDraft unexpectedly returned undefined for id', draft.id);
+      return res.status(500).json({ error: 'internal_error' });
+    }
+
     // 4) return created entity
     return res.status(201).location(`/admin/questions/${saved.id}`).json(saved);
   } catch (err) {
