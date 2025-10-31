@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useCollab } from '../CollabProvider';
-import { Stack, Avatar, Typography, Box } from '@mui/material';
+import { Stack, Typography, Box } from '@mui/material';
 
 export const MessageDialogs = () => {
   const { messages, userId } = useCollab();
@@ -27,31 +27,17 @@ export const MessageDialogs = () => {
           <Box
             key={idx}
             display="flex"
-            flexDirection={isOwn ? 'row-reverse' : 'row'}
-            alignItems="flex-end"
-            gap={1}
+            flexDirection="column"
+            alignItems={isOwn ? 'flex-end' : 'flex-start'}
           >
-            {/* Avatar */}
-            <Avatar
-              sx={{
-                bgcolor: isOwn ? '#7C3AED' : '#A78BFA',
-                color: 'white',
-                fontSize: 14,
-              }}
-            >
-              {msg.user?.[0]?.toUpperCase() || '?'}
-            </Avatar>
-
             {/* Message bubble */}
             <Box
               sx={{
                 px: 2,
                 py: 1.2,
                 borderRadius: 3,
-                borderTopLeftRadius: isOwn ? 3 : 0,
-                borderTopRightRadius: isOwn ? 0 : 3,
                 maxWidth: '70%',
-                bgcolor: isOwn ? '#7C3AED' : '#f1f1f1',
+                bgcolor: isOwn ? '#8b5cf7' : '#f1f1f1',
                 color: isOwn ? 'white' : '#222',
               }}
             >
@@ -59,29 +45,32 @@ export const MessageDialogs = () => {
                 variant="body2"
                 sx={{
                   fontWeight: isOwn ? 400 : 500,
-                  mb: 0.3,
                   opacity: 0.9,
                 }}
               >
                 {msg.text}
               </Typography>
-              <Typography
-                variant="caption"
-                sx={{
-                  display: 'block',
-                  textAlign: isOwn ? 'right' : 'left',
-                  color: isOwn ? 'rgba(255,255,255,0.7)' : '#777',
-                  mt: 0.2,
-                }}
-              >
-                {msg.timestamp
-                  ? new Date(msg.timestamp).toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
-                  : ''}
-              </Typography>
             </Box>
+
+            {/* Timestamp below bubble */}
+            <Typography
+              variant="caption"
+              sx={{
+                textAlign: isOwn ? 'right' : 'left',
+                color: '#797979ff',
+                fontSize: '0.7rem',
+                mt: 0.3,
+                ml: isOwn ? 0 : 1,
+                mr: isOwn ? 1 : 0,
+              }}
+            >
+              {msg.timestamp
+                ? new Date(msg.timestamp).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : ''}
+            </Typography>
           </Box>
         );
       })}

@@ -80,8 +80,8 @@ export class SessionManager {
     yText.insert(
       0,
       `def twoSum(nums, target):
-        # Write your solution here
-        pass
+    # Write your solution here
+    pass
     `,
     );
 

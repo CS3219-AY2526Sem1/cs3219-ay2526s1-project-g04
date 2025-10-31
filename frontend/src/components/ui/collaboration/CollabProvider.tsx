@@ -44,7 +44,7 @@ export function CollabProvider({ children }: { children: React.ReactNode }) {
   const [sessionId, setSessionId] = useState('');
 
   useEffect(() => {
-    // ✅ Extract session/user from URL
+    // Extract session/user from URL
     const params = new URLSearchParams(window.location.search);
     const urlUserId = params.get('userId') || crypto.randomUUID();
     const urlSessionId = params.get('sessionId') || 'default-session';
@@ -52,7 +52,7 @@ export function CollabProvider({ children }: { children: React.ReactNode }) {
     setUserId(urlUserId);
     setSessionId(urlSessionId);
 
-    // ✅ Setup Yjs + WebSocket connection
+    // Setup Yjs + WebSocket connection
     const ydoc = new Y.Doc();
     const wsUrl =
       process.env.NEXT_PUBLIC_COLLAB_SERVER_URL || 'ws://localhost:3000';
@@ -66,7 +66,6 @@ export function CollabProvider({ children }: { children: React.ReactNode }) {
       },
     );
 
-    // Awareness (presence API)
     const awareness = provider.awareness;
 
     // Set local presence data (optional — can be empty if you don't want self)

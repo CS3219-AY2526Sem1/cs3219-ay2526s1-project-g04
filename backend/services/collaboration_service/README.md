@@ -2,153 +2,80 @@
 
 ## Technology Stack
 
-### YJS (CRDT)
+### 1. **WebSocket Communication Layer**
 
-Collaboration service uses WebSockets (via the ws library) for persistent bi-directional communication between clients and the backend.
+**Technology: `ws` (WebSocket) library**
 
-```ts
-import { WebSocketServer } from 'ws';
+- Chosen for **persistent bi-directional communication** between clients and backend
+- Enables **real-time updates** with sub-second latency essential for collaborative editing
 
-export class Collab {
-  public async start() {
-    // Initialize WebSocket server attached to HTTP server
-    const server = this.initServer(app, pgdb);
-    const webSocketServer = new WebSocketServer({ server });
+---
 
-    // Create session manager to handle WebSocket connections
-    const sessionManager = new SessionManager(
-      redis,
-      postgresDb,
-      webSocketServer,
-      pgdb,
-    );
-  }
-}
-```
+### 2. **CRDT Framework: Yjs**
 
-Real-time document synchronization is handled by Yjs. Each user edits on their own copy of the shared document, then Yjs generates incremental updates of the changes made automatically. These updates are then shared to other clients connected within the same session through the WebSocket layer, where they are merged in a conflict-free manner using CRDT (Conflict-free Replicated Data Type), which is a structure that Google docs use.
+**Technology: Yjs (Conflict-free Replicated Data Type)**
 
-Because Yjs merges updates without requiring a central authority, it eliminates race conditions which avoids the complexity of operational transforms. This allows users to edit the same document concurrently and have all the changes converge to the same state once reconnected.
+- Enables **conflict-free collaborative editing** without central coordination
+- Automatically merges concurrent edits from multiple users
+- Similar to Google Docs' operational transformation but simpler implementation
 
-#### Other uses
+---
 
-Also used for communication nice-to-haves like messaging and drawing.
+### 3. **Code Editor: Monaco Editor**
 
-### Monaco Editor (y-monaco)
+**Technology: Monaco Editor (VS Code's editor) with `y-monaco` binding**
 
-On the client side, Monaco Editor is integrated with Yjs through y-monaco.
+- Industry-standard code editor used in VS Code
+- Rich features: syntax highlighting, IntelliSense, multi-cursor support
+- Seamless integration with Yjs via `y-monaco`
 
-### Database: Prisma ORM
+---
 
-Handles tables for sessions, users, and code document updates.
+### 4. **Data Storage**
 
-### Enabling Code Persistence through Y-PostgreSQL
+**PostgreSQL with Prisma ORM + Y-PostgreSQL**
 
-Y-PostgreSQL creates a table called `yjs-documents` which stores CRDT updates.
+- Use Prisma for session metadata like session id and user id
+- Use Y-PostgreSQL for code persistence
 
-Function to view full document string:
+---
 
-```
-const ydoc = await pgdb.getYDoc(docName); // docname is the session id
-const yText = ydoc.getText('monaco');
-const content = yText.toString();
-```
+## How Collab Service creates a session
 
-## Architectural Decisions
+### 1. Trigger: Message from Matching Service
 
-**WebSocket-Based Architecture**
+Matching Service will first find 2 compatible users and publishes a message to the message broker (RabbitMQ): `type: 'matched'`
 
-- Uses `WebSocketServer` from the `ws` library for persistent bi-directional connections
-- Provides low-latency communication essential for real-time collaboration
+### 2. Creating session with SessionManager
 
-```typescript
-// WebSocket server initialization
-const webSocketServer = new WebSocketServer({ server });
-const sessionManager = new SessionManager(
-  redis,
-  postgresDb,
-  webSocketServer,
-  pgdb,
-);
-```
+The SessionManager does the following
 
-**Connection Handling**
-
-- Each WebSocket connection is managed through `SessionManager.handleConnection`
-- User authentication and session routing via URL parameters
-- Automatic session lifecycle management (creation, ready state, cleanup)
-
-```typescript
-this.wss.on('connection', (ws, req) => {
-  this.handleConnection(ws, req);
-});
-```
-
-### 2. **CRDT-Based Document Synchronization**
-
-**Yjs for Conflict-Free Replication**
-
-- Uses **Yjs CRDT** framework to enable concurrent editing without conflicts
-- Each session has a unique `Y.Doc` instance
-- Changes are automatically merged using operational transformation
-- Eliminates race conditions and avoids complex conflict resolution logic
-
-```typescript
-const ydoc = new Y.Doc();
-const docName = sessionId.toString();
-setupWSConnection(ws, req, { docName: sessionId.toString() });
-```
-
-**Monaco Editor Integration**
-
-- Frontend uses `y-monaco` binding for seamless editor synchronization
-- Real-time cursor positions and selections via awareness protocol
-
-```typescript
-const binding = new MonacoBinding(
-  yText,
-  model,
-  new Set([editor]),
-  provider.awareness,
-);
-```
-
-### 3. **Session Management Architecture**
+1. Fetch user pairing data from Redis using matchedId to identify both participants
+2. Creates a new session entry in PostgreSQL using Prisma, linking both users to the session
+3. Instantiates an in-memory Session object to manage runtime state
+4. Updates Redis with the new session ID and state (`created`) for quick reference and lookup
+5. Initializes the Yjs documents that will serve as shared CRDT state for collaborative editing and other communication services
+6. Persists the initial Yjs state to PostgreSQL via `y-postgresql` so that the document can be reconstructed even after the server resets.
 
 **State Machine Design**
 
 - Sessions follow a defined state lifecycle: `created → active → end`
 - User states tracked independently: `waiting → ready → left → end`
 
-```typescript
-export enum SESSIONSTATE {
-  created = 'created',
-  active = 'active',
-  end = 'end',
-}
-```
+## Architectural Decisions
 
-**Session Creation Flow**
+### 1. **CRDT-Based Document Synchronization**
 
-1. Receive matched users from matching service via RabbitMQ
-2. Create session in PostgreSQL via `PostgresPrisma.createSessionDataModel`
-3. Initialize Yjs document and persist to PostgreSQL
-4. Store session metadata in Redis for fast lookups
-5. Wait for both users to connect and mark ready
+**Yjs for Conflict-Free Replication**
 
-```typescript
-public async createSession(matchedId: string) {
-  const sessionId = await this.db.createSessionDataModel(
-    Number(matchedData['user_a']),
-    Number(matchedData['user_b'])
-  );
+- Uses **Yjs CRDT** (Conflict-free Replicated Data Types) framework to merge concurrent updates across multiple replicas without conflicts
+- Each session has a unique `Y.Doc` instance
+- Changes are automatically merged using operational transformation
+- Eliminates race conditions and avoids complex conflict resolution logic
 
-  const session = new Session(sessionId, userA, userB);
-  this.sessions[sessionId] = { session, matchedId };
-}
-```
+> Fufils F15, F15.1
 
-### 4. **Data Persistence Strategy**
+### 2. **Data Persistence Strategy**
 
 **Automatic Code Persistence**
 
@@ -156,169 +83,55 @@ public async createSession(matchedId: string) {
 - Binding state restoration on reconnection
 - Data is stored in the `yjs-documents` table in Prisma DB
 
-```typescript
-setPersistence({
-  provider: pgdb,
-  bindState: async (docName, ydoc) => {
-    const persistedYDoc = await pgdb.getYDoc(docName);
-    Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYDoc));
+Retrieving full code document from `yjs-documents`:
 
-    ydoc.on('update', async (update: Uint8Array) => {
-      await pgdb.storeUpdate(docName, update);
-    });
-  },
-});
+```ts
+// Step 1: Get Y.Doc from PostgreSQL yjs_documents table
+const ydoc = await pgdb.getYDoc(sessionId);
+
+// Step 2: Access the text in the 'monaco' namespace
+const yText = ydoc.getText('monaco');
+
+// Step 3: Convert to plain string
+const content = yText.toString();
 ```
 
-### 6. **Executing Code**
+### 3. **Executing Code**
 
-**Shared Code Context**
+**Code runner Service**
 
-- `CodeContext` provides code and test case state
-- Real-time code from Monaco editor sent to execution service
-- Results displayed in `TestCases` component
+- Created to **isolate code execeution** from the Collab Service environment
+  - Prevents user programs from running in the same runtime as collab backend
+  - Ensures that crashes or errors in code execution does ont disrupt collab features
+- Each program runs inside its own ephemeral Docker container, which is automatically deleted after execution
+  - Provides full sandboxing and zero data leakage between runs
 
-```typescript
-const { code, language, testCases, setResults } = useCodeContext();
+### 4. **Communication Service**
 
-// Execute code with test inputs
-runBatchCode(
-  code,
-  testCases.map((t) => t.input),
-);
-```
+- Handles instant messaging and collaborative drawing within a session using Yjs shared documents bound to WebSocket connections
+- Each Collaboration session maintains dedicated Yjs documents for text chat and drawing data, so that participants can see updates immediately and without conflicts
 
-Collecting workspace information# View Toward Scaling and Compatibility with Other Services
+## View Toward Scaling and Compatibility with Other Services
 
-## Collaboration Service
+**Scalability**
 
-### Horizontal Scaling Strategy
+- Collaboration service is stateless: session state and CRDT documents are stored in the database and redis, allows multiple instances to run in parallel
+- Supports horizontal scaling
+  - The system can handle more users or traffic by running multiple instances of the same service
 
-**Stateless Service Design**
+**Compaibility**
 
-- The collaboration service is designed to be **stateless** at the application layer
-- Session state is externalized to Redis and PostgreSQL, enabling multiple instances to run in parallel
-- WebSocket connections can be distributed across instances using load balancing
+- Store past session records in db so the User Service can retrieve and display user history or past collaboration (will be used to show analytics)
+- Can easily integrate with future extensions like leaderboard through session and performance data
 
-```typescript
-// Shared state through Redis
-const redis = await CollabRedis.getInstance();
-await redis.addSessionDataToUser(sessionId, matchedId, state);
+## Summary of Service Dependecies
 
-// Persistent storage through PostgreSQL
-const sessionId = await this.db.createSessionDataModel(userAId, userBId);
-```
-
-**Load Balancing Considerations**
-
-- Use **sticky sessions** (session affinity) for WebSocket connections
-- Alternative: Implement WebSocket connection migration using Redis pub/sub
-- Scale based on active session count and WebSocket connection metrics
-
-### Service Discovery & Communication
-
-**Message Broker Integration**
-
-- Uses RabbitMQ for **asynchronous, loosely-coupled** communication with other services
-- Listens for `CollaborationService` message types from matching service
-- Can scale consumers independently
-
-```typescript
-export class MessageListener {
-  private TYPES_TO_LISTEN = [MESSAGE_TYPES.CollaborationService];
-
-  private messageHandler(msgType: MESSAGE_TYPES, msg: string) {
-    const msgJson = JSON.parse(msg);
-    if (msgJson['type'] === 'matched') {
-      this.handleStartSession(msgJson['matchedId']);
-    }
-  }
-}
-```
-
-**REST API Endpoints for Service Integration**
-
-- `GET /sessions/:userId` - Query user's past sessions
-- `GET /document/:sessionId` - Retrieve session code document
-- Stateless endpoints enable easy integration with API gateways
-
-```typescript
-app.get('/sessions/:userId', async (req, res) => {
-  const sessions = await db.getPastSessionsByUser(userId);
-  res.json(sessions);
-});
-
-app.get('/document/:sessionId', async (req, res) => {
-  const ydoc = await pgdb.getYDoc(sessionId);
-  const content = yText.toString();
-  res.json({ sessionId, content });
-});
-```
-
-### Data Layer Scalability
-
-**PostgreSQL Scaling**
-
-- Uses connection pooling via Prisma for efficient database access
-- Separate tables for session metadata (`Session`) and CRDT updates (`yjs_documents`)
-- Read replicas can be added for session history queries
-
-**Redis for Distributed State**
-
-- Session metadata cached in Redis for fast lookups
-- Supports Redis Cluster for horizontal scaling
-- TTL-based cleanup prevents unbounded growth
-
-```typescript
-public async addSessionDataToUser(
-  sessionId: string,
-  matchedId: string,
-  state: SESSIONSTATE
-) {
-  const sessionData = {
-    session_id: sessionId,
-    session_state: state.valueOf()
-  };
-  await this.redis.setDictValueByKey(matchedId, sessionData);
-}
-```
-
-### Compatibility with Other Services
-
-**Matching Service Integration**
-
-- Receives matched user pairs via RabbitMQ message broker
-- Creates sessions based on matching service data structure
-- Returns session IDs back to matching service via Redis
-
-```typescript
-public async createSession(matchedId: string) {
-  const matchedData = await this.redis.getMatchedUser(matchedId);
-  const sessionId = await this.db.createSessionDataModel(
-    Number(matchedData['user_a']),
-    Number(matchedData['user_b'])
-  );
-}
-```
-
-**Question Service Integration**
-
-- Session document can store question ID for retrieval
-- Direct API calls to fetch question details
-  - Question itself, test cases (input and output), starter code
-- Stored in session metadata for history tracking
-
-**Code Execution Service Integration for Interpreter**
-
-- Frontend retrieves code from collaboration service
-- Sends to code execution service for running test cases
-- Results displayed in `TestCases` component
-
-```typescript
-async function runBatchCode(code: string, inputs: any[]) {
-  const response = await fetch('http://localhost:5000/batch-run', {
-    method: 'POST',
-    body: JSON.stringify({ code, inputs }),
-  });
-}
-```
+| Source Service    | Target Service    | Protocol       | Purpose                                           |
+| ----------------- | ----------------- | -------------- | ------------------------------------------------- |
+| **Collaboration** | **Question**      | HTTP REST      | Fetch question details for the active session     |
+| **Collaboration** | **User**          | HTTP REST      | Retrieve collaborator profile info                |
+| **Collaboration** | **Code Runner**   | HTTP REST      | Execute user code against predefined test cases   |
+| **Matching**      | **Collaboration** | RabbitMQ       | Trigger creation of new collaboration sessions    |
+| **Frontend**      | **Collaboration** | HTTP REST      | Retrieve past sessions or documents               |
+| **Frontend**      | **Collaboration** | WebSocket      | Real-time code, chat, and drawing synchronization |
+| **Collaboration** | **Redis**         | Redis Protocol | Store and retrieve temporary session state        |

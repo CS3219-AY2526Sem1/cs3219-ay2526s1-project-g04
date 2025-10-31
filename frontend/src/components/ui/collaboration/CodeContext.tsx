@@ -13,7 +13,7 @@ interface CodeContextType {
   language: string;
   setLanguage: React.Dispatch<React.SetStateAction<string>>;
   testCases: TestCase[];
-  results: any[]; // ✅ store actual results here
+  results: any[];
   setResults: React.Dispatch<React.SetStateAction<any[]>>;
 }
 
@@ -25,7 +25,6 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
   );
   const [language, setLanguage] = React.useState<string>('python');
 
-  // ✅ store returned results
   const [results, setResults] = React.useState<any[]>([]);
 
   const testCases: TestCase[] = [

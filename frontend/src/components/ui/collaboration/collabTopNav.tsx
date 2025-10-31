@@ -74,7 +74,6 @@ export default function CollabNavigationBar({
       console.log('[Batch Runner Results]', results);
 
       if (results?.outputs) {
-        // ✅ Update context directly here
         setResults(results.outputs);
         console.log('[Context Updated] Stored outputs in test case context.');
       } else {

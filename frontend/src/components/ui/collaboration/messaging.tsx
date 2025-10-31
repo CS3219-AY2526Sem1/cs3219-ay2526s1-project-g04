@@ -14,6 +14,7 @@ import { UserInput } from './messaging/userInput';
 import { MessageDialogs } from './messaging/messageDialog';
 import { CollabProvider, useCollab } from './CollabProvider';
 import React from 'react';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 
 const ChatHeader = () => {
   const { awareness, userId } = useCollab();
@@ -37,14 +38,21 @@ const ChatHeader = () => {
 
   return (
     <CardHeader
-      className="py-2 px-3 h-fit border-b border-[#777889]"
+      className="py-2 px-3 h-fit border-b border-[#e0e0e0]"
       title={
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Avatar className="bg-purple-500">
-            {otherUser?.id ? otherUser.id.substring(0, 2).toUpperCase() : '?'}
+          <Avatar
+            sx={{
+              bgcolor: '#ded0ff',
+              color: '#8b5cf7',
+            }}
+          >
+            <PersonOutlineIcon sx={{ fontSize: 30 }} />{' '}
           </Avatar>
-          <Typography className="text-white font-semibold">
-            {otherUser?.id || 'Waiting for collaborator...'}
+          <Typography className="font-semibold">
+            {otherUser?.id
+              ? `User-${otherUser.id}`
+              : 'Waiting for collaborator...'}
           </Typography>
         </Stack>
       }
@@ -72,14 +80,14 @@ export const MessageBoard = () => {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden', // prevent outer overflow
+            overflow: 'hidden',
             p: 0,
           }}
         >
           <Box
             sx={{
               flex: 1,
-              overflowY: 'auto', // ✅ makes messages scrollable
+              overflowY: 'auto',
               px: 2,
               py: 1,
             }}

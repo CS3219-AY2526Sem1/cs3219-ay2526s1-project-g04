@@ -22,7 +22,7 @@ const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 export default function CollabMonaco() {
   const { code, setCode } = useCodeContext();
-  const { ydoc, provider } = useCollab(); // ✅ use shared doc & provider
+  const { ydoc, provider } = useCollab();
   const yTextRef = useRef<Y.Text | null>(null);
   const bindingRef = useRef<any>(null);
 

@@ -63,21 +63,25 @@ export const TestCases = () => {
         {testCases.map((testCase, idx) =>
           value === idx ? (
             <Stack key={idx} spacing={1} className="mt-2">
-              {/* 🧩 Input */}
               <Typography variant="subtitle2">Input:</Typography>
-              <Typography className="bg-gray-100 p-1 px-3 rounded-xl">
+              <Typography
+                fontFamily="monospace"
+                className="bg-gray-100 p-1 px-3 rounded-xl"
+              >
                 {JSON.stringify(testCase.input)}
               </Typography>
 
-              {/* 🧩 Expected */}
               <Typography variant="subtitle2">Expected Output:</Typography>
-              <Typography className="bg-gray-100 p-1 px-3 rounded-xl">
+              <Typography
+                fontFamily="monospace"
+                className="bg-gray-100 p-1 px-3 rounded-xl"
+              >
                 {testCase.expectedOutput}
               </Typography>
 
-              {/* 🧩 Actual */}
               <Typography variant="subtitle2">Actual Output:</Typography>
               <Typography
+                fontFamily="monospace"
                 className={`p-1 px-3 rounded-xl transition-colors duration-200 ${
                   results && results[idx] !== undefined
                     ? JSON.stringify(results[idx]).replace(/\s+/g, '') ===

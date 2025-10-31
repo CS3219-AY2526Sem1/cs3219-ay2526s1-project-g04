@@ -1,16 +1,9 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import {
-  Card,
-  CardContent,
-  Stack,
-  IconButton,
-  Select,
-  MenuItem,
-} from '@mui/material';
-import BrushIcon from '@mui/icons-material/Brush';
-import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
+import { Card, CardContent, IconButton, Box, Stack } from '@mui/material';
+import CreateIcon from '@mui/icons-material/Create';
+import KitchenIcon from '@mui/icons-material/Kitchen';
 import { useCollab } from './CollabProvider';
 
 interface Stroke {
@@ -29,33 +22,28 @@ export const DrawingBoard = () => {
   const [isErasing, setIsErasing] = useState(false);
   const [isErasingDrag, setIsErasingDrag] = useState(false);
   const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
-  const [penSize, setPenSize] = useState(2);
+  const penSize = 4; // fixed size
 
-  const userColor = '#7E57C2'; // you
-  const otherColor = '#2196F3'; // others
+  const userColor = '#7E57C2';
+  const otherColor = '#2196F3';
 
-  // 🧭 Get mouse position
   const getMousePos = (e: React.MouseEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   };
 
-  // 📐 Resize canvas for high-DPI screens
   const resizeCanvas = (canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.scale(dpr, dpr);
     ctx.translate(0.5, 0.5);
-
-    redrawAll(ctx); // only redraw once on resize
+    redrawAll(ctx);
   };
 
-  // 🖌️ Redraw all strokes (for resize or erase)
   const redrawAll = (ctx: CanvasRenderingContext2D) => {
     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     if (!strokes) return;
@@ -65,7 +53,6 @@ export const DrawingBoard = () => {
     for (const s of all) drawStroke(ctx, s);
   };
 
-  // ✏️ Draw a single stroke incrementally
   const drawStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke) => {
     if (!stroke.points || stroke.points.length < 2) return;
     ctx.strokeStyle = stroke.userId === userId ? userColor : otherColor;
@@ -73,13 +60,10 @@ export const DrawingBoard = () => {
     ctx.beginPath();
     const pts = stroke.points;
     ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) {
-      ctx.lineTo(pts[i].x, pts[i].y);
-    }
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
     ctx.stroke();
   };
 
-  // 👀 Yjs updates
   useEffect(() => {
     if (!strokes || !canvasRef.current) return;
     const ctx = canvasRef.current.getContext('2d');
@@ -93,7 +77,7 @@ export const DrawingBoard = () => {
     return () => strokes.unobserve(observer);
   }, [strokes]);
 
-  // 📏 Erase helpers
+  // 📏 Eraser helpers
   const distanceToSegment = (p: any, a: any, b: any) => {
     const A = p.x - a.x,
       B = p.y - a.y,
@@ -143,7 +127,6 @@ export const DrawingBoard = () => {
     }
   };
 
-  // 🖱️ Events
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!canvasRef.current) return;
     const { x, y } = getMousePos(e, canvasRef.current);
@@ -181,7 +164,6 @@ export const DrawingBoard = () => {
       };
       setCurrentStroke(updated);
 
-      // Incremental live draw
       const ctx = canvasRef.current.getContext('2d');
       if (ctx) drawStroke(ctx, updated);
     }
@@ -199,7 +181,6 @@ export const DrawingBoard = () => {
     setCurrentStroke(null);
   };
 
-  // 🪟 Resize handler
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -212,56 +193,49 @@ export const DrawingBoard = () => {
   return (
     <Card
       variant="outlined"
-      className="w-full h-full rounded-2xl border border-3 border-gray-100"
+      className="w-full h-full rounded-2xl border border-gray-100 relative"
     >
-      <CardContent className="relative w-full h-full p-0 flex flex-col">
-        {/* Toolbar */}
-        <Stack
-          direction="row"
-          spacing={2}
-          alignItems="center"
-          className="p-2 bg-gray-50"
+      <CardContent className="w-full h-full p-0 relative">
+        {/* Canvas */}
+        <canvas
+          ref={canvasRef}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          className={`w-full h-full bg-white rounded-2xl ${
+            isErasing ? 'cursor-cell' : 'cursor-crosshair'
+          }`}
+        />
+
+        {/* Floating bottom-right toolbar */}
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: 16,
+            right: 16,
+            display: 'flex',
+            gap: 1,
+            bgcolor: 'rgba(255,255,255,0.9)',
+            borderRadius: 3,
+            boxShadow: '0px 3px 8px rgba(0,0,0,0.2)',
+            p: 1,
+          }}
         >
           <IconButton
             color={!isErasing ? 'primary' : 'default'}
             onClick={() => setIsErasing(false)}
           >
-            <BrushIcon />
+            <CreateIcon />
           </IconButton>
 
           <IconButton
             color={isErasing ? 'error' : 'default'}
             onClick={() => setIsErasing(true)}
           >
-            <CleaningServicesIcon />
+            <KitchenIcon />
           </IconButton>
-
-          <Select
-            value={penSize}
-            onChange={(e) => setPenSize(Number(e.target.value))}
-            size="small"
-            sx={{ width: 120 }}
-          >
-            <MenuItem value={1}>Thin</MenuItem>
-            <MenuItem value={2}>Normal</MenuItem>
-            <MenuItem value={4}>Thick</MenuItem>
-            <MenuItem value={8}>Extra Thick</MenuItem>
-          </Select>
-        </Stack>
-
-        {/* Canvas */}
-        <div className="flex-1 relative">
-          <canvas
-            ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            className={`w-full h-full bg-white rounded-2xl ${
-              isErasing ? 'cursor-cell' : 'cursor-crosshair'
-            }`}
-          />
-        </div>
+        </Box>
       </CardContent>
     </Card>
   );

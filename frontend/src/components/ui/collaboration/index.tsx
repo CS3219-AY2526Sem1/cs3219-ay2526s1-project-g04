@@ -13,12 +13,12 @@ export const Collaboration = () => {
         <Communication></Communication>
       </Stack>
       <Stack spacing={2} className="h-full w-1/2">
-        <Box className="flex w-full h-55/100">
+        <Box className="flex w-full h-60/100">
           <CollabProvider>
             <CollabMonaco></CollabMonaco>
           </CollabProvider>
         </Box>
-        <Box className="flex w-full h-45/100">
+        <Box className="flex w-full h-40/100">
           <TestCases></TestCases>
         </Box>
       </Stack>

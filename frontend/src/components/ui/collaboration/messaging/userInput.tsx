@@ -23,7 +23,6 @@ export const UserInput = () => {
         px: 2,
         py: 1,
         bgcolor: 'white',
-        borderTop: '1px solid #e5e7eb',
         borderBottomLeftRadius: 16,
         borderBottomRightRadius: 16,
       }}
