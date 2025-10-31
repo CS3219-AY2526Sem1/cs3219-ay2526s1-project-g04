@@ -5,16 +5,24 @@ import {
   renderQuestionMarkdown,
   type AttachmentLike,
 } from './MarkdownService.js';
+import { toPublicQuestion } from './ResponseMapper.js';
+import type { QuestionRecordFromRepo } from './ResponseMapper.js';
 
 export async function getPublishedWithHtml(id: string) {
-  const q = await Repo.getPublishedById(id);
+  const row = await Repo.getPublishedById(id);
 
-  if (!q) return undefined;
+  if (!row) return undefined;
 
-  const attachments = (q.attachments ?? []) as AttachmentLike[];
+  const attachments = (row.attachments ?? []) as AttachmentLike[];
 
-  const body_html = await renderQuestionMarkdown(q.body_md, attachments);
-  return { ...q, body_html };
+  const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+
+  const view = toPublicQuestion({
+    row: row as QuestionRecordFromRepo,
+    body_html,
+  });
+
+  return view;
 }
 
 export async function listPublished(opts: {
@@ -25,11 +33,19 @@ export async function listPublished(opts: {
   size?: number;
 }) {
   const rows = await Repo.listPublished(opts);
+
+  // rows (plural) needs to ALSO come back in the same select shape from Repo.listPublished
+  // i.e. listPublished in the repo should mirror getPublishedById's select,
+  // including question_topics/topics.slug/color_hex etc.
   return Promise.all(
-    rows.map(async (q) => {
-      const attachments = (q.attachments ?? []) as AttachmentLike[];
-      const body_html = await renderQuestionMarkdown(q.body_md, attachments);
-      return { ...q, body_html };
+    rows.map(async (row) => {
+      const attachments = (row.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+
+      return toPublicQuestion({
+        row: row as QuestionRecordFromRepo,
+        body_html,
+      });
     }),
   );
 }

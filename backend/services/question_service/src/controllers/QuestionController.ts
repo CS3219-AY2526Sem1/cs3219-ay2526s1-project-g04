@@ -49,9 +49,19 @@ export async function getById(req: Request, res: Response) {
     const id = String(req.params['id'] ?? '');
     if (!id) return res.status(400).json({ error: 'id param required' });
 
-    const q = await Service.getPublishedWithHtml(id);
-    if (!q) return res.status(404).json({ error: 'not found' });
-    return res.json(q);
+    const view = await Service.getPublishedWithHtml(id);
+    if (!view) return res.status(404).json({ error: 'not found' });
+
+    // view is already in PublicQuestionView shape:
+    // {
+    //   id, title, body_md, difficulty,
+    //   topics: [{slug,color_hex},...],
+    //   attachments: [...],
+    //   status, version,
+    //   created_at, updated_at,
+    //   body_html
+    // }
+    return res.json(view);
   } catch {
     return res.status(500).json({ error: 'internal_error' });
   }
@@ -82,6 +92,9 @@ export async function list(req: Request, res: Response) {
   if (s !== undefined) args.size = s;
 
   const data = await Service.listPublished(args);
+
+  // data here is array<PublicQuestionView>
+  // we wrap it in { items: [...] } for pagination later
   return res.json({ items: data });
 }
 

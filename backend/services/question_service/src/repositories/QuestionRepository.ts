@@ -7,7 +7,30 @@ import { slugify } from '../utils/slug.js';
 import type { AttachmentInput } from '../types/attachments.js';
 
 export async function getPublishedById(id: string) {
-  return prisma.questions.findFirst({ where: { id, status: 'published' } });
+  return prisma.questions.findFirst({
+    where: { id, status: 'published' },
+    select: {
+      id: true,
+      title: true,
+      body_md: true,
+      difficulty: true,
+      status: true,
+      version: true,
+      attachments: true,
+      created_at: true,
+      updated_at: true,
+      question_topics: {
+        select: {
+          topics: {
+            select: {
+              slug: true,
+              color_hex: true,
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 export async function getQuestionById(id: string) {
@@ -25,62 +48,80 @@ export async function listPublished(opts: {
   const size = Math.min(100, Math.max(1, opts.size ?? 20));
   const offset = (page - 1) * size;
 
-  // Fast path — no search text and no topic filter → use Prisma
+  // simple filters (no full-text search case)
   if (!opts.q && !opts.topics?.length) {
-    const where: Prisma.questionsWhereInput = {
-      status: 'published',
-      ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
-    };
     return prisma.questions.findMany({
-      where,
+      where: {
+        status: 'published',
+        ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
+      },
       orderBy: { updated_at: 'desc' },
       skip: offset,
       take: size,
+      select: {
+        id: true,
+        title: true,
+        body_md: true,
+        difficulty: true,
+        status: true,
+        version: true,
+        attachments: true,
+        created_at: true,
+        updated_at: true,
+        question_topics: {
+          select: {
+            topics: {
+              select: {
+                slug: true,
+                color_hex: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
-  // FTS / topics path — parameterized SQL with explicit casts
-  const clauses: string[] = ['status = $1'];
-  const params: unknown[] = ['published'];
-  let i = params.length + 1;
-
-  if (opts.difficulty) {
-    clauses.push(`difficulty = $${i++}`);
-    params.push(opts.difficulty);
-  }
-  if (opts.topics?.length) {
-    clauses.push(`topics ?| $${i++}::text[]`);
-    params.push(opts.topics);
-  }
-  if (opts.q) {
-    clauses.push(`tsv_en @@ plainto_tsquery('english', $${i++})`);
-    params.push(opts.q);
-  }
-
-  const sql = `
-    SELECT id, title, body_md, difficulty, topics, attachments,
-         status, version, rand_key, created_at, updated_at
-    FROM questions
-    WHERE ${clauses.join(' AND ')}
-    ORDER BY updated_at DESC
-    LIMIT ${size} OFFSET ${offset}
-  `;
-
-  return prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      title: string;
-      body_md: string;
-      difficulty: 'Easy' | 'Medium' | 'Hard';
-      topics: unknown; // jsonb
-      attachments: unknown; // jsonb
-      status: 'draft' | 'published' | 'archived';
-      version: number;
-      rand_key: number;
-      created_at: Date | null;
-      updated_at: Date | null;
-    }>
-  >(sql, ...params);
+  return prisma.questions.findMany({
+    where: {
+      status: 'published',
+      ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
+      ...(opts.topics?.length
+        ? {
+            question_topics: {
+              some: {
+                topic_slug: { in: opts.topics },
+              },
+            },
+          }
+        : {}),
+      // TODO: q full-text search, hook up `tsv_en` + raw query here
+    },
+    orderBy: { updated_at: 'desc' },
+    skip: offset,
+    take: size,
+    select: {
+      id: true,
+      title: true,
+      body_md: true,
+      difficulty: true,
+      status: true,
+      version: true,
+      attachments: true,
+      created_at: true,
+      updated_at: true,
+      question_topics: {
+        select: {
+          topics: {
+            select: {
+              slug: true,
+              color_hex: true,
+            },
+          },
+        },
+      },
+    },
+  });
 }
 
 export async function listAll(opts: {

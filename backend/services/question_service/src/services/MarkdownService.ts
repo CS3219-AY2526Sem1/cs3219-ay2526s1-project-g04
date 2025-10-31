@@ -50,7 +50,7 @@ export function toSafeHtml(md: string) {
 
 export async function renderQuestionMarkdown(
   md: string,
-  attachments: AttachmentLike[],
+  attachments: AttachmentLike[] = [],
 ): Promise<string> {
   // presign known attachments and build a lookup
   const signedMap = new Map<string, string>();
