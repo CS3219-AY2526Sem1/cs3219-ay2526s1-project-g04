@@ -3,8 +3,23 @@
 import type { Request, Response } from 'express';
 import * as Repo from '../repositories/QuestionRepository.js';
 import { renderQuestionMarkdown } from '../services/MarkdownService.js';
+import type { AttachmentLike } from '../services/MarkdownService.js';
 
 const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
+
+interface PreviewQuestion {
+  id: string;
+  title: string;
+  body_md: string | null;
+  difficulty: string;
+  status: string;
+  version: number | null;
+  created_at?: Date;
+  updated_at?: Date;
+  topics?: unknown;
+  attachments?: unknown;
+  body_html?: string;
+}
 
 export async function previewQuestion(req: Request, res: Response) {
   if (NODE_ENV !== 'development' && NODE_ENV !== 'test') {
@@ -16,23 +31,31 @@ export async function previewQuestion(req: Request, res: Response) {
     return res.status(400).send('id required');
   }
 
-  const q = await Repo.getPublishedById(id);
-  if (!q) {
+  const qRaw = await Repo.getPublishedById(id);
+
+  if (!qRaw) {
     return res.status(404).send('not found');
   }
 
-  // Try to use precomputed body_html if your normal controller/service already added that.
-  let renderedHtml: string | undefined =
-    (q as any).body_html && typeof (q as any).body_html === 'string'
-      ? (q as any).body_html
-      : undefined;
+  const q = qRaw as unknown as PreviewQuestion;
 
-  // Otherwise generate it now using the MarkdownService pipeline
+  let renderedHtml: string | undefined =
+    typeof q.body_html === 'string' ? q.body_html : undefined;
+
   if (!renderedHtml) {
-    renderedHtml = await renderQuestionMarkdown(
-      q.body_md ?? '',
-      Array.isArray(q.attachments) ? (q.attachments as any[]) : [],
-    );
+    const bodyMd = q.body_md ?? '';
+    const attachmentsArray: AttachmentLike[] = Array.isArray(q.attachments)
+      ? q.attachments
+          .filter(
+            (a: unknown): a is AttachmentLike =>
+              !!a &&
+              typeof a === 'object' &&
+              typeof (a as { object_key?: unknown }).object_key === 'string' &&
+              typeof (a as { mime?: unknown }).mime === 'string',
+          )
+          .map((a) => a)
+      : [];
+    renderedHtml = await renderQuestionMarkdown(bodyMd, attachmentsArray);
   }
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -201,12 +224,16 @@ export async function previewQuestion(req: Request, res: Response) {
       <div><strong>Version:</strong> ${String(q.version ?? '')}</div>
     </div>
     <div class="pill-row">
-      ${(Array.isArray(q.topics) ? q.topics : [])
-        .map(
-          (t: unknown) =>
-            `<span class="pill">${escapeHtml(String(t ?? ''))}</span>`,
-        )
-        .join('')}
+      ${
+        Array.isArray(q.topics)
+          ? q.topics
+              .map(
+                (t) =>
+                  `<span class="pill">${escapeHtml(String(t ?? ''))}</span>`,
+              )
+              .join('')
+          : ''
+      }
     </div>
   </header>
 

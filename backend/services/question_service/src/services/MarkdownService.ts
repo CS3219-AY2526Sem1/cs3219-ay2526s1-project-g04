@@ -1,6 +1,6 @@
 // src/services/MarkdownService
 
-import { marked } from 'marked';
+import { marked, Renderer, type Tokens } from 'marked';
 import sanitizeHtml from 'sanitize-html';
 import { signViewUrl } from './AttachmentService.js';
 
@@ -73,7 +73,7 @@ export async function renderQuestionMarkdown(
     }),
   );
 
-  const renderer = new marked.Renderer();
+  const renderer = new Renderer();
   marked.setOptions({
     gfm: true,
     breaks: false,
@@ -87,19 +87,32 @@ export async function renderQuestionMarkdown(
    * @param {string} text - The original alt text of the image.
    * @returns {string} A string containing the rendered HTML image tag.
    */
-  renderer.image = (href, title, text) => {
+  renderer.image = ({
+    href,
+    title,
+    text,
+  }: Tokens.Image & {
+    href?: string | null;
+    title?: string | null;
+    text?: string | null;
+  }) => {
     const raw = String(href ?? '');
     const signed = signedMap.get(raw);
 
     // if author used pp:// and don't have a matching attachment, drop the image.
     // (prevents leaking internal pointers and avoids broken images.)
+
     if (!signed && raw.startsWith('pp://')) {
       return '';
     }
 
     const src = escapeAttr(signed ?? raw);
-    const altAttr = `alt="${escapeAttr(String(text ?? ''))}"`;
-    const titleAttr = title ? ` title="${escapeAttr(String(title))}"` : '';
+    const altStr = String(text ?? '');
+    const titleStr = title ? String(title) : '';
+
+    const altAttr = `alt="${escapeAttr(altStr)}"`;
+    const titleAttr = titleStr ? ` title="${escapeAttr(titleStr)}"` : '';
+
     return `<img src="${src}" ${altAttr}${titleAttr}>`;
   };
 

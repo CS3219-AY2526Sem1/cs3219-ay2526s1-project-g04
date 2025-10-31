@@ -61,14 +61,39 @@ export function toPublicQuestion(args: {
     ? (row.attachments as Record<string, unknown>[])
     : [];
 
-  const attachments = attachmentsArray.map((att) => ({
-    object_key: String(att['object_key'] ?? ''),
-    mime: att['mime'] ? String(att['mime']) : undefined,
-    byte_size: att['byte_size'] ? Number(att['byte_size']) : undefined,
-    width: att['width'] ? Number(att['width']) : undefined,
-    height: att['height'] ? Number(att['height']) : undefined,
-    alt: att['alt'] ? String(att['alt']) : undefined,
-  }));
+  const attachments = attachmentsArray.map((att) => {
+    const out: {
+      object_key: string;
+      mime?: string;
+      byte_size?: number;
+      width?: number;
+      height?: number;
+      alt?: string;
+    } = {
+      object_key: String(att['object_key'] ?? ''),
+    };
+
+    if (att['mime']) {
+      out.mime = String(att['mime']);
+    }
+    if (att['byte_size'] !== undefined) {
+      const n = Number(att['byte_size']);
+      if (!Number.isNaN(n)) out.byte_size = n;
+    }
+    if (att['width'] !== undefined) {
+      const n = Number(att['width']);
+      if (!Number.isNaN(n)) out.width = n;
+    }
+    if (att['height'] !== undefined) {
+      const n = Number(att['height']);
+      if (!Number.isNaN(n)) out.height = n;
+    }
+    if (att['alt']) {
+      out.alt = String(att['alt']);
+    }
+
+    return out;
+  });
 
   return {
     id: row.id,

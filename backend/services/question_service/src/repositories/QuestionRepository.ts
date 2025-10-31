@@ -10,6 +10,12 @@ import type {
 import { slugify } from '../utils/slug.js';
 import type { AttachmentInput } from '../types/attachments.js';
 
+function isoOrNow(v: Date | string | null | undefined): string {
+  if (v instanceof Date) return v.toISOString();
+  if (typeof v === 'string') return v;
+  return new Date().toISOString();
+}
+
 export async function getPublishedById(id: string) {
   return prisma.questions.findFirst({
     where: { id, status: 'published' },
@@ -485,7 +491,7 @@ export async function getPublicResourcesBundle(questionId: string) {
       expected: tc.expected_output,
       ordinal: tc.ordinal,
     })),
-    updated_at: q.updated_at.toISOString(),
+    updated_at: isoOrNow(q.updated_at),
   };
 }
 
@@ -528,6 +534,6 @@ export async function getInternalResourcesBundle(questionId: string) {
       expected: tc.expected_output,
       ordinal: tc.ordinal,
     })),
-    updated_at: q.updated_at.toISOString(),
+    updated_at: isoOrNow(q.updated_at),
   };
 }
