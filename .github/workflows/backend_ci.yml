@@ -46,17 +46,9 @@ jobs:
       - name: build user service
         run: cd services/user_service && npm i && npm run build
 
-  docker:
-    # needs: build-services
+  build-and-push-docker-image:
+    needs: build-services
     runs-on: ubuntu-latest
-    # strategy:
-    #   matrix:
-    #     service:
-    #       - collaboration_service
-    #       - question_service
-    # - matching_service
-    # - user_service
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
