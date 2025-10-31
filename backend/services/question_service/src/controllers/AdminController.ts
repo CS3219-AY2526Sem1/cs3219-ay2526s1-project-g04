@@ -63,6 +63,32 @@ function parseNum(x: unknown): number | undefined {
 }
 
 /**
+ * Given original markdown and two attachment lists (pre-finalize and post-finalize),
+ * rewrite any pp://staging/... refs to pp://questions/<id>/...
+ */
+function rewriteMarkdownAttachmentPointers(
+  md: string,
+  before: AttachmentInput[],
+  after: AttachmentInput[],
+): string {
+  let out = md;
+
+  for (let i = 0; i < before.length; i += 1) {
+    const oldKey = before[i]?.object_key;
+    const newKey = after[i]?.object_key;
+
+    if (!oldKey || !newKey || oldKey === newKey) continue;
+
+    const from = `pp://${oldKey}`;
+    const to = `pp://${newKey}`;
+
+    out = out.split(from).join(to);
+  }
+
+  return out;
+}
+
+/**
  * POST /admin/questions
  * - Accepts attachments with possible `staging/...` keys.
  * - Will finalize them to `questions/<id>/...`.
@@ -110,8 +136,17 @@ export async function create(req: Request, res: Response) {
       inputAttachments,
     );
 
+    const rewrittenMd = rewriteMarkdownAttachmentPointers(
+      draft.body_md,
+      inputAttachments,
+      finalized,
+    );
+
     // 3) persist finalized attachments
-    const saved = await Repo.updateQuestionAttachments(draft.id, finalized);
+    const saved = await Repo.updateDraft(draft.id, {
+      body_md: rewrittenMd,
+      attachments: finalized as unknown as AttachmentInput[],
+    });
 
     // 4) return created entity
     return res.status(201).location(`/admin/questions/${saved.id}`).json(saved);
@@ -164,14 +199,20 @@ export async function update(req: Request, res: Response) {
             'attachments must be [{ object_key: string, mime: string, alt?: string }]',
         });
       }
-      // If any key is in staging/, finalize it to questions/<id>/...
-      const finalized = await finalizeStagedAttachments(
-        id,
-        req.body.attachments,
-      );
-      patch.attachments = finalized;
-    }
 
+      const incomingAtts = req.body.attachments;
+      const finalizedAtts = await finalizeStagedAttachments(id, incomingAtts);
+      patch.attachments = finalizedAtts;
+
+      // if caller also sent body_md, rewrite it to point at finalized keys
+      if (typeof req.body?.body_md === 'string') {
+        patch.body_md = rewriteMarkdownAttachmentPointers(
+          req.body.body_md,
+          incomingAtts,
+          finalizedAtts,
+        );
+      }
+    }
     const q = await Repo.updateDraft(id, patch);
     if (!q) return res.status(404).json({ error: 'not_found' });
     return res.json(q);

@@ -1,25 +1,9 @@
 // src/controllers/DebugController.ts
 
 import type { Request, Response } from 'express';
-import * as Repo from '../repositories/QuestionRepository.js';
-import { renderQuestionMarkdown } from '../services/MarkdownService.js';
-import type { AttachmentLike } from '../services/MarkdownService.js';
+import * as QuestionService from '../services/QuestionService.js';
 
 const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
-
-interface PreviewQuestion {
-  id: string;
-  title: string;
-  body_md: string | null;
-  difficulty: string;
-  status: string;
-  version: number | null;
-  created_at?: Date;
-  updated_at?: Date;
-  topics?: unknown;
-  attachments?: unknown;
-  body_html?: string;
-}
 
 export async function previewQuestion(req: Request, res: Response) {
   if (NODE_ENV !== 'development' && NODE_ENV !== 'test') {
@@ -31,39 +15,100 @@ export async function previewQuestion(req: Request, res: Response) {
     return res.status(400).send('id required');
   }
 
-  const qRaw = await Repo.getPublishedById(id);
-
-  if (!qRaw) {
+  // Pull the same shape we expose from GET /questions/:id
+  const publicView = await QuestionService.getPublishedWithHtml(id);
+  if (!publicView) {
     return res.status(404).send('not found');
   }
 
-  const q = qRaw as unknown as PreviewQuestion;
+  // Debug logging just so you can see what's going on in the server console
+  console.log(
+    'DEBUG previewQuestion publicView.body_html =',
+    publicView.body_html,
+  );
+  console.log('DEBUG previewQuestion publicView.body_md =', publicView.body_md);
 
-  let renderedHtml: string | undefined =
-    typeof q.body_html === 'string' ? q.body_html : undefined;
+  // Build pills for topics if present
+  const topicPills: Array<{ slug: string; color_hex?: string }> = Array.isArray(
+    publicView.topics,
+  )
+    ? publicView.topics.map((t: any) => ({
+        slug: String(t.slug ?? ''),
+        color_hex: typeof t.color_hex === 'string' ? t.color_hex : undefined,
+      }))
+    : [];
 
-  if (!renderedHtml) {
-    const bodyMd = q.body_md ?? '';
-    const attachmentsArray: AttachmentLike[] = Array.isArray(q.attachments)
-      ? q.attachments
-          .filter(
-            (a: unknown): a is AttachmentLike =>
-              !!a &&
-              typeof a === 'object' &&
-              typeof (a as { object_key?: unknown }).object_key === 'string' &&
-              typeof (a as { mime?: unknown }).mime === 'string',
-          )
-          .map((a) => a)
-      : [];
-    renderedHtml = await renderQuestionMarkdown(bodyMd, attachmentsArray);
-  }
+  // 🔓 OVERRIDE CSP FOR THIS RESPONSE:
+  //
+  // helmet() globally sets img-src 'self' data: which blocks S3.
+  // Here we let the browser load images from your S3 bucket domain.
+  //
+  // You can add more domains (like CloudFront) later by appending them in img-src.
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      // allow images from same origin, data: URLs, and your S3 bucket host
+      "img-src 'self' data: https://peerprep-question-service.s3.ap-southeast-1.amazonaws.com",
+      // for inline styles in this debug page
+      "style-src 'self' 'unsafe-inline' https:",
+      // allow system fonts/CDN fonts if needed
+      "font-src 'self' https: data:",
+      // stay strict on scripts
+      "script-src 'self'",
+      // XHR/fetch targets
+      "connect-src 'self'",
+      // prevent embedding in random iframes
+      "frame-ancestors 'self'",
+      // optional extras mirroring helmet defaults:
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join('; '),
+  );
+
+  // Render final HTML
+  const pageHtml = buildPreviewPageHtml({
+    title: publicView.title,
+    id: publicView.id,
+    difficulty: publicView.difficulty,
+    version: publicView.version,
+    topics: topicPills,
+    body_md: publicView.body_md,
+    body_html: publicView.body_html,
+    node_env: NODE_ENV,
+  });
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.status(200).send(`<!DOCTYPE html>
+  res.status(200).send(pageHtml);
+}
+
+function buildPreviewPageHtml(args: {
+  title: string;
+  id: string;
+  difficulty: string;
+  version: number | null | undefined;
+  topics: Array<{ slug: string; color_hex?: string }>;
+  body_md: string;
+  body_html: string;
+  node_env: string;
+}): string {
+  const {
+    title,
+    id,
+    difficulty,
+    version,
+    topics,
+    body_md,
+    body_html,
+    node_env,
+  } = args;
+
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>${escapeHtml(q.title)} — debug preview</title>
+  <title>${escapeHtml(title)} — debug preview</title>
   <style>
     :root {
       --bg-page: #f5f5f7;
@@ -89,9 +134,7 @@ export async function previewQuestion(req: Request, res: Response) {
       padding: 0 1rem 4rem;
     }
 
-    header {
-      margin-bottom: 2rem;
-    }
+    header { margin-bottom: 2rem; }
 
     h1 {
       font-size: 1.4rem;
@@ -107,6 +150,23 @@ export async function previewQuestion(req: Request, res: Response) {
       display: flex;
       flex-wrap: wrap;
       gap: 1rem;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-top: .5rem;
+    }
+    .pill {
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: .7rem;
+      padding: .25rem .5rem;
+      line-height: 1.2;
+      border-radius: 999px;
+      border: 1px solid #c7d2fe;
+      font-weight: 500;
     }
 
     .grid {
@@ -153,10 +213,16 @@ export async function previewQuestion(req: Request, res: Response) {
       margin: 0 0 .4rem;
     }
 
+    .question-body img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+    }
+
     .raw-md {
       font-family: var(--font-mono);
-      background: var(--mono-bg);
-      color: var(--mono-fg);
+      background: #0f172a;
+      color: #f8fafc;
       font-size: .8rem;
       line-height: 1.5;
       padding: 1rem 1.25rem;
@@ -167,13 +233,15 @@ export async function previewQuestion(req: Request, res: Response) {
       border: 1px solid #1f2937;
     }
 
-    code, pre {
+    code,
+    pre {
       font-family: var(--font-mono);
       background: #f6f6f6;
       padding: 0.2rem 0.4rem;
       border-radius: 4px;
       font-size: 0.8rem;
     }
+
     pre {
       background: #0f172a;
       color: #f8fafc;
@@ -183,28 +251,12 @@ export async function previewQuestion(req: Request, res: Response) {
       overflow-x: auto;
       border: 1px solid #1f2937;
     }
+
     pre code {
       background: transparent;
       padding: 0;
       color: inherit;
       font-size: inherit;
-    }
-
-    .pill-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .5rem;
-      margin-top: .5rem;
-    }
-    .pill {
-      background: #eef2ff;
-      color: #4f46e5;
-      font-size: .7rem;
-      padding: .25rem .5rem;
-      line-height: 1.2;
-      border-radius: 999px;
-      border: 1px solid #c7d2fe;
-      font-weight: 500;
     }
 
     footer {
@@ -217,46 +269,39 @@ export async function previewQuestion(req: Request, res: Response) {
 </head>
 <body>
   <header>
-    <h1>${escapeHtml(q.title)}</h1>
+    <h1>${escapeHtml(title)}</h1>
     <div class="meta">
-      <div><strong>ID:</strong> ${escapeHtml(q.id)}</div>
-      <div><strong>Difficulty:</strong> ${escapeHtml(q.difficulty)}</div>
-      <div><strong>Version:</strong> ${String(q.version ?? '')}</div>
+      <div><strong>ID:</strong> ${escapeHtml(id)}</div>
+      <div><strong>Difficulty:</strong> ${escapeHtml(difficulty)}</div>
+      <div><strong>Version:</strong> ${escapeHtml(String(version ?? ''))}</div>
     </div>
     <div class="pill-row">
-      ${
-        Array.isArray(q.topics)
-          ? q.topics
-              .map(
-                (t) =>
-                  `<span class="pill">${escapeHtml(String(t ?? ''))}</span>`,
-              )
-              .join('')
-          : ''
-      }
+      ${topics
+        .map((t) => `<span class="pill">${escapeHtml(t.slug)}</span>`)
+        .join('')}
     </div>
   </header>
 
   <section class="grid">
     <section class="card">
-      <h2>Sanitized HTML (what the frontend renders)</h2>
+      <h2>SANITIZED HTML (WHAT THE FRONTEND RENDERS)</h2>
       <div class="question-body">
-        ${renderedHtml}
+        ${body_html}
       </div>
     </section>
 
     <section class="card">
-      <h2>Raw Markdown (body_md)</h2>
-      <div class="raw-md">${escapePre(q.body_md ?? '')}</div>
+      <h2>RAW MARKDOWN (BODY_MD)</h2>
+      <div class="raw-md">${escapePre(body_md)}</div>
     </section>
   </section>
 
   <footer>
-    <div>NODE_ENV=${escapeHtml(NODE_ENV)}</div>
+    <div>NODE_ENV=${escapeHtml(node_env)}</div>
     <div>This page is not exposed in production.</div>
   </footer>
 </body>
-</html>`);
+</html>`;
 }
 
 function escapeHtml(s: string): string {
