@@ -3,9 +3,9 @@
 import type { Request, Response } from 'express';
 import { log } from '../utils/logger.js';
 import {
-  getPublicResources,
-  getInternalResources,
-} from '../repositories/ResourcesRepository.js';
+  getInternalResourcesBundle,
+  getPublicResourcesBundle,
+} from '../repositories/QuestionRepository.js';
 
 /**
  * GET /questions/:id/resources
@@ -19,7 +19,7 @@ export async function getPublicQuestionResources(req: Request, res: Response) {
   }
 
   try {
-    const payload = await getPublicResources(id);
+    const payload = await getPublicResourcesBundle(id);
     if (!payload) {
       return res.status(404).json({ error: 'not_found' });
     }
@@ -48,7 +48,7 @@ export async function getAdminQuestionResources(req: Request, res: Response) {
   }
 
   try {
-    const payload = await getInternalResources(id);
+    const payload = await getInternalResourcesBundle(id);
     if (!payload) {
       return res.status(404).json({ error: 'not_found' });
     }

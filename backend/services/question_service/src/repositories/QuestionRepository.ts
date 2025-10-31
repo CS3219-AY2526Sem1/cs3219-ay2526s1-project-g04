@@ -2,7 +2,11 @@
 
 import { prisma } from './prisma.js';
 import { Prisma } from '@prisma/client';
-import type { questions as Question } from '@prisma/client';
+import type {
+  questions as Question,
+  question_test_cases as QuestionTestCase,
+  question_python_starter as QuestionStarter,
+} from '@prisma/client';
 import { slugify } from '../utils/slug.js';
 import type { AttachmentInput } from '../types/attachments.js';
 
@@ -434,4 +438,96 @@ export async function updateQuestionAttachments(
     where: { id },
     data: { attachments: attachments as unknown as Prisma.InputJsonValue },
   });
+}
+
+/**
+ * Read starter_code + SAMPLE test cases for a *published* question.
+ * This is what we expose to normal clients / students.
+ *
+ * Returns null if:
+ *   - question doesn't exist
+ *   - OR question is not published
+ */
+export async function getPublicResourcesBundle(questionId: string) {
+  // check published question basics
+  const q = await prisma.questions.findFirst({
+    where: { id: questionId, status: 'published' },
+    select: {
+      id: true,
+      updated_at: true,
+    },
+  });
+  if (!q) return null;
+
+  // pull python starter (may not exist for sql-only questions)
+  const starterRow: QuestionStarter | null =
+    await prisma.question_python_starter.findUnique({
+      where: { question_id: questionId },
+    });
+
+  // pull only SAMPLE test cases
+  const sampleCases: QuestionTestCase[] =
+    await prisma.question_test_cases.findMany({
+      where: {
+        question_id: questionId,
+        visibility: 'sample',
+      },
+      orderBy: { ordinal: 'asc' },
+    });
+
+  return {
+    question_id: q.id,
+    starter_code: starterRow ? { python: starterRow.starter_code } : {},
+    test_cases: sampleCases.map((tc) => ({
+      name: `case-${tc.ordinal}`,
+      visibility: tc.visibility,
+      input: tc.input_data,
+      expected: tc.expected_output,
+      ordinal: tc.ordinal,
+    })),
+    updated_at: q.updated_at.toISOString(),
+  };
+}
+
+/**
+ * Read starter_code + ALL test cases (sample + hidden) for ANY status.
+ * This is what we expose to admin/service (judge, matching worker, etc.).
+ *
+ * Returns null if question_id doesn't exist at all.
+ */
+export async function getInternalResourcesBundle(questionId: string) {
+  const q = await prisma.questions.findFirst({
+    where: { id: questionId },
+    select: {
+      id: true,
+      status: true,
+      updated_at: true,
+    },
+  });
+  if (!q) return null;
+
+  const starterRow: QuestionStarter | null =
+    await prisma.question_python_starter.findUnique({
+      where: { question_id: questionId },
+    });
+
+  const allCases: QuestionTestCase[] =
+    await prisma.question_test_cases.findMany({
+      where: { question_id: questionId },
+      orderBy: { ordinal: 'asc' },
+    });
+
+  return {
+    question_id: q.id,
+    status: q.status,
+    starter_code: starterRow ? { python: starterRow.starter_code } : {},
+    test_cases: allCases.map((tc) => ({
+      name: `case-${tc.ordinal}`,
+      visibility: tc.visibility, // includes 'hidden'
+      input: tc.input_data,
+      expected: tc.expected_output,
+      ordinal: tc.ordinal,
+    })),
+    updated_at: q.updated_at.toISOString(),
+  };
 }
