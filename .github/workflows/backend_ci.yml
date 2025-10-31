@@ -27,6 +27,7 @@ jobs:
         run: npm run lint -- services/matching_service/src
 
   build-services:
+    needs: lint-services
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -44,3 +45,35 @@ jobs:
         run: cd services/matching_service && npm i && npm run build
       - name: build user service
         run: cd services/user_service && npm i && npm run build
+
+  build-and-push-docker-image:
+    needs: build-services
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push question image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend/services/question_service
+          file: ./backend/services/question_service/Dockerfile
+          push: true
+          tags: peerprep4/peerprep4:question_service
+
+      - name: Build and push collab image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/services/collaboration_service/Dockerfile
+          push: true
+          tags: peerprep4/peerprep4:collaboration_service

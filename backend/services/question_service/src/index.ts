@@ -8,7 +8,7 @@ import { log } from './utils/logger.js';
 import { prisma } from './repositories/prisma.js';
 import http from 'http';
 
-const port = Number(process.env['PORT'] || 3000);
+const port = Number(process.env['PORT'] || 3008);
 
 async function main() {
   const app = buildApp();
