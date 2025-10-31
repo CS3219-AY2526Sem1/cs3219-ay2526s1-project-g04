@@ -73,7 +73,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend/services/question_service
-          file: ./backend/services/question_service/Dockerfile
+          context: ./services/question_service
+          file: ./services/question_service/Dockerfile
           push: true
           tags: peerprep4/peerprep4:question_service
