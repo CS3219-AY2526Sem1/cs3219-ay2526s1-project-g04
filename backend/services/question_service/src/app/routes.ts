@@ -8,6 +8,7 @@ import * as TopicController from '../controllers/TopicController.js';
 import * as HealthController from '../controllers/HealthController.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import * as DebugController from '../controllers/DebugController.js';
+import * as ResourcesController from '../controllers/ResourceController.js';
 
 const r = Router();
 
@@ -19,6 +20,10 @@ r.get('/debug/questions/:id', DebugController.previewQuestion);
 
 // Public read
 r.get('/questions/topics', TopicController.listPublished);
+r.get(
+  '/questions/:id/resources',
+  ResourcesController.getPublicQuestionResources,
+);
 r.get('/questions/:id', QuestionController.getById);
 r.get('/questions', QuestionController.list);
 r.get('/topics', TopicController.list);
@@ -85,6 +90,10 @@ r.post(
   requireAuth(),
   requireRole('admin'),
   AdminController.publish,
+);
+r.get(
+  '/admin/questions/:id/resources',
+  ResourcesController.getAdminQuestionResources,
 );
 
 export default r;

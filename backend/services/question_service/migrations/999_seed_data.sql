@@ -499,33 +499,15 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
     def reverseString(self, s: list[str]) -> None:
         """
         Do not return anything, modify s in-place instead.
-        Example:
-        s = ["h","e","l","l","o"] -> ["o","l","l","e","h"]
         """
-        # TODO: two-pointer swap
-        left, right = 0, len(s) - 1
-        while left < right:
-            s[left], s[right] = s[right], s[left]
-            left += 1
-            right -= 1
+        pass
 '
   ),
   (
     'linked-list-cycle-detection',
     'class Solution:
     def hasCycle(self, head: "ListNode | None") -> bool:
-        """
-        Given head of a singly linked list, return True if there is a cycle.
-        Use O(1) extra space.
-        """
-        slow = head
-        fast = head
-        while fast and fast.next:
-            slow = slow.next
-            fast = fast.next.next
-            if slow is fast:
-                return True
-        return False
+        pass
 '
   ),
   (
@@ -534,110 +516,59 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
     def rotate(self, matrix: list[list[int]]) -> None:
         """
         Do not return anything, modify matrix in-place instead.
-
-        Goal: rotate 90 degrees clockwise.
-        Steps:
-        1. Transpose (swap matrix[i][j] with matrix[j][i] for j>i)
-        2. Reverse each row
         """
-        n = len(matrix)
-        # transpose
-        for i in range(n):
-            for j in range(i + 1, n):
-                matrix[i][j], matrix[j][i] = matrix[j][i], matrix[i][j]
-        # reverse rows
-        for row in matrix:
-            row.reverse()
+        pass
 '
   ),
   (
     'validate-binary-search-tree',
     'class Solution:
     def isValidBST(self, root: "TreeNode | None") -> bool:
-        """
-        Return True if the tree is a valid BST.
-        A valid BST has all left < node.val < all right, recursively.
-        """
-
-        def helper(node, low, high):
-            if not node:
-                return True
-            if not (low < node.val < high):
-                return False
-            return helper(node.left, low, node.val) and helper(node.right, node.val, high)
-
-        return helper(root, float("-inf"), float("inf"))
+        pass
 '
   ),
   (
     'lru-cache',
     'class LRUCache:
-    """
-    Implement LRU cache with get/put in O(1).
-    Hint: dict + doubly linked list.
-    """
-
     def __init__(self, capacity: int):
-        # TODO: init your data structures
         pass
 
     def get(self, key: int) -> int:
-        # TODO
         return -1
 
     def put(self, key: int, value: int) -> None:
-        # TODO
-        return
+        pass
 '
   ),
   (
     'longest-common-subsequence',
     'class Solution:
     def longestCommonSubsequence(self, text1: str, text2: str) -> int:
-        """
-        Return length of LCS of text1 and text2.
-        Classic DP.
-        """
-        # TODO: bottom-up DP
-        n, m = len(text1), len(text2)
-        dp = [[0]*(m+1) for _ in range(n+1)]
-        for i in range(n-1, -1, -1):
-            for j in range(m-1, -1, -1):
-                if text1[i] == text2[j]:
-                    dp[i][j] = 1 + dp[i+1][j+1]
-                else:
-                    dp[i][j] = max(dp[i+1][j], dp[i][j+1])
-        return dp[0][0]
+        pass
 '
   ),
   (
     'sliding-window-maximum',
-    'from collections import deque
-
-class Solution:
+    'class Solution:
     def maxSlidingWindow(self, nums: list[int], k: int) -> list[int]:
-        """
-        Return array of max for each window of size k.
-        Hint: use a deque of indices in decreasing nums[] order.
-        """
-        # TODO
-        dq = deque()  # store indices
-        res: list[int] = []
+        pass
+'
+  ),
+  (
+    'serialize-and-deserialize-binary-tree',
+    'class Codec:
+    def serialize(self, root: "TreeNode | None") -> str:
+        pass
 
-        for i, val in enumerate(nums):
-            # pop left if out of window
-            while dq and dq[0] <= i - k:
-                dq.popleft()
-
-            # maintain decreasing order
-            while dq and nums[dq[1-1]] < val:
-                dq.pop()
-
-            dq.append(i)
-
-            if i >= k - 1:
-                res.append(nums[dq[0]])
-        return res
+    def deserialize(self, data: str) -> "TreeNode | None":
+        pass
+'
+  ),
+  (
+    'n-queens',
+    'class Solution:
+    def solveNQueens(self, n: int) -> list[list[str]]:
+        pass
 '
   )
 ON CONFLICT (question_id) DO UPDATE
