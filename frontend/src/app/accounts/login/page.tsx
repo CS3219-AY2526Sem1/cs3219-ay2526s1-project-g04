@@ -73,6 +73,7 @@ export default function LoginPage() {
         setError(data.message || 'Login failed.');
       }
     } catch (err) {
+      console.log(err);
       setError('Failed to connect to the server.');
     } finally {
       setIsLoading(false);
@@ -104,6 +105,7 @@ export default function LoginPage() {
           setError(data.message || 'Verification failed.');
         }
       } catch (err) {
+        console.log(err);
         setError('Failed to connect to the server.');
       } finally {
         setIsLoading(false);
@@ -136,6 +138,7 @@ export default function LoginPage() {
         setCooldownSeconds(0);
       }
     } catch (err) {
+      console.log(err);
       setError('Failed to connect to the server.');
       setCooldownSeconds(0);
     } finally {
