@@ -17,7 +17,7 @@ import {
 import { openSans } from '@/styles/fonts';
 import { VerifyOtpForm } from '@/components/ui/accounts/VerifyOtp';
 
-function debounce<T extends (...args: any[]) => void>(
+function debounce<T extends (...args: unknown[]) => void>(
   func: T,
   wait: number,
 ): (...args: Parameters<T>) => void {
@@ -123,6 +123,7 @@ export default function SignUpPage() {
           setUsernameError('Username is already taken.');
         }
       } catch (err) {
+        console.error(err);
         setUsernameError('Could not check username. Please try again.');
         setIsUsernameAvailable(null);
       } finally {
@@ -172,6 +173,7 @@ export default function SignUpPage() {
         setCooldownSeconds(0);
       }
     } catch (err) {
+      console.error(err);
       setError('Failed to connect to the server. Please try again.');
       setCooldownSeconds(0);
     } finally {
@@ -206,12 +208,13 @@ export default function SignUpPage() {
           setError(data.message || 'An unknown error occurred.');
         }
       } catch (err) {
+        console.error(err);
         setError('Failed to connect to the server. Please try again.');
       } finally {
         setIsLoading(false);
       }
     },
-    [email],
+    [email, router],
   );
 
   const handleResendOtp = useCallback(async () => {
@@ -242,6 +245,7 @@ export default function SignUpPage() {
         }
       }
     } catch (err) {
+      console.error(err);
       setError('Failed to connect to the server. Please try again.');
       setCooldownSeconds(0);
     } finally {

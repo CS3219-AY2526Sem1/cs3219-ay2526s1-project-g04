@@ -2,8 +2,6 @@
 
 import * as React from 'react';
 import {
-  AppBar,
-  Avatar,
   Box,
   Button,
   Card,
@@ -20,12 +18,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Toolbar,
   Typography,
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 // --- Mock Data (Replace with your API data) ---
 const user = {
@@ -107,7 +103,14 @@ const getDifficultyColor = (difficulty: string) => {
 
 export default function DashboardPage() {
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+    <Box
+      sx={{
+        pt: 5,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+      }}
+    >
       {/* Main Content */}
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Typography
@@ -136,10 +139,11 @@ export default function DashboardPage() {
               {/* Start Practising Card */}
               <Card
                 sx={{
-                  p: 3,
+                  px: 3,
+                  py: 5,
                   borderRadius: 3,
                   background:
-                    'linear-gradient(90deg, #6D28D9 0%, #4F46E5 100%)',
+                    'linear-gradient(90deg, #8B5CF6 0%, #3B82F6 100%)',
                   color: 'white',
                 }}
               >
@@ -151,9 +155,13 @@ export default function DashboardPage() {
                   <Box>
                     <Typography
                       sx={{
+                        py: 1,
                         textTransform: 'uppercase',
-                        fontSize: '0.8rem',
-                        letterSpacing: 1,
+                        fontWeight: 800,
+                        letterSpacing: 0.4,
+                        fontSize: '1rem',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        opacity: 0.6,
                       }}
                     >
                       Sharpen your skills, practice live with peers
@@ -161,7 +169,7 @@ export default function DashboardPage() {
                     <Typography
                       variant="h4"
                       sx={{
-                        fontWeight: 800,
+                        fontWeight: 900,
                         fontFamily: openSans.style.fontFamily,
                       }}
                     >

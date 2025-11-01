@@ -28,9 +28,9 @@ interface TopNavigationBarProps {
 }
 
 export default function TopNavigationBar({
-                                           onHeightChange,
-                                           ...props
-                                         }: TopNavigationBarProps) {
+  onHeightChange,
+  ...props
+}: TopNavigationBarProps) {
   const appBarRef = useRef<HTMLDivElement>(null);
   const router = useRouter(); // Initialize router
 
@@ -39,8 +39,7 @@ export default function TopNavigationBar({
 
   const [openDialog, setOpenDialog] = useState(false);
 
-  useEffect(() => {
-  }, [onHeightChange]);
+  useEffect(() => {}, [onHeightChange]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -73,7 +72,7 @@ export default function TopNavigationBar({
     console.log('Logging out...');
     const accessToken = localStorage.getItem('accessToken');
     if (!accessToken) {
-      console.error("Logout failed: Access token not found.");
+      console.error('Logout failed: Access token not found.');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       router.push('/accounts/login');
@@ -82,20 +81,19 @@ export default function TopNavigationBar({
     }
 
     try {
-      const response = await fetch("http://localhost:3001/user/auth/logout", {
+      const response = await fetch('http://localhost:3001/user/auth/logout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        }
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       if (!response.ok) {
-        console.error("Backend logout failed:", await response.json());
+        console.error('Backend logout failed:', await response.json());
       }
-
     } catch (error) {
-      console.error("Error during logout API call:", error);
+      console.error('Error during logout API call:', error);
     } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
@@ -107,20 +105,19 @@ export default function TopNavigationBar({
   return (
     <>
       <AppBar
-          ref={appBarRef}
-          position="fixed"
-          className="bg-[var(--background)] text-[var(--foreground)] border-b border-white/20 shadow-[0_4px_20px_rgba(0,0,0,0.25)] py-1 z-[1100]"
-          {...props}
+        ref={appBarRef}
+        position="fixed"
+        className="bg-[var(--background)] text-[var(--foreground)] border-b border-white/20 shadow-[0_4px_20px_rgba(0,0,0,0.25)] py-1 z-[1100]"
+        {...props}
       >
         <Toolbar className="flex justify-between items-center">
-          {/* Logo */}
           <div className="flex items-center flex-grow">
             <Tooltip title="Dashboard">
               <Link href="/home/dashboard">
                 <img
-                    src="/logo.png"
-                    alt="PeerPrep Logo"
-                    className="h-[40px] sm:h-[56px] md:h-[72px] object-contain"
+                  src="/logo.png"
+                  alt="PeerPrep Logo"
+                  className="h-[40px] sm:h-[56px] md:h-[72px] object-contain"
                 />
               </Link>
             </Tooltip>
@@ -142,8 +139,8 @@ export default function TopNavigationBar({
 
             <Tooltip title="profile">
               <IconButton
-                  onClick={handleMenuOpen}
-                  className="text-[var(--foreground)]"
+                onClick={handleMenuOpen}
+                className="text-[var(--foreground)]"
               >
                 <AccountCircleOutlined />
               </IconButton>
@@ -153,20 +150,20 @@ export default function TopNavigationBar({
       </AppBar>
 
       <Menu
-          anchorEl={anchorEl}
-          open={openMenu}
-          onClose={handleMenuClose}
-          MenuListProps={{
-            'aria-labelledby': 'basic-button',
-          }}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
+        anchorEl={anchorEl}
+        open={openMenu}
+        onClose={handleMenuClose}
+        MenuListProps={{
+          'aria-labelledby': 'basic-button',
+        }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
       >
         <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
         <MenuItem onClick={handleSettingsClick}>Account Settings</MenuItem>
@@ -176,9 +173,15 @@ export default function TopNavigationBar({
         </MenuItem>
       </Menu>
 
-      {/* --- Logout Confirmation Dialog --- */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} fullWidth={true} maxWidth="xs">
-        <DialogTitle sx={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center' }}>
+      <Dialog
+        open={openDialog}
+        onClose={handleCloseDialog}
+        fullWidth={true}
+        maxWidth="xs"
+      >
+        <DialogTitle
+          sx={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center' }}
+        >
           Logout Confirmation
         </DialogTitle>
         <DialogTitle sx={{ fontSize: '1rem', textAlign: 'center' }}>

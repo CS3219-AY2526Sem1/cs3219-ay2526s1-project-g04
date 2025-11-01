@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   Stack,
   TextField,
@@ -57,7 +57,7 @@ export function VerifyOtpForm({
           Verify Your Email
         </Typography>
         <Typography sx={{ textAlign: 'center', color: '#6B7280' }}>
-          We've sent a 6-digit code to <strong>{email}</strong>. Please enter it
+          We&apos;ve sent a 6-digit code to <strong>{email}</strong>. Please enter it
           below.
         </Typography>
 

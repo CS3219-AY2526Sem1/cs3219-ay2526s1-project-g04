@@ -12,7 +12,6 @@ import {
   Paper,
   Stack,
   Alert,
-  Container,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
@@ -71,6 +70,7 @@ export default function Page() {
         profilePictureUrl: data.profilePictureUrl ?? '',
       });
     } catch (err) {
+      console.log(err);
       setError('Could not load profile data.');
     } finally {
       setIsLoading(false);
@@ -133,8 +133,9 @@ export default function Page() {
         });
         if (!res.ok) throw new Error(await res.json().then((d) => d.message));
         textUpdated = true;
-      } catch (err: any) {
-        setError(`Text update failed: ${err.message}`);
+      } catch (err) {
+        console.log(err);
+        setError(`Text update failed: ${err}`);
         setIsSaving(false);
         return; // Stop if text update fails
       }
@@ -155,10 +156,11 @@ export default function Page() {
         );
         if (!res.ok) throw new Error(await res.json().then((d) => d.message));
         imageUpdated = true;
-      } catch (err: any) {
-        setError(`Image upload failed: ${err.message}`);
+      } catch (err) {
+        console.log(err);
+        setError(`Image upload failed: ${err}`);
         setIsSaving(false);
-        return; // Stop if image upload fails
+        return;
       }
     }
 
