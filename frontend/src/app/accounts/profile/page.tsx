@@ -85,55 +85,84 @@ export default function Page() {
     setEditData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      setSelectedFile(file);
+      // Create a temporary local URL to show a preview
+      setEditData(prev => ({ ...prev, profilePictureUrl: URL.createObjectURL(file) }));
+    }
+  };
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
     setError('');
     setSuccessMessage('');
     const token = localStorage.getItem('accessToken');
 
-    const payload: Partial<typeof editData> = {};
-    if (editData.username !== profile?.username) {
-      payload.username = editData.username;
-    }
-    if (editData.bio !== (profile?.bio ?? '')) {
-      payload.bio = editData.bio || undefined;
-    }
-    if (editData.profilePictureUrl !== (profile?.profilePictureUrl ?? '')) {
-      payload.profilePictureUrl = editData.profilePictureUrl || undefined;
-    }
-
-
-    if (Object.keys(payload).length === 0) {
-      setIsEditing(false);
+    if (!token) {
+      setError("Authentication error. Please log in again.");
       setIsSaving(false);
       return;
     }
 
-    try {
-      const response = await fetch('http://localhost:3001/user/me/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      const data = await response.json();
+    let textUpdated = false;
+    let imageUpdated = false;
 
-      if (!response.ok) {
-        setError(data.message || 'Failed to save changes.');
-      } else {
-        setSuccessMessage('Profile updated successfully!');
-        setIsEditing(false);
-        await fetchProfile();
+    const textPayload: { username?: string; bio?: string | null } = {};
+    if (editData.username !== profile?.username) {
+      textPayload.username = editData.username;
+    }
+    if (editData.bio !== (profile?.bio ?? '')) {
+      textPayload.bio = editData.bio || null;
+    }
+
+    if (Object.keys(textPayload).length > 0) {
+      try {
+        const res = await fetch('http://localhost:3001/user/me/profile', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(textPayload),
+        });
+        if (!res.ok) throw new Error(await res.json().then(d => d.message));
+        textUpdated = true;
+      } catch (err: any) {
+        setError(`Text update failed: ${err.message}`);
+        setIsSaving(false);
+        return; // Stop if text update fails
       }
-    } catch (err) {
-      setError('Failed to connect to the server.');
-    } finally {
-      setIsSaving(false);
+    }
+
+    if (selectedFile) {
+      try {
+        const formData = new FormData();
+        formData.append('profilePicture', selectedFile); // This is the logic from your test
+
+        const res = await fetch('http://localhost:3001/user/me/profile-picture', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!res.ok) throw new Error(await res.json().then(d => d.message));
+        imageUpdated = true;
+      } catch (err: any) {
+        setError(`Image upload failed: ${err.message}`);
+        setIsSaving(false);
+        return; // Stop if image upload fails
+      }
+    }
+
+    setIsSaving(false);
+    setIsEditing(false);
+    setSelectedFile(null);
+    if (textUpdated || imageUpdated) {
+      setSuccessMessage('Profile updated successfully!');
+      await fetchProfile(); // Refresh all profile data
     }
   };
-
 
   if (isLoading) {
     return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
@@ -148,96 +177,91 @@ export default function Page() {
   }
 
   return (
-      <Container maxWidth="md" sx={{ py: 4 }}>
-        <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 3 }}>
-          <Stack spacing={3} alignItems="center">
-            <Typography variant="h4" component="h1" gutterBottom>
-              Your Profile
-            </Typography>
+    <Container maxWidth="md" sx={{ py: 4 }}>
+      <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 3 }}>
+        <Stack spacing={3} alignItems="center">
+          <Typography variant="h4" component="h1" gutterBottom>
+            Your Profile
+          </Typography>
 
-            {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
-            {successMessage && <Alert severity="success" sx={{ width: '100%' }}>{successMessage}</Alert>}
+          {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
+          {successMessage && <Alert severity="success" sx={{ width: '100%' }}>{successMessage}</Alert>}
 
-            <Avatar
-                src={isEditing ? editData.profilePictureUrl : profile.profilePictureUrl ?? undefined}
-                alt={profile.username}
-                sx={{ width: 100, height: 100, mb: 2 }}
-            />
+          <Avatar
+              src={isEditing ? editData.profilePictureUrl : (profile.profilePictureUrl ?? undefined)}
+              alt={profile.username}
+              sx={{ width: 100, height: 100, mb: 2 }}
+          />
 
-            {isEditing ? (
-              <>
-                <Button component="label" variant="outlined" size="small">
-                  Upload New Picture
-                  <input
+          {isEditing ? (
+            <>
+              <Button component="label" variant="outlined" size="small">
+                Upload New Picture (JPG/PNG)
+                <input
                     type="file"
                     hidden
                     accept="image/png, image/jpeg"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setSelectedFile(e.target.files[0]);
-                        // Optionally, show a preview
-                        setEditData(prev => ({ ...prev, profilePictureUrl: URL.createObjectURL(e.target.files![0]) }));
-                      }
-                    }}
-                  />
+                    onChange={handleFileChange}
+                />
+              </Button>
+              {selectedFile && (
+                  <Typography variant="caption" color="text.secondary">
+                    New file: {selectedFile.name}
+                  </Typography>
+              )}
+              <TextField
+                fullWidth
+                label="Username"
+                name="username"
+                value={editData.username}
+                onChange={handleInputChange}
+                required
+                variant="outlined"
+                size="small"
+                inputProps={{ maxLength: 30 }}
+              />
+              <TextField
+                fullWidth
+                label="Bio"
+                name="bio"
+                value={editData.bio}
+                onChange={handleInputChange}
+                multiline
+                rows={3}
+                variant="outlined"
+                size="small"
+                placeholder="Tell us about yourself (max 150 chars)"
+                inputProps={{ maxLength: 150 }}
+              />
+              <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: 'flex-end' }}>
+                <Button onClick={() => setIsEditing(false)} disabled={isSaving}>
+                  Cancel
                 </Button>
-                  {selectedFile && <Typography variant="caption">{selectedFile.name}</Typography>}
-                  <Button size="small" onClick={() => { setSelectedFile(null); setEditData(prev => ({...prev, profilePictureUrl: ''}))}}>
-                    Remove Picture
-                  </Button>
-                  <TextField
-                    fullWidth
-                    label="Username"
-                    name="username"
-                    value={editData.username}
-                    onChange={handleInputChange}
-                    required
-                    variant="outlined"
-                    size="small"
-                    inputProps={{ maxLength: 30 }}
-                  />
-                  <TextField
-                    fullWidth
-                    label="Bio"
-                    name="bio"
-                    value={editData.bio}
-                    onChange={handleInputChange}
-                    multiline
-                    rows={3}
-                    variant="outlined"
-                    size="small"
-                    placeholder="Tell us about yourself (max 150 chars)"
-                    inputProps={{ maxLength: 150 }}
-                  />
-                  <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: 'flex-end' }}>
-                    <Button onClick={() => setIsEditing(false)} disabled={isSaving}>
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="contained"
-                      onClick={handleSaveChanges}
-                      disabled={isSaving}
-                    >
-                      {isSaving ? <CircularProgress size={24} /> : 'Save Changes'}
-                    </Button>
-                  </Stack>
-                </>
-            ) : (
-              <>
-                <Typography variant="h6">{profile.username}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Member since: {new Date(profile.createdAt).toLocaleDateString()}
-                </Typography>
-                <Typography variant="body1" sx={{ mt: 2, textAlign: 'center', whiteSpace: 'pre-wrap' }}>
-                  {profile.bio || <i>No bio yet.</i>}
-                </Typography>
-                <Button variant="outlined" onClick={() => setIsEditing(true)} sx={{ mt: 3 }}>
-                  Edit Profile
+                <Button
+                  variant="contained"
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <CircularProgress size={24} /> : 'Save Changes'}
                 </Button>
-              </>
-            )}
-          </Stack>
-        </Paper>
-      </Container>
+              </Stack>
+            </>
+          ) : (
+            <>
+              <Typography variant="h6">{profile.username}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Member since: {new Date(profile.createdAt).toLocaleDateString()}
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 2, textAlign: 'center', whiteSpace: 'pre-wrap' }}>
+                {profile.bio || <i>No bio yet.</i>}
+              </Typography>
+              <Button variant="outlined" onClick={() => setIsEditing(true)} sx={{ mt: 3 }}>
+                Edit Profile
+              </Button>
+            </>
+          )}
+        </Stack>
+      </Paper>
+    </Container>
   );
 }

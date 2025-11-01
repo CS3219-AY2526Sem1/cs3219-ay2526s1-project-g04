@@ -5,17 +5,41 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import cors from 'cors';
 import dotenv from 'dotenv';
-
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import {
+  S3Client,
+  PutObjectCommand
+} from '@aws-sdk/client-s3';
+import multer from 'multer';
 
 dotenv.config();
-console.log('DATABASE_URL:', process.env.DATABASE_URL); // Add this line
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 const OTP_COOLDOWN_SECONDS = 60;
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size (e.g., 5MB)
+  fileFilter: (req, file, cb) => {
+    // Filter for allowed image types
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG and PNG are allowed.'));
+    }
+  },
+});
 
 // --- Middleware ---
 app.use(cors());
@@ -44,6 +68,7 @@ const signupSchema = z.object({
   username: z
     .string()
     .min(3, { message: 'Username must be at least 3 characters long.' })
+    .max(30, { message: 'Username should not exceed 30 characters.' })
     .regex(/^[a-z0-9_]+$/, {
       message:
         'Username can only contain lowercase letters, numbers, and underscores (_).',
@@ -382,13 +407,13 @@ app.put(
   async (req: AuthRequest, res: Response) => {
     try {
       const validatedData = updateProfileSchema.parse(req.body);
+
       if (Object.keys(validatedData).length === 0) {
         return res
           .status(400)
           .json({ message: 'No fields to update provided.' });
       }
 
-      // NOT GNA ALLOW TO UPDATE USERNAME??
       if (validatedData.username) {
         const existingUser = await prisma.user.findUnique({
           where: { username: validatedData.username },
@@ -405,18 +430,105 @@ app.put(
         data: validatedData,
       });
 
-      if (updatedUser) {
-        res.status(200).json({ message: 'Profile updated successfully.' });
-      } else {
-        res.status(500).json({ message: 'Internal server error' });
-      }
+      res.status(200).json({
+        message: 'Profile updated successfully.',
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid input', details: error.issues });
+          .json({ message: 'Invalid text input', details: error.issues });
       }
+      if (error instanceof multer.MulterError) {
+        return res
+          .status(400)
+          .json({ message: `File upload error: ${error.message}` });
+      }
+      if (
+        error instanceof Error &&
+        error.message.includes('Invalid file type')
+      ) {
+        return res.status(400).json({ message: error.message });
+      }
+      console.error('Profile Update Error:', error);
       res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
+app.get(
+  '/user/me/profile',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.userId;
+
+      const userProfile = await prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          role: true,
+          createdAt: true,
+          bio: true,
+          profilePictureUrl: true,
+        },
+      });
+
+      if (!userProfile) {
+        return res.status(404).json({ message: 'User profile not found.' });
+      }
+
+      res.status(200).json(userProfile);
+    } catch (error) {
+      console.error('Failed to retrieve user profile:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
+app.post(
+  '/user/me/profile-picture',
+  authenticateToken,
+  upload.single('profilePicture'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ message: 'No profile picture file uploaded.' });
+      }
+
+      const file = req.file;
+      const fileName = `${req.user!.userId}-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+
+      const uploadParams = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
+        Key: fileName,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      };
+
+      await s3Client.send(new PutObjectCommand(uploadParams));
+
+      const profilePictureS3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+
+      await prisma.user.update({
+        where: { id: req.user!.userId },
+        data: { profilePictureUrl: profilePictureS3Url },
+      });
+
+      res.status(200).json({
+        message: 'Profile picture updated successfully.',
+        profilePictureUrl: profilePictureS3Url,
+      });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: 'Internal server error', details: error });
     }
   },
 );
@@ -616,7 +728,7 @@ app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
  */
 // UTILITY TO BE DELETED !!!!!
 // list all users in db
-app.post('/user/utility/list', async (req, res) => {
+app.get('/user/utility/list', async (req, res) => {
   try {
     const allUsers = await prisma.user.findMany();
     res.status(200).json({ message: 'List successful', details: allUsers });
