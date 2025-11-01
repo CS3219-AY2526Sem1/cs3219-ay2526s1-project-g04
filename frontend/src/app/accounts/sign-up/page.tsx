@@ -17,7 +17,7 @@ import {
 import { openSans } from '@/styles/fonts';
 import { VerifyOtpForm } from '@/components/ui/accounts/VerifyOtp';
 
-function debounce<T extends (...args: unknown[]) => void>(
+function debounce<T extends (...args: any[]) => unknown>(
   func: T,
   wait: number,
 ): (...args: Parameters<T>) => void {

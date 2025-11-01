@@ -57,8 +57,8 @@ export function VerifyOtpForm({
           Verify Your Email
         </Typography>
         <Typography sx={{ textAlign: 'center', color: '#6B7280' }}>
-          We&apos;ve sent a 6-digit code to <strong>{email}</strong>. Please enter it
-          below.
+          We&apos;ve sent a 6-digit code to <strong>{email}</strong>. Please
+          enter it below.
         </Typography>
 
         <TextField
