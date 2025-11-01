@@ -260,7 +260,7 @@ export default function LoginPage() {
                     fontSize: '14px',
                   }}
                 >
-                  Don't have an account?{' '}
+                  Don&apos;t have an account?{' '}
                   <Link
                     href="/accounts/sign-up"
                     sx={{ color: '#8B5CF6', fontWeight: 600 }}

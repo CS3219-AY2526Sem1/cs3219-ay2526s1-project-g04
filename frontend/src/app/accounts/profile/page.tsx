@@ -11,8 +11,10 @@ import {
   Avatar,
   Paper,
   Stack,
-  Alert, Container,
+  Alert,
+  Container,
 } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 interface UserProfile {
   username: string;
@@ -79,10 +81,9 @@ export default function Page() {
     fetchProfile();
   }, [fetchProfile]);
 
-
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-    setEditData(prev => ({ ...prev, [name]: value }));
+    setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,7 +91,10 @@ export default function Page() {
       const file = event.target.files[0];
       setSelectedFile(file);
       // Create a temporary local URL to show a preview
-      setEditData(prev => ({ ...prev, profilePictureUrl: URL.createObjectURL(file) }));
+      setEditData((prev) => ({
+        ...prev,
+        profilePictureUrl: URL.createObjectURL(file),
+      }));
     }
   };
 
@@ -101,7 +105,7 @@ export default function Page() {
     const token = localStorage.getItem('accessToken');
 
     if (!token) {
-      setError("Authentication error. Please log in again.");
+      setError('Authentication error. Please log in again.');
       setIsSaving(false);
       return;
     }
@@ -127,7 +131,7 @@ export default function Page() {
           },
           body: JSON.stringify(textPayload),
         });
-        if (!res.ok) throw new Error(await res.json().then(d => d.message));
+        if (!res.ok) throw new Error(await res.json().then((d) => d.message));
         textUpdated = true;
       } catch (err: any) {
         setError(`Text update failed: ${err.message}`);
@@ -141,12 +145,15 @@ export default function Page() {
         const formData = new FormData();
         formData.append('profilePicture', selectedFile); // This is the logic from your test
 
-        const res = await fetch('http://localhost:3001/user/me/profile-picture', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        });
-        if (!res.ok) throw new Error(await res.json().then(d => d.message));
+        const res = await fetch(
+          'http://localhost:3001/user/me/profile-picture',
+          {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          },
+        );
+        if (!res.ok) throw new Error(await res.json().then((d) => d.message));
         imageUpdated = true;
       } catch (err: any) {
         setError(`Image upload failed: ${err.message}`);
@@ -165,11 +172,19 @@ export default function Page() {
   };
 
   if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   if (error && !profile) {
-    return <Alert severity="error" sx={{ m: 4 }}>{error}</Alert>;
+    return (
+      <Alert severity="error" sx={{ m: 4 }}>
+        {error}
+      </Alert>
+    );
   }
 
   if (!profile) {
@@ -177,20 +192,39 @@ export default function Page() {
   }
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
+    <Box sx={{ pt: 12, pb: 4, px: 20 }}>
+      <Button
+        startIcon={<ArrowBackIcon />}
+        onClick={() => router.push('/home/dashboard')} // Navigate to dashboard
+        sx={{ mb: 2, alignSelf: 'flex-start' }} // Add margin below
+      >
+        Back to Dashboard
+      </Button>
       <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 3 }}>
         <Stack spacing={3} alignItems="center">
           <Typography variant="h4" component="h1" gutterBottom>
             Your Profile
           </Typography>
 
-          {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
-          {successMessage && <Alert severity="success" sx={{ width: '100%' }}>{successMessage}</Alert>}
+          {error && (
+            <Alert severity="error" sx={{ width: '100%' }}>
+              {error}
+            </Alert>
+          )}
+          {successMessage && (
+            <Alert severity="success" sx={{ width: '100%' }}>
+              {successMessage}
+            </Alert>
+          )}
 
           <Avatar
-              src={isEditing ? editData.profilePictureUrl : (profile.profilePictureUrl ?? undefined)}
-              alt={profile.username}
-              sx={{ width: 100, height: 100, mb: 2 }}
+            src={
+              isEditing
+                ? editData.profilePictureUrl
+                : (profile.profilePictureUrl ?? undefined)
+            }
+            alt={profile.username}
+            sx={{ width: 100, height: 100, mb: 2 }}
           />
 
           {isEditing ? (
@@ -198,16 +232,16 @@ export default function Page() {
               <Button component="label" variant="outlined" size="small">
                 Upload New Picture (JPG/PNG)
                 <input
-                    type="file"
-                    hidden
-                    accept="image/png, image/jpeg"
-                    onChange={handleFileChange}
+                  type="file"
+                  hidden
+                  accept="image/png, image/jpeg"
+                  onChange={handleFileChange}
                 />
               </Button>
               {selectedFile && (
-                  <Typography variant="caption" color="text.secondary">
-                    New file: {selectedFile.name}
-                  </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  New file: {selectedFile.name}
+                </Typography>
               )}
               <TextField
                 fullWidth
@@ -233,7 +267,11 @@ export default function Page() {
                 placeholder="Tell us about yourself (max 150 chars)"
                 inputProps={{ maxLength: 150 }}
               />
-              <Stack direction="row" spacing={2} sx={{ width: '100%', justifyContent: 'flex-end' }}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{ width: '100%', justifyContent: 'flex-end' }}
+              >
                 <Button onClick={() => setIsEditing(false)} disabled={isSaving}>
                   Cancel
                 </Button>
@@ -252,16 +290,23 @@ export default function Page() {
               <Typography variant="body2" color="text.secondary">
                 Member since: {new Date(profile.createdAt).toLocaleDateString()}
               </Typography>
-              <Typography variant="body1" sx={{ mt: 2, textAlign: 'center', whiteSpace: 'pre-wrap' }}>
+              <Typography
+                variant="body1"
+                sx={{ mt: 2, textAlign: 'center', whiteSpace: 'pre-wrap' }}
+              >
                 {profile.bio || <i>No bio yet.</i>}
               </Typography>
-              <Button variant="outlined" onClick={() => setIsEditing(true)} sx={{ mt: 3 }}>
+              <Button
+                variant="outlined"
+                onClick={() => setIsEditing(true)}
+                sx={{ mt: 3 }}
+              >
                 Edit Profile
               </Button>
             </>
           )}
         </Stack>
       </Paper>
-    </Container>
+    </Box>
   );
 }
