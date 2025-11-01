@@ -1,5 +1,4 @@
 -- migrations/0001_init.sql
--- Question Service: initial schema + indexes
 
 -- =========================
 -- Core tables
@@ -10,8 +9,8 @@ CREATE TABLE IF NOT EXISTS questions (
   title          text NOT NULL,
   body_md        text NOT NULL,
   difficulty     text NOT NULL CHECK (difficulty IN ('Easy','Medium','Hard')),
-  topics         jsonb NOT NULL DEFAULT '[]',              -- array of topic slugs
-  attachments    jsonb NOT NULL DEFAULT '[]',
+  topics         jsonb NOT NULL DEFAULT '[]',              -- ["arrays","dp"]
+  attachments    jsonb NOT NULL DEFAULT '[]',              -- [{key, content_type, filename}]
   status         text NOT NULL CHECK (status IN ('draft','published','archived')),
   version        int  NOT NULL DEFAULT 1,
   rand_key       double precision NOT NULL DEFAULT random(),
@@ -22,6 +21,8 @@ CREATE TABLE IF NOT EXISTS questions (
   ) STORED
 );
 
+-- Immutable snapshot of the authored content/metadata per version.
+-- (We keep this so "publish" can freeze the markdown, title, etc.)
 CREATE TABLE IF NOT EXISTS question_versions (
   id             text NOT NULL,
   version        int  NOT NULL,
@@ -36,10 +37,11 @@ CREATE TABLE IF NOT EXISTS question_versions (
   PRIMARY KEY (id, version)
 );
 
+-- session_idempotency / reservation window for /select
 CREATE TABLE IF NOT EXISTS reservations (
-  matching_id     text PRIMARY KEY,
-  question_id    text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
-  expires_at     timestamptz NOT NULL
+  matching_id   text PRIMARY KEY,
+  question_id   text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  expires_at    timestamptz NOT NULL
 );
 
 -- Canonical topic metadata (slug → display/color)
@@ -54,6 +56,29 @@ CREATE TABLE IF NOT EXISTS question_topics (
   question_id text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   topic_slug  text NOT NULL REFERENCES topics(slug) ON DELETE CASCADE,
   PRIMARY KEY (question_id, topic_slug)
+);
+
+-- ======================================================
+-- Execution-related data (runtime only, not versioned)
+-- ======================================================
+
+-- Test cases to evaluate submissions.
+-- visibility:
+--   - 'sample'  -> show to user in UI
+--   - 'hidden'  -> keep secret
+CREATE TABLE IF NOT EXISTS question_test_cases (
+  id              bigserial PRIMARY KEY,
+  question_id     text NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
+  visibility      text NOT NULL CHECK (visibility IN ('sample','hidden')),
+  input_data      text NOT NULL,          -- raw stdin / JSON / args
+  expected_output text NOT NULL,          -- raw stdout / JSON
+  ordinal         int NOT NULL DEFAULT 0  -- stable order (UI + runner)
+);
+
+-- Single canonical Python starter template for the editor.
+CREATE TABLE IF NOT EXISTS question_python_starter (
+  question_id   text PRIMARY KEY REFERENCES questions(id) ON DELETE CASCADE,
+  starter_code  text NOT NULL
 );
 
 -- =========================
@@ -90,30 +115,15 @@ CREATE INDEX IF NOT EXISTS idx_questions_rand_key
 CREATE INDEX IF NOT EXISTS idx_questions_topics_gin
   ON questions USING GIN (topics jsonb_path_ops);
 
--- Full-text search over title+body:
--- Partial index for Published content to keep it small & fast.
+-- Full-text search over title+body, only published rows to keep it small
 CREATE INDEX IF NOT EXISTS idx_questions_tsv_en_published
   ON questions USING GIN (tsv_en)
   WHERE status = 'published';
 
 -- Topic lookup convenience
-CREATE INDEX IF NOT EXISTS idx_topics_color ON topics (color_hex);
+CREATE INDEX IF NOT EXISTS idx_topics_color
+  ON topics (color_hex);
 
--- =========================
--- Optional seed (comment out in prod)
--- =========================
--- INSERT INTO topics (slug, display, color_hex) VALUES
---   ('arrays', 'Arrays', '#FFB020'),
---   ('graphs', 'Graphs', '#5B8DEF')
--- ON CONFLICT (slug) DO NOTHING;
---
--- INSERT INTO questions (id, title, body_md, difficulty, topics, status)
--- VALUES
---   ('two-sum', 'Two Sum', 'Find two numbers…', 'Easy', '["arrays"]', 'published'),
---   ('graph-traversal', 'Graph Traversal', 'BFS/DFS…', 'Medium', '["graphs"]', 'published')
--- ON CONFLICT (id) DO NOTHING;
---
--- INSERT INTO question_topics (question_id, topic_slug) VALUES
---   ('two-sum', 'arrays'),
---   ('graph-traversal', 'graphs')
--- ON CONFLICT DO NOTHING;
+-- Runtime helpers
+CREATE INDEX IF NOT EXISTS idx_qtc_question
+  ON question_test_cases (question_id, visibility, ordinal);

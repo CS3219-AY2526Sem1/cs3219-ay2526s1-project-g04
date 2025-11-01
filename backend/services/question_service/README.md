@@ -138,7 +138,7 @@ Service is now at **[http://localhost:3000](http://localhost:3000)**.
 ### Read
 
 - **GET `/questions/{id}`** → returns a **published** question or `404`. Includes `body_html` (sanitized) and `body_md`.
-- **GET `/questions?difficulty=&topics=&q=&page=&size=`** → paginated list (stable order: `updated_at desc`).
+- **GET `/questions?difficulty=&topics=&q=&page=&page_size=`** → paginated list (stable order: `updated_at desc`).
 
 ### Selection
 
