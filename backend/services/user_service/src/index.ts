@@ -422,11 +422,6 @@ app.put(
         }
       }
 
-      const updatedUser = await prisma.user.update({
-        where: { id: req.user!.userId },
-        data: validatedData,
-      });
-
       res.status(200).json({
         message: 'Profile updated successfully.',
       });
