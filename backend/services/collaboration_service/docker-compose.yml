@@ -1,0 +1,58 @@
+# include:
+#   - ../../infrastructure/docker-compose.yml
+services:
+  postgres:
+    image: postgres
+    restart: always
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: example
+    ports:
+      - "5433:5432"
+    networks:
+      - peerprep-network
+    volumes:
+      - collab_postgres_data:/collab_data
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+    networks:
+      - peerprep-network
+
+  collaboration_service:
+    build:
+      context: ../../
+      dockerfile: services/collaboration_service/Dockerfile
+
+    restart: always
+    depends_on:
+      - postgres
+      # - redis
+      # - rabbitmq
+    ports:
+      - "3009:3000"
+    networks:
+      - peerprep-network
+
+    environment:
+      - DATABASE_URL=postgres://postgres:example@postgres:5432/postgres
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://admin:rabbitmq123@rabbitmq:5672
+
+volumes:
+  collab_postgres_data:
+
+networks:
+  peerprep-network:
+    external: true

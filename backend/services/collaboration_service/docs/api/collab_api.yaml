@@ -1,0 +1,166 @@
+openapi: 3.0.4
+info:
+  title: Collaboration Service API
+  version: 0.0.1
+
+
+paths:
+  /collab/sessions:
+    post:
+      summary: Create a new session with 2 matched users
+      description: Called by the matchmaker service once two users are matched. (for sync, will be moving to message broker for async)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userIds
+                - questionId
+              properties:
+                userIds:
+                  type: array
+                  items:
+                    type: string
+                  minItems: 2
+                  maxItems: 2
+                  example: ["user-123", "user-456"]
+                questionId:
+                  type: number
+      responses:
+        "201":
+          description: Session successfully created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+
+  /collab/sessions/{sessionId}/join:
+    post:
+      summary: Join an existing session
+      description: FE calls this to register a user as part of a session before opening WebSocket.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+              properties:
+                userId:
+                  type: string
+                  example: "user-123"
+      responses:
+        "200":
+          description: User joined session successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionState"
+        "404":
+          description: Session not found
+
+  /sessions/{sessionId}:
+    get:
+      summary: Get session state
+      description: Useful for reconnects or page refresh to retrieve the latest session state.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session state retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          description: Session not found
+
+  /sessions/{sessionId}/users/{userId}:
+    delete:
+      summary: Leave a session
+      description: Gracefully remove a user from a session. Equivalent to disconnect.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        "404":
+          description: Session or user not found
+
+components:
+  schemas:
+    Session:
+      type: object
+      properties:
+        sessionId:
+          type: string
+          example: session-789
+        users:
+          type: array
+          items:
+            type: string
+          example: ["user-123", "user-456"]
+        document:
+          type: string
+          example: ""
+        messages:
+          type: string
+          example: ""
+        drawings:
+          type: string
+          example: ""
+        status:
+          type: string
+          enum: [waiting, active, closed]
+          example: active
+
+    SessionState:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        userId:
+          type: string
+        status:
+          type: string
+          enum: [waiting, ready]
+          example: ready
+        document:
+          type: string
+          example: "Current document content"
+        messages:
+          type: string
+          example: "Current document content"
+        drawings:
+          type: string
+          example: "Current document content"

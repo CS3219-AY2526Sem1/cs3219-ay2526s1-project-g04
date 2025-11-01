@@ -1,0 +1,27 @@
+{
+  "scripts": {
+    "lint": "eslint",
+    "lint:fix": "eslint \"{src,apps,libs}/**/*.ts\" --fix",
+    "format": "prettier --write \"{src,apps,libs}/**/*.ts\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@eslint/json": "^0.13.2",
+    "@eslint/markdown": "^7.3.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.4.0",
+    "jiti": "^2.6.1",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "^8.45.0",
+    "@types/amqplib": "^0.10.7"
+  },
+  "dependencies": {
+    "redis": "^5.8.3",
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.2"
+  }
+}
