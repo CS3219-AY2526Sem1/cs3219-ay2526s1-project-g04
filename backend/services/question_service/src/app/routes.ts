@@ -93,6 +93,8 @@ r.post(
 );
 r.get(
   '/admin/questions/:id/resources',
+  requireAuth(),
+  requireRole('admin'),
   ResourcesController.getAdminQuestionResources,
 );
 

@@ -1,13 +1,12 @@
 // src/controllers/AdminAttachmentController.ts
 import type { Request, Response } from 'express';
 import { signUploadUrl, signViewUrl } from '../services/AttachmentService.js';
+import { log } from '../utils/logger.js';
 
 /**
  * Checks if the given key is allowed for the admin user.
- * A key is allowed if it is in the published questions area (i.e. `questions/...`) or in the admin user's own staging area (i.e. `staging/<adminUserId>/...`).
- * @param userId The ID of the admin user or undefined.
- * @param key The key to check.
- * @returns True if the key is allowed, false otherwise.
+ * A key is allowed if it is in the published questions area (i.e. `questions/...`)
+ * or in the admin user's own staging area (i.e. `staging/<adminUserId>/...`).
  */
 function isAllowedKeyForAdmin(
   userId: string | undefined,
@@ -23,22 +22,34 @@ function isAllowedKeyForAdmin(
 }
 
 /**
+ * POST /admin/attachments/sign-upload
+ *
  * Signs a URL for uploading a file to S3.
- * The signed URL is restricted to the admin user's own staging area (i.e. `staging/<adminUserId>/...`).
- * The signed URL is also restricted to the published questions area (i.e. `questions/...`).
- * @param req Request object
- * @param res Response object
- * @returns Promise that resolves with a JSON object containing the signed upload URL, object key, maximum allowed bytes, and expiration time of the signed URL.
+ * The signed URL is restricted to either:
+ *   - the admin user's own staging area: staging/<adminUserId>/...
+ *   - or questions/... (publishing flow)
+ *
+ * Body:
+ *   - content_type: string (required)
+ *   - filename: string (required)
+ *   - suggested_prefix?: string
+ *
+ * Headers:
+ *   - x-upload-session?: string (ulid to group uploads)
  */
 export async function signUpload(req: Request, res: Response) {
+  // req.user is typed via module augmentation
+  const user = req.user;
+
+  if (!user || user.role !== 'admin') {
+    log.warn(
+      '[signUpload] forbidden: missing/invalid user role',
+      user ? user.role : 'no-user',
+    );
+    return res.status(403).json({ error: 'forbidden' });
+  }
+
   try {
-    // req.user is now typed via module augmentation
-    const user = req.user;
-
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ error: 'forbidden' });
-    }
-
     // Extract and validate body fields safely
     const body = req.body ?? {};
     const contentType =
@@ -51,13 +62,26 @@ export async function signUpload(req: Request, res: Response) {
         : undefined;
 
     if (!contentType || !filename) {
-      return res
-        .status(400)
-        .json({ error: 'content_type and filename are required (strings)' });
+      log.warn('[signUpload] bad request: missing fields', {
+        admin: user.sub ?? user.userId,
+        contentTypePresent: !!contentType,
+        filenamePresent: !!filename,
+      });
+      return res.status(400).json({
+        error: 'content_type and filename are required (strings)',
+      });
     }
 
-    // optional header
+    // optional header used to bucket uploads
     const sessionUlid = req.get('x-upload-session') || undefined;
+
+    log.info('[signUpload] request', {
+      admin: user.sub ?? user.userId,
+      filename,
+      contentType,
+      suggestedPrefix,
+      sessionUlid,
+    });
 
     const payload = await signUploadUrl(
       user.sub ?? user.userId ?? 'admin',
@@ -69,29 +93,54 @@ export async function signUpload(req: Request, res: Response) {
       sessionUlid,
     );
 
+    log.info('[signUpload] success', {
+      admin: user.sub ?? user.userId,
+      object_key: payload.object_key,
+      max_bytes: payload.max_bytes,
+      expires_at: payload.expires_at,
+    });
+
     return res.json(payload);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'unknown_error';
-    return res.status(400).json({ error: message });
+    const msg = err instanceof Error ? err.message : String(err);
+
+    log.error('[signUpload] failed', {
+      admin: user?.sub ?? user?.userId,
+      error: msg,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+
+    return res.status(400).json({ error: 'unknown_error' });
   }
 }
 
 /**
- * Signs a URL for viewing an attachment.
- * - `object_key` (string): The S3 object key to sign.
- * - `as_attachment` (boolean): If true, the object will be signed as an attachment.
- * - `filename` (string): An optional filename to include in the signed URL's Content-Disposition header.
- * - `content_type_hint` (string): An optional MIME type to include in the signed URL's Content-Type header.
- * - Returns a JSON response with the signed URL, object key, and expiration time.
- * - Throws a 400 on invalid requests, a 404 if the object is not found, and a 403 if the user is not an admin.
+ * POST /admin/attachments/sign-view
+ *
+ * Signs a URL for viewing/downloading an attachment.
+ *
+ * Body:
+ *   - object_key: string (required)
+ *   - as_attachment: boolean (optional)
+ *   - filename: string (optional download filename)
+ *   - content_type_hint: string (optional)
+ *
+ * Behavior:
+ *   - Only allows signing:
+ *       questions/*  OR
+ *       staging/<this-admin>/*
  */
 export async function signView(req: Request, res: Response) {
-  try {
-    const user = req.user;
-    if (!user || user.role !== 'admin') {
-      return res.status(403).json({ error: 'forbidden' });
-    }
+  const user = req.user;
+  if (!user || user.role !== 'admin') {
+    log.warn(
+      '[signView] forbidden: missing/invalid user role',
+      user ? user.role : 'no-user',
+    );
+    return res.status(403).json({ error: 'forbidden' });
+  }
 
+  try {
     const body = req.body ?? {};
     const objectKey =
       typeof body.object_key === 'string' ? body.object_key : undefined;
@@ -105,14 +154,29 @@ export async function signView(req: Request, res: Response) {
         : undefined;
 
     if (!objectKey) {
+      log.warn('[signView] bad request: missing object_key', {
+        admin: user.sub ?? user.userId,
+      });
       return res.status(400).json({ error: 'object_key is required (string)' });
     }
 
-    // Basic containment check — keeps presigns inside known prefixes
-    const userId = user.sub ?? user.userId;
-    if (!isAllowedKeyForAdmin(userId, objectKey)) {
+    // enforce prefix policy
+    const adminId = user.sub ?? user.userId;
+    if (!isAllowedKeyForAdmin(adminId, objectKey)) {
+      log.warn('[signView] key_not_allowed', {
+        admin: adminId,
+        attempted_key: objectKey,
+      });
       return res.status(403).json({ error: 'key_not_allowed' });
     }
+
+    log.info('[signView] request', {
+      admin: adminId,
+      object_key: objectKey,
+      as_attachment: asAttachment,
+      filename,
+      contentTypeHint,
+    });
 
     const payload = await signViewUrl(objectKey, {
       ...(asAttachment ? { asAttachment } : {}),
@@ -120,13 +184,31 @@ export async function signView(req: Request, res: Response) {
       ...(contentTypeHint !== undefined ? { contentTypeHint } : {}),
     });
 
+    log.info('[signView] success', {
+      admin: adminId,
+      object_key: payload.object_key,
+      expires_at: payload.expires_at,
+    });
+
     return res.json(payload);
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'unknown_error';
-    // Map common S3 errors to nicer responses
-    if (message.includes('NotFound') || message.includes('404')) {
+    const msg = err instanceof Error ? err.message : String(err);
+
+    // Map common S3-ish "not found" to 404, and log appropriately
+    if (msg.includes('NotFound') || msg.includes('404')) {
+      log.warn('[signView] object_not_found', {
+        admin: user.sub ?? user.userId,
+        error: msg,
+      });
       return res.status(404).json({ error: 'object_not_found' });
     }
-    return res.status(400).json({ error: message });
+
+    log.error('[signView] failed', {
+      admin: user.sub ?? user.userId,
+      error: msg,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+
+    return res.status(400).json({ error: msg || 'unknown_error' });
   }
 }

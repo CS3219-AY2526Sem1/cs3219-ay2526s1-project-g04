@@ -49,13 +49,14 @@ function isTestCaseArray(x: unknown): x is IncomingTestCase[] {
     if (tc === null || typeof tc !== 'object') return false;
     const v = tc as Record<string, unknown>;
 
-    if (v.visibility !== 'sample' && v.visibility !== 'hidden') return false;
+    if (v['visibility'] !== 'sample' && v['visibility'] !== 'hidden')
+      return false;
     if (typeof v['input_data'] !== 'string') return false;
     if (typeof v['expected_output'] !== 'string') return false;
 
     if (
-      v.ordinal !== undefined &&
-      (typeof v.ordinal !== 'number' || !Number.isFinite(v.ordinal))
+      v['ordinal'] !== undefined &&
+      (typeof v['ordinal'] !== 'number' || !Number.isFinite(v['ordinal']))
     ) {
       return false;
     }
@@ -122,7 +123,7 @@ function rewriteMarkdownAttachmentPointers(
  * - difficulty (easy|medium|hard, required)
  * - topics (string[] optional)
  * - attachments (AttachmentInput[] optional, may still be staging/*)
- * - starter_code_python (string optional)
+ * - starter_code (string optional)
  * - test_cases (IncomingTestCase[] optional)
  *
  * Flow:
@@ -130,7 +131,7 @@ function rewriteMarkdownAttachmentPointers(
  *   2) finalize attachments to questions/<id>/...
  *   3) rewrite body_md image refs
  *   4) update the draft with finalized attachments + rewritten body_md
- *      AND starter_code_python + test_cases via Repo.updateDraftWithResources
+ *      AND starter_code + test_cases via Repo.updateDraftWithResources
  */
 export async function create(req: Request, res: Response) {
   try {
@@ -140,7 +141,7 @@ export async function create(req: Request, res: Response) {
       difficulty,
       topics,
       attachments,
-      starter_code_python,
+      starter_code,
       test_cases,
     } = req.body ?? {};
 
@@ -168,7 +169,7 @@ export async function create(req: Request, res: Response) {
 
     // execution resources validation
     const starterCodeStr =
-      typeof starter_code_python === 'string' ? starter_code_python : undefined;
+      typeof starter_code === 'string' ? starter_code : undefined;
 
     const testCasesList: IncomingTestCase[] | undefined = isTestCaseArray(
       test_cases,
@@ -176,7 +177,7 @@ export async function create(req: Request, res: Response) {
       ? test_cases
       : undefined;
 
-    // 1) allocate canonical slug/id by creating an empty draft first
+    // allocate canonical slug/id by creating an empty draft first
     const slugId = slugify(title);
     if (!slugId) {
       return res
@@ -193,30 +194,46 @@ export async function create(req: Request, res: Response) {
       attachments: [], // we'll fill these properly below
     });
 
-    // 2) finalize staged attachments now that we know draft.id
+    // finalize staged attachments now that we know draft.id
     const finalizedAtts = await finalizeStagedAttachments(
       draft.id,
       incomingAtts,
     );
 
-    // 3) rewrite body_md if images referenced staging/... keys
+    // rewrite body_md if images referenced staging/... keys
     const rewrittenMd = rewriteMarkdownAttachmentPointers(
       draft.body_md,
       incomingAtts,
       finalizedAtts,
     );
 
-    // 4) patch the draft with finalized data + execution resources
-    const saved = await Repo.updateDraftWithResources(draft.id, {
-      title, // keep same title in case we slugged differently later
-      body_md: rewrittenMd,
-      difficulty: diff,
-      topics: topicList,
-      attachments: finalizedAtts,
-      starter_code_python: starterCodeStr,
-      test_cases: testCasesList,
-    });
+    // patch the draft with finalized data + execution resources
+    const patchForCreate: {
+      title?: string;
+      body_md?: string;
+      difficulty?: Difficulty;
+      topics?: string[];
+      attachments?: AttachmentInput[];
+      starter_code?: string;
+      test_cases?: IncomingTestCase[];
+    } = {};
 
+    // required stuff we always know:
+    patchForCreate.title = title;
+    patchForCreate.body_md = rewrittenMd;
+    patchForCreate.difficulty = diff;
+    patchForCreate.topics = topicList;
+    patchForCreate.attachments = finalizedAtts;
+
+    // only include optional extras if caller actually sent them
+    if (starterCodeStr !== undefined) {
+      patchForCreate.starter_code = starterCodeStr;
+    }
+    if (testCasesList !== undefined) {
+      patchForCreate.test_cases = testCasesList;
+    }
+
+    const saved = await Repo.updateDraftWithResources(draft.id, patchForCreate);
     if (!saved) {
       log.error(
         'updateDraftWithResources unexpectedly returned undefined for',
@@ -242,7 +259,7 @@ export async function create(req: Request, res: Response) {
  * - difficulty
  * - topics
  * - attachments              (full array; can include staging/* keys)
- * - starter_code_python
+ * - starter_code
  * - test_cases               (full replace [] or omit to keep same)
  *
  * Behavior:
@@ -306,8 +323,8 @@ export async function update(req: Request, res: Response) {
 
     // execution resources
     const starterCodeStr =
-      typeof req.body?.starter_code_python === 'string'
-        ? req.body.starter_code_python
+      typeof req.body?.starter_code === 'string'
+        ? req.body.starter_code
         : undefined;
 
     let newTestCases: IncomingTestCase[] | undefined;
@@ -323,15 +340,27 @@ export async function update(req: Request, res: Response) {
     }
 
     // now apply patch in repo
-    const updated = await Repo.updateDraftWithResources(id, {
-      title: typeof req.body?.title === 'string' ? req.body.title : undefined,
-      body_md: newBodyMd,
-      difficulty: newDifficulty,
-      topics: newTopics,
-      attachments: finalizedAtts,
-      starter_code: starterCodeStr,
-      test_cases: newTestCases,
-    });
+    const patchForUpdate: {
+      title?: string;
+      body_md?: string;
+      difficulty?: Difficulty;
+      topics?: string[];
+      attachments?: AttachmentInput[];
+      starter_code?: string;
+      test_cases?: IncomingTestCase[];
+    } = {};
+
+    if (typeof req.body?.title === 'string')
+      patchForUpdate.title = req.body.title;
+    if (newBodyMd !== undefined) patchForUpdate.body_md = newBodyMd;
+    if (newDifficulty !== undefined) patchForUpdate.difficulty = newDifficulty;
+    if (newTopics !== undefined) patchForUpdate.topics = newTopics;
+    if (finalizedAtts !== undefined) patchForUpdate.attachments = finalizedAtts;
+    if (starterCodeStr !== undefined)
+      patchForUpdate.starter_code = starterCodeStr;
+    if (newTestCases !== undefined) patchForUpdate.test_cases = newTestCases;
+
+    const updated = await Repo.updateDraftWithResources(id, patchForUpdate);
 
     if (!updated) return res.status(404).json({ error: 'not_found' });
     return res.json(updated);
@@ -405,7 +434,7 @@ export async function archive(req: Request, res: Response) {
  *
  * Admin should see:
  * - core question fields (even if draft)
- * - starter_code_python
+ * - starter_code
  * - ALL test cases (sample + hidden)
  */
 export async function getById(req: Request, res: Response) {
@@ -419,12 +448,12 @@ export async function getById(req: Request, res: Response) {
     const bundle = await Repo.getInternalResourcesBundle(id);
     // bundle can technically be null if somehow question vanished between calls,
     // but since core exists, treat null bundle as empty resources.
-    const starter_code_python = bundle?.starter_code?.python ?? '';
+    const starter_code = bundle?.starter_code?.python ?? '';
     const test_cases = bundle?.test_cases ?? [];
 
     return res.json({
       ...core,
-      starter_code_python,
+      starter_code,
       test_cases,
     });
   } catch (err) {

@@ -103,7 +103,7 @@ components:
         error:
           type: string
           example: not_found
-        detail:
+        message:
           type: string
           example: Question not found
       required:
@@ -1253,8 +1253,6 @@ paths:
         - admin editing / previewing
         - internal judge / grader services
 
-        NOTE: In code you *should* wrap this in requireAuth() + requireRole('admin').
-        The current router forgot to add that middleware; fix that before prod.
       parameters:
         - name: id
           in: path
