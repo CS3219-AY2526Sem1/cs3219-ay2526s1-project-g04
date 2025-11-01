@@ -7,10 +7,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
-import {
-  S3Client,
-  PutObjectCommand
-} from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import multer from 'multer';
 
 dotenv.config();
