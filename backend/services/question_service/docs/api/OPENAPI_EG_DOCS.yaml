@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Question Service API (PeerPrep)
-  version: 0.2.0
+  version: 0.3.0
   description: |
     Microservice to manage and serve coding interview questions.
 
@@ -19,7 +19,7 @@ info:
 
     - `/select` is idempotent for a `matching_id` for ~10 minutes.
 
-    - Admin endpoints require `admin` role (via `x-role: admin` or valid JWT + RBAC).
+    - Admin endpoints require `admin` role (via `x-role: admin` in dev or RBAC'ed JWT in prod).
 
     - Service-to-service calls (like the matching worker) may use `x-role: service`.
 
@@ -216,15 +216,21 @@ components:
       type: object
       description: Test case returned to admin/service.
       properties:
+        name:
+          type: string
+          example: case-0
         visibility:
           type: string
           enum: [sample, hidden]
         input:
           type: string
+          example: '[[1,2],[3,4]]'
         expected:
           type: string
+          example: '[[3,1],[4,2]]'
         ordinal:
           type: integer
+          example: 0
       required:
         - visibility
         - input
@@ -235,12 +241,18 @@ components:
       type: object
       description: Test case visible to normal users/clients (no hidden cases).
       properties:
+        name:
+          type: string
+          example: case-0
         input:
           type: string
+          example: '[[1,2],[3,4]]'
         expected:
           type: string
+          example: '[[3,1],[4,2]]'
         ordinal:
           type: integer
+          example: 0
       required:
         - input
         - expected
@@ -532,6 +544,115 @@ components:
         - total
         - items
 
+    QuestionResourcesPublic:
+      type: object
+      description: |
+        Lightweight execution bundle for a published question.
+        Returned by GET /questions/{id}/resources.
+        Only includes SAMPLE test cases (no hidden).
+      properties:
+        question_id:
+          type: string
+          example: rotate-image-in-place
+        starter_code:
+          type: object
+          description: |
+            Map of language -> starter code.
+            Currently { python: string } or {}.
+          additionalProperties:
+            type: string
+          example:
+            python: |
+              def rotate_image(matrix):
+                  # TODO
+                  pass
+        test_cases:
+          type: array
+          description: SAMPLE test cases only.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: case-0
+              visibility:
+                type: string
+                enum: [sample]
+              input:
+                type: string
+                example: '[[1,2],[3,4]]'
+              expected:
+                type: string
+                example: '[[3,1],[4,2]]'
+              ordinal:
+                type: integer
+                example: 0
+            required:
+              - visibility
+              - input
+              - expected
+              - ordinal
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - question_id
+        - starter_code
+        - test_cases
+        - updated_at
+
+    QuestionResourcesAdmin:
+      type: object
+      description: |
+        Internal execution bundle for any question status.
+        Returned by GET /admin/questions/{id}/resources.
+        Includes HIDDEN and SAMPLE test cases.
+      properties:
+        question_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/Status'
+        starter_code:
+          type: object
+          description: |
+            Map of language -> starter code.
+            Currently { python: string } or {}.
+          additionalProperties:
+            type: string
+        test_cases:
+          type: array
+          description: |
+            All test cases: SAMPLE and HIDDEN.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: case-1
+              visibility:
+                type: string
+                enum: [sample, hidden]
+              input:
+                type: string
+              expected:
+                type: string
+              ordinal:
+                type: integer
+            required:
+              - visibility
+              - input
+              - expected
+              - ordinal
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - question_id
+        - status
+        - starter_code
+        - test_cases
+        - updated_at
+
     SignUploadRequest:
       type: object
       additionalProperties: false
@@ -683,7 +804,7 @@ paths:
     get:
       tags:
         - Health
-      summary: Readiness probe (DB reachable)
+      summary: Readiness probe (DB/AMQP reachable)
       security: []
       responses:
         '200':
@@ -751,10 +872,35 @@ paths:
     get:
       tags:
         - Read
-      summary: List topic tags (slug + color)
+      summary: List all known topic tags (slug + color)
       description: |
-        Returns topics for UI rendering.
-        Behavior: public/anonymous depends on server config (ALLOW_ANONYMOUS_READS).
+        Returns *all* topics in the system, even if they are not used by any
+        published question. Useful for admin UIs, dropdowns, etc.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /questions/topics:
+    get:
+      tags:
+        - Read
+      summary: List topics that appear in published questions
+      description: |
+        Returns distinct topic slugs + colors that are currently attached
+        to at least one PUBLISHED question.
+
+        Useful for building topic filters in the public UI.
+
+        This is different from `GET /topics`, which returns *all* known topics,
+        even if they are not used by any published question.
       responses:
         '200':
           description: OK
@@ -1092,6 +1238,51 @@ paths:
       x-roles:
         - admin
 
+  /admin/questions/{id}/resources:
+    get:
+      tags:
+        - Admin
+      summary: Get full execution resources for a question (any status)
+      description: |
+        Returns the internal runtime bundle for a question:
+        - starter code
+        - ALL test cases, including hidden
+        - status
+
+        This endpoint is intended for:
+        - admin editing / previewing
+        - internal judge / grader services
+
+        NOTE: In code you *should* wrap this in requireAuth() + requireRole('admin').
+        The current router forgot to add that middleware; fix that before prod.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResourcesAdmin'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
   /questions:
     get:
       tags:
@@ -1151,6 +1342,42 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionPublicRead'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not found / not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /questions/{id}/resources:
+    get:
+      tags:
+        - Read
+      summary: Get execution resources for a published question
+      description: |
+        Returns the runtime bundle for a published question:
+        - starter code (per language, currently python)
+        - SAMPLE test cases only (no hidden cases)
+
+        If the question does not exist or is not published, returns 404.
+
+        This is a lighter-weight, runner-friendly view compared to
+        GET /questions/{id}, which focuses on the problem statement and rendered HTML.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResourcesPublic'
         '401':
           description: Unauthorized
         '404':
