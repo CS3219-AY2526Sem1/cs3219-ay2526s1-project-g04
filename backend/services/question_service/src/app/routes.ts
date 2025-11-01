@@ -12,11 +12,16 @@ import * as ResourcesController from '../controllers/ResourceController.js';
 
 const r = Router();
 
+const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
+
 // Health
 r.get('/healthz', HealthController.healthz);
 r.get('/readyz', HealthController.readyz);
 
-r.get('/debug/questions/:id', DebugController.previewQuestion);
+// debug
+if (NODE_ENV === 'development' || NODE_ENV === 'test') {
+  r.get('/debug/questions/:id', DebugController.previewQuestion);
+}
 
 // Public read
 r.get('/questions/topics', TopicController.listPublished);

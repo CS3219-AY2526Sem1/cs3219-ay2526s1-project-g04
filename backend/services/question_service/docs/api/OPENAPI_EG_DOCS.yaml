@@ -1313,6 +1313,77 @@ paths:
         '403':
           description: Forbidden
 
+  /debug/questions/{id}:
+    get:
+      tags:
+        - Debug
+      summary: Render a published question as sanitized HTML (DEV ONLY)
+      description: |
+        DEVELOPMENT / TEST ONLY.
+
+        Returns a preview of what a published question would look like to the public UI:
+        - Sanitized `body_html` with short-lived signed URLs for inline images.
+        - Basic question metadata (`id`, `title`, `difficulty`, `topics`, `version`).
+
+        This endpoint is:
+        - NOT mounted at all in production (`NODE_ENV=production`).
+        - Additionally guarded in the controller.
+
+        Intended for local authoring / debugging the Markdown pipeline.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK (development preview)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  difficulty:
+                    $ref: '#/components/schemas/Difficulty'
+                  version:
+                    type: integer
+                  body_html:
+                    type: string
+                    description: Sanitized HTML with signed <img> sources.
+                  topics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TopicTag'
+        '400':
+          description: Missing/invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Disabled outside development/test
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: debug disabled
+        '404':
+          description: Not found / not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+      x-internal: true
+      x-env:
+        - development
+        - test
+
   /questions/{id}:
     get:
       tags:
