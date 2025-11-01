@@ -9,6 +9,13 @@ import { log } from '../utils/logger.js';
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
+type IncomingTestCase = {
+  visibility: 'sample' | 'hidden';
+  input_data: string;
+  expected_output: string;
+  ordinal?: number;
+};
+
 // helpers
 function normalizeDifficulty(d: unknown): Difficulty | null {
   if (typeof d !== 'string') return null;
@@ -21,8 +28,6 @@ function normalizeDifficulty(d: unknown): Difficulty | null {
 
 function isAttachment(obj: unknown): obj is AttachmentInput {
   if (typeof obj !== 'object' || obj === null) return false;
-
-  // Narrow via safe property lookups
   const o = obj as Partial<AttachmentInput> & Record<string, unknown>;
   const hasKey = typeof o.object_key === 'string';
   const hasMime = typeof o.mime === 'string';
@@ -36,6 +41,26 @@ function isAttachmentArray(x: unknown): x is AttachmentInput[] {
 
 function isStringArray(x: unknown): x is string[] {
   return Array.isArray(x) && x.every((i) => typeof i === 'string');
+}
+
+function isTestCaseArray(x: unknown): x is IncomingTestCase[] {
+  if (!Array.isArray(x)) return false;
+  return x.every((tc) => {
+    if (tc === null || typeof tc !== 'object') return false;
+    const v = tc as Record<string, unknown>;
+
+    if (v.visibility !== 'sample' && v.visibility !== 'hidden') return false;
+    if (typeof v['input_data'] !== 'string') return false;
+    if (typeof v['expected_output'] !== 'string') return false;
+
+    if (
+      v.ordinal !== undefined &&
+      (typeof v.ordinal !== 'number' || !Number.isFinite(v.ordinal))
+    ) {
+      return false;
+    }
+    return true;
+  });
 }
 
 function parseTopics(x: unknown): string[] | undefined {
@@ -90,12 +115,34 @@ function rewriteMarkdownAttachmentPointers(
 
 /**
  * POST /admin/questions
- * - Accepts attachments with possible `staging/...` keys.
- * - Will finalize them to `questions/<id>/...`.
+ *
+ * Body can include:
+ * - title (string, required)
+ * - body_md (string, required)
+ * - difficulty (easy|medium|hard, required)
+ * - topics (string[] optional)
+ * - attachments (AttachmentInput[] optional, may still be staging/*)
+ * - starter_code_python (string optional)
+ * - test_cases (IncomingTestCase[] optional)
+ *
+ * Flow:
+ *   1) create a draft row with empty attachments just to lock in an ID/slug
+ *   2) finalize attachments to questions/<id>/...
+ *   3) rewrite body_md image refs
+ *   4) update the draft with finalized attachments + rewritten body_md
+ *      AND starter_code_python + test_cases via Repo.updateDraftWithResources
  */
 export async function create(req: Request, res: Response) {
   try {
-    const { title, body_md, difficulty, topics, attachments } = req.body ?? {};
+    const {
+      title,
+      body_md,
+      difficulty,
+      topics,
+      attachments,
+      starter_code_python,
+      test_cases,
+    } = req.body ?? {};
 
     if (typeof title !== 'string' || !title.trim()) {
       return res.status(400).json({ error: 'title is required' });
@@ -103,58 +150,82 @@ export async function create(req: Request, res: Response) {
     if (typeof body_md !== 'string' || !body_md.trim()) {
       return res.status(400).json({ error: 'body_md is required' });
     }
+
     const diff = normalizeDifficulty(difficulty);
     if (!diff) {
-      return res
-        .status(400)
-        .json({ error: 'difficulty must be: Easy, Medium, Hard' });
+      return res.status(400).json({
+        error: 'difficulty must be: Easy, Medium, Hard',
+      });
     }
 
-    // 1) create the draft so we have a canonical id/slug
-    const id = slugify(title);
-    if (!id) {
+    // topics validation
+    const topicList = isStringArray(topics) ? topics : [];
+
+    // attachments validation (may include staging)
+    const incomingAtts: AttachmentInput[] = isAttachmentArray(attachments)
+      ? attachments
+      : [];
+
+    // execution resources validation
+    const starterCodeStr =
+      typeof starter_code_python === 'string' ? starter_code_python : undefined;
+
+    const testCasesList: IncomingTestCase[] | undefined = isTestCaseArray(
+      test_cases,
+    )
+      ? test_cases
+      : undefined;
+
+    // 1) allocate canonical slug/id by creating an empty draft first
+    const slugId = slugify(title);
+    if (!slugId) {
       return res
         .status(400)
         .json({ error: 'invalid title (cannot derive a slug)' });
     }
 
     const draft = await Repo.createDraft({
-      id,
+      id: slugId,
       title,
       body_md,
       difficulty: diff,
-      topics: isStringArray(topics) ? topics : [],
-      attachments: [], // set after finalize
+      topics: topicList,
+      attachments: [], // we'll fill these properly below
     });
 
-    // 2) finalize any staging keys → questions/<id>/...
-    const inputAttachments: AttachmentInput[] = isAttachmentArray(attachments)
-      ? attachments
-      : [];
-    const finalized = await finalizeStagedAttachments(
+    // 2) finalize staged attachments now that we know draft.id
+    const finalizedAtts = await finalizeStagedAttachments(
       draft.id,
-      inputAttachments,
+      incomingAtts,
     );
 
+    // 3) rewrite body_md if images referenced staging/... keys
     const rewrittenMd = rewriteMarkdownAttachmentPointers(
       draft.body_md,
-      inputAttachments,
-      finalized,
+      incomingAtts,
+      finalizedAtts,
     );
 
-    // 3) persist finalized attachments
-    const saved = await Repo.updateDraft(draft.id, {
+    // 4) patch the draft with finalized data + execution resources
+    const saved = await Repo.updateDraftWithResources(draft.id, {
+      title, // keep same title in case we slugged differently later
       body_md: rewrittenMd,
-      attachments: finalized as unknown as AttachmentInput[],
+      difficulty: diff,
+      topics: topicList,
+      attachments: finalizedAtts,
+      starter_code_python: starterCodeStr,
+      test_cases: testCasesList,
     });
 
     if (!saved) {
-      // extremely unlikely, but keeps TS and runtime happy
-      log.error('updateDraft unexpectedly returned undefined for id', draft.id);
+      log.error(
+        'updateDraftWithResources unexpectedly returned undefined for',
+        draft.id,
+      );
       return res.status(500).json({ error: 'internal_error' });
     }
 
-    // 4) return created entity
+    // 5) respond
     return res.status(201).location(`/admin/questions/${saved.id}`).json(saved);
   } catch (err) {
     log.error('AdminController.create failed:', err);
@@ -164,40 +235,54 @@ export async function create(req: Request, res: Response) {
 
 /**
  * PATCH /admin/questions/:id
- * - Expects full attachments array (usually under `questions/<id>/...`).
- * - If any `staging/...` keys are passed, we will also finalize them for convenience.
+ *
+ * Body may include any subset of:
+ * - title
+ * - body_md
+ * - difficulty
+ * - topics
+ * - attachments              (full array; can include staging/* keys)
+ * - starter_code_python
+ * - test_cases               (full replace [] or omit to keep same)
+ *
+ * Behavior:
+ *  - If attachments includes staging/... keys, we finalize them into questions/<id>/...
+ *    and rewrite body_md accordingly.
+ *  - Then we hand EVERYTHING to Repo.updateDraftWithResources(...).
  */
 export async function update(req: Request, res: Response) {
   try {
     const { id } = req.params;
     if (!id) return res.status(400).json({ error: 'id param required' });
 
-    const patch: Partial<{
-      title: string;
-      body_md: string;
-      difficulty: Difficulty;
-      topics: string[];
-      attachments: AttachmentInput[];
-    }> = {};
+    // collect patch fields
+    let newBodyMd: string | undefined;
 
-    if (typeof req.body?.title === 'string') patch.title = req.body.title;
-    if (typeof req.body?.body_md === 'string') patch.body_md = req.body.body_md;
+    if (typeof req.body?.body_md === 'string') {
+      newBodyMd = req.body.body_md;
+    }
 
+    let newDifficulty: Difficulty | undefined;
     if (req.body?.difficulty !== undefined) {
       const diff = normalizeDifficulty(req.body.difficulty);
-      if (!diff)
-        return res
-          .status(400)
-          .json({ error: 'difficulty must be one of: easy, medium, hard' });
-      patch.difficulty = diff;
+      if (!diff) {
+        return res.status(400).json({
+          error: 'difficulty must be one of: easy, medium, hard',
+        });
+      }
+      newDifficulty = diff;
     }
 
+    let newTopics: string[] | undefined;
     if (req.body?.topics !== undefined) {
-      if (!isStringArray(req.body.topics))
+      if (!isStringArray(req.body.topics)) {
         return res.status(400).json({ error: 'topics must be string[]' });
-      patch.topics = req.body.topics;
+      }
+      newTopics = req.body.topics;
     }
 
+    // attachments can contain staging URLs – finalize if provided
+    let finalizedAtts: AttachmentInput[] | undefined;
     if (req.body?.attachments !== undefined) {
       if (!isAttachmentArray(req.body.attachments)) {
         return res.status(400).json({
@@ -207,21 +292,49 @@ export async function update(req: Request, res: Response) {
       }
 
       const incomingAtts = req.body.attachments;
-      const finalizedAtts = await finalizeStagedAttachments(id, incomingAtts);
-      patch.attachments = finalizedAtts;
+      finalizedAtts = await finalizeStagedAttachments(id, incomingAtts);
 
-      // if caller also sent body_md, rewrite it to point at finalized keys
+      // if caller ALSO sent body_md, rewrite it now -> final keys
       if (typeof req.body?.body_md === 'string') {
-        patch.body_md = rewriteMarkdownAttachmentPointers(
+        newBodyMd = rewriteMarkdownAttachmentPointers(
           req.body.body_md,
           incomingAtts,
           finalizedAtts,
         );
       }
     }
-    const q = await Repo.updateDraft(id, patch);
-    if (!q) return res.status(404).json({ error: 'not_found' });
-    return res.json(q);
+
+    // execution resources
+    const starterCodeStr =
+      typeof req.body?.starter_code_python === 'string'
+        ? req.body.starter_code_python
+        : undefined;
+
+    let newTestCases: IncomingTestCase[] | undefined;
+    if ('test_cases' in req.body) {
+      // If client explicitly sent test_cases (even []), we respect it.
+      if (!isTestCaseArray(req.body.test_cases)) {
+        return res.status(400).json({
+          error:
+            'test_cases must be [{ visibility: "sample"|"hidden", input_data: string, expected_output: string, ordinal?: number }]',
+        });
+      }
+      newTestCases = req.body.test_cases;
+    }
+
+    // now apply patch in repo
+    const updated = await Repo.updateDraftWithResources(id, {
+      title: typeof req.body?.title === 'string' ? req.body.title : undefined,
+      body_md: newBodyMd,
+      difficulty: newDifficulty,
+      topics: newTopics,
+      attachments: finalizedAtts,
+      starter_code: starterCodeStr,
+      test_cases: newTestCases,
+    });
+
+    if (!updated) return res.status(404).json({ error: 'not_found' });
+    return res.json(updated);
   } catch (err) {
     log.error('AdminController.update failed:', err);
     return res.status(500).json({ error: 'internal_error' });
@@ -289,15 +402,31 @@ export async function archive(req: Request, res: Response) {
 
 /**
  * GET /admin/questions/:id
+ *
+ * Admin should see:
+ * - core question fields (even if draft)
+ * - starter_code_python
+ * - ALL test cases (sample + hidden)
  */
 export async function getById(req: Request, res: Response) {
   try {
     const id = String(req.params['id'] ?? '');
     if (!id) return res.status(400).json({ error: 'id param required' });
 
-    const q = await Repo.getQuestionById(id);
-    if (!q) return res.status(404).json({ error: 'not found' });
-    return res.json(q);
+    const core = await Repo.getQuestionById(id);
+    if (!core) return res.status(404).json({ error: 'not found' });
+
+    const bundle = await Repo.getInternalResourcesBundle(id);
+    // bundle can technically be null if somehow question vanished between calls,
+    // but since core exists, treat null bundle as empty resources.
+    const starter_code_python = bundle?.starter_code?.python ?? '';
+    const test_cases = bundle?.test_cases ?? [];
+
+    return res.json({
+      ...core,
+      starter_code_python,
+      test_cases,
+    });
   } catch (err) {
     log.error('AdminController.getById failed:', err);
     return res.status(500).json({ error: 'internal_error' });

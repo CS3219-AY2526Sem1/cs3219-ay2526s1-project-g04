@@ -16,6 +16,51 @@ function isoOrNow(v: Date | string | null | undefined): string {
   return new Date().toISOString();
 }
 
+async function upsertStarterCode(
+  questionId: string,
+  starterCode: string | undefined,
+) {
+  if (starterCode === undefined) return; // means caller didnt mention it
+
+  // if explicitly send empty string, we persist empty string
+  await prisma.question_python_starter.upsert({
+    where: { question_id: questionId },
+    update: { starter_code: starterCode },
+    create: { question_id: questionId, starter_code: starterCode },
+  });
+}
+
+type IncomingTestCase = {
+  visibility: 'sample' | 'hidden';
+  input_data: string;
+  expected_output: string;
+  ordinal?: number;
+};
+
+async function replaceTestCases(
+  questionId: string,
+  casesInput: IncomingTestCase[] | undefined,
+) {
+  if (casesInput === undefined) return; // not provided -> dont edit
+
+  // when we update test cases: wipe all rows, then bulk insert new list (if any)
+  await prisma.question_test_cases.deleteMany({
+    where: { question_id: questionId },
+  });
+
+  if (!casesInput.length) return;
+
+  await prisma.question_test_cases.createMany({
+    data: casesInput.map((tc, idx) => ({
+      question_id: questionId,
+      visibility: tc.visibility,
+      input_data: tc.input_data,
+      expected_output: tc.expected_output,
+      ordinal: tc.ordinal ?? idx,
+    })),
+  });
+}
+
 export async function getPublishedById(id: string) {
   return prisma.questions.findFirst({
     where: { id, status: 'published' },
@@ -263,6 +308,35 @@ export async function createDraft(q: {
   throw new Error('Could not allocate a unique slug for this title');
 }
 
+export async function createDraftWithResources(q: {
+  title: string;
+  body_md: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  topics: string[];
+  attachments: AttachmentInput[];
+  starter_code?: string;
+  test_cases?: IncomingTestCase[];
+}) {
+  // create base draft question
+  const created = await createDraft({
+    title: q.title,
+    body_md: q.body_md,
+    difficulty: q.difficulty,
+    topics: q.topics,
+    attachments: q.attachments,
+  });
+
+  const questionId = created.id;
+
+  // upsert starter code
+  await upsertStarterCode(questionId, q.starter_code);
+
+  // insert test cases
+  await replaceTestCases(questionId, q.test_cases);
+
+  return created;
+}
+
 export async function updateDraft(
   id: string,
   patch: Omit<Prisma.questionsUpdateInput, 'id'>,
@@ -278,6 +352,59 @@ export async function updateDraft(
   } catch {
     return undefined;
   }
+}
+
+export async function updateDraftWithResources(
+  id: string,
+  patch: {
+    title?: string;
+    body_md?: string;
+    difficulty?: 'Easy' | 'Medium' | 'Hard';
+    topics?: string[];
+    attachments?: AttachmentInput[];
+    starter_code?: string;
+    test_cases?: IncomingTestCase[];
+  },
+) {
+  // build Prisma.questionsUpdateInput from the provided patch
+  const data: Prisma.questionsUpdateInput = {};
+  if (patch.title !== undefined) data.title = patch.title;
+  if (patch.body_md !== undefined) data.body_md = patch.body_md;
+  if (patch.difficulty !== undefined) data.difficulty = patch.difficulty;
+  if (patch.attachments !== undefined) {
+    data.attachments = patch.attachments as unknown as Prisma.InputJsonValue;
+  }
+  if (patch.topics !== undefined) {
+    data.topics = patch.topics as unknown as Prisma.InputJsonValue;
+  }
+
+  const updated = await updateDraft(id, data);
+  if (!updated) return undefined;
+
+  // 2. upsert starter code if included in payload
+  await upsertStarterCode(id, patch.starter_code);
+
+  // 3. replace test cases if included in payload
+  await replaceTestCases(id, patch.test_cases);
+
+  // 4. if topics[] was provided, also sync the join table
+  if (patch.topics !== undefined) {
+    // nuke old mappings
+    await prisma.question_topics.deleteMany({
+      where: { question_id: id },
+    });
+
+    if (patch.topics.length) {
+      await prisma.question_topics.createMany({
+        data: patch.topics.map((slug) => ({
+          question_id: id,
+          topic_slug: slug,
+        })),
+      });
+    }
+  }
+
+  return updated;
 }
 
 export async function publish(id: string) {

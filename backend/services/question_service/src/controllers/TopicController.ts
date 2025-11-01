@@ -39,7 +39,7 @@ export async function listPublished(req: Request, res: Response) {
  */
 export async function create(req: Request, res: Response) {
   try {
-    const { display, color_hex } = req.params;
+    const { display, color_hex } = req.body;
 
     if (typeof display !== 'string' || !display.trim()) {
       return res.status(400).json({ error: 'display is required' });
