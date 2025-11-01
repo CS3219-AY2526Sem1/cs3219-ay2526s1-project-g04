@@ -56,8 +56,8 @@ components:
         minimum: 1
         default: 1
 
-    Size:
-      name: size
+    PageSize:
+      name: page_size
       in: query
       description: Page size (max 50)
       schema:
@@ -1002,7 +1002,7 @@ paths:
         Result items are summaries (no test cases inline).
       parameters:
         - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/PageSize'
         - $ref: '#/components/parameters/Difficulty'
         - name: status
           in: query
@@ -1296,7 +1296,7 @@ paths:
         - `highlight` (include `snippet`)
       parameters:
         - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/PageSize'
         - $ref: '#/components/parameters/Difficulty'
         - $ref: '#/components/parameters/Topics'
         - $ref: '#/components/parameters/Q'

@@ -120,11 +120,11 @@ export async function listPublished(opts: {
   topics?: string[];
   q?: string;
   page?: number;
-  size?: number;
+  page_size?: number;
 }) {
   const page = Math.max(1, opts.page ?? 1);
-  const size = Math.min(100, Math.max(1, opts.size ?? 20));
-  const offset = (page - 1) * size;
+  const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
+  const offset = (page - 1) * page_size;
 
   // simple filters (no full-text search case)
   if (!opts.q && !opts.topics?.length) {
@@ -135,7 +135,7 @@ export async function listPublished(opts: {
       },
       orderBy: { updated_at: 'desc' },
       skip: offset,
-      take: size,
+      take: page_size,
       select: {
         id: true,
         title: true,
@@ -177,7 +177,7 @@ export async function listPublished(opts: {
     },
     orderBy: { updated_at: 'desc' },
     skip: offset,
-    take: size,
+    take: page_size,
     select: {
       id: true,
       title: true,
@@ -207,11 +207,11 @@ export async function listAll(opts: {
   topics?: string[];
   q?: string;
   page?: number;
-  size?: number;
+  page_size?: number;
 }) {
   const page = Math.max(1, opts.page ?? 1);
-  const size = Math.min(100, Math.max(1, opts.size ?? 20));
-  const offset = (page - 1) * size;
+  const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
+  const offset = (page - 1) * page_size;
 
   const where: Prisma.questionsWhereInput = {
     ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
@@ -242,7 +242,7 @@ export async function listAll(opts: {
     where,
     orderBy: { updated_at: 'desc' },
     skip: offset,
-    take: size,
+    take: page_size,
     select: {
       id: true,
       title: true,

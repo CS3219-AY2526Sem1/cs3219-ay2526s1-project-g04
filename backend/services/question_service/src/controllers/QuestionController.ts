@@ -148,20 +148,20 @@ export async function list(req: Request, res: Response) {
     topics?: string[];
     q?: string;
     page?: number;
-    size?: number;
+    page_size?: number;
   } = {};
 
   const d = parseDifficulty(req.query['difficulty']);
   const t = parseTopics(req.query['topics']);
   const qq = parseStr(req.query['q']);
   const p = parseNum(req.query['page']);
-  const s = parseNum(req.query['size']);
+  const s = parseNum(req.query['page_size']);
 
   if (d !== undefined) args.difficulty = d;
   if (t !== undefined) args.topics = t;
   if (qq !== undefined) args.q = qq;
   if (p !== undefined) args.page = p;
-  if (s !== undefined) args.size = s;
+  if (s !== undefined) args.page_size = s;
 
   log.info('[GET /questions] request', {
     ip: req.ip,
@@ -172,7 +172,7 @@ export async function list(req: Request, res: Response) {
     topics: args.topics,
     q_len: args.q?.length ?? 0,
     page: args.page,
-    size: args.size,
+    page_size: args.page_size,
   });
 
   try {
@@ -184,7 +184,7 @@ export async function list(req: Request, res: Response) {
       difficulty: args.difficulty,
       topics: args.topics,
       page: args.page,
-      size: args.size,
+      page_size: args.page_size,
     });
 
     return res.json({ items: data });

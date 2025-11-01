@@ -30,7 +30,7 @@ export async function listPublished(opts: {
   topics?: string[];
   q?: string;
   page?: number;
-  size?: number;
+  page_size?: number;
 }) {
   const rows = await Repo.listPublished(opts);
 

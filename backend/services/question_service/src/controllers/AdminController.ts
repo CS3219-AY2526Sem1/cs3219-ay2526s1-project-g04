@@ -397,20 +397,20 @@ export async function list(req: Request, res: Response) {
     topics?: string[];
     q?: string;
     page?: number;
-    size?: number;
+    page_size?: number;
   } = {};
 
   const d = parseDifficulty(req.query['difficulty']);
   const t = parseTopics(req.query['topics']);
   const q = parseStr(req.query['q']);
   const p = parseNum(req.query['page']);
-  const s = parseNum(req.query['size']);
+  const s = parseNum(req.query['page_size']);
 
   if (d !== undefined) args.difficulty = d;
   if (t !== undefined) args.topics = t;
   if (q !== undefined) args.q = q;
   if (p !== undefined) args.page = p;
-  if (s !== undefined) args.size = s;
+  if (s !== undefined) args.page_size = s;
 
   const data = await Repo.listAll(args);
   return res.json({ items: data });
