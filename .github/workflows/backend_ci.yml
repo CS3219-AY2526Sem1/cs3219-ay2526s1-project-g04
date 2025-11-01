@@ -69,6 +69,7 @@ jobs:
           file: ./backend/services/question_service/Dockerfile
           push: true
           tags: peerprep4/peerprep4:question_service
+          platforms: linux/amd64,linux/arm64
 
       - name: Build and push collab image
         uses: docker/build-push-action@v6
@@ -77,3 +78,4 @@ jobs:
           file: ./backend/services/collaboration_service/Dockerfile
           push: true
           tags: peerprep4/peerprep4:collaboration_service
+          platforms: linux/amd64,linux/arm64
