@@ -5,15 +5,38 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import cors from 'cors';
 import dotenv from 'dotenv';
-
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import multer from 'multer';
 
 dotenv.config();
+console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
 const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
+const OTP_COOLDOWN_SECONDS = 60;
+const s3Client = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  },
+});
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size (e.g., 5MB)
+  fileFilter: (req, file, cb) => {
+    // Filter for allowed image types
+    if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG and PNG are allowed.'));
+    }
+  },
+});
 
 // --- Middleware ---
 app.use(cors());
@@ -42,6 +65,7 @@ const signupSchema = z.object({
   username: z
     .string()
     .min(3, { message: 'Username must be at least 3 characters long.' })
+    .max(30, { message: 'Username should not exceed 30 characters.' })
     .regex(/^[a-z0-9_]+$/, {
       message:
         'Username can only contain lowercase letters, numbers, and underscores (_).',
@@ -214,41 +238,39 @@ async function sendOtpEmail(email: string, otp: string) {
  * session and authentication
  */
 // 1. SIGN UP (for regular users)
-app.post('/api/auth/signup', async (req, res) => {
+// in src/index.ts
+
+app.post('/user/auth/signup', async (req, res) => {
   try {
     const { email, password, username } = signupSchema.parse(req.body);
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: email }, { username: username }],
-      },
-    });
 
-    if (existingUser) {
-      if (existingUser.isVerified) {
-        return res
-          .status(409)
-          .json({ message: 'An account with this email is already verified.' });
-      } else {
-        const otp = crypto.randomInt(100000, 999999).toString();
-        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    // --- UPDATED LOGIC ---
+    // 1. Check if EMAIL already exists
+    const userByEmail = await prisma.user.findUnique({ where: { email } });
 
-        await prisma.user.update({
-          where: { email },
-          data: { verificationOtp: otp, otpExpiresAt },
-        });
-
-        await sendOtpEmail(email, otp);
-        return res.status(200).json({
-          message:
-            'Account already exists. A new OTP has been sent to your email.',
-        });
-      }
+    if (userByEmail) {
+      // If email exists (verified OR unverified), block the signup immediately
+      return res.status(409).json({
+        message: 'An account with this email already exists. Please log in.',
+      });
     }
 
+    // 2. Check if USERNAME already exists (only if email is new)
+    const userByUsername = await prisma.user.findUnique({
+      where: { username },
+    });
+    if (userByUsername) {
+      return res
+        .status(409)
+        .json({ message: 'This username is already taken.' });
+    }
+
+    // --- If both email and username are available, proceed to create ---
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    // default USER role
+    const now = new Date();
+
     const newUser = await prisma.user.create({
       data: {
         email,
@@ -257,6 +279,7 @@ app.post('/api/auth/signup', async (req, res) => {
         isVerified: false,
         verificationOtp: otp,
         otpExpiresAt,
+        otpLastSentAt: now,
       },
     });
 
@@ -265,18 +288,20 @@ app.post('/api/auth/signup', async (req, res) => {
     res.status(201).json({
       message:
         'User created successfully. Please check your email for the OTP to verify your account.',
-      user: {
-        email: newUser.email,
-        username: newUser.username,
-      },
+      user: { email: newUser.email, username: newUser.username },
     });
   } catch (error) {
-    res.status(400).json({ message: 'Invalid request', details: error });
+    if (error instanceof z.ZodError) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid input', details: error.issues });
+    }
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // 2. LOG IN (for user or admin)
-app.post('/api/auth/login', async (req, res) => {
+app.post('/user/auth/login', async (req, res) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
@@ -322,7 +347,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.post('/api/auth/refresh', async (req, res) => {
+app.post('/user/auth/refresh', async (req, res) => {
   try {
     const { token: refreshToken } = refreshTokenSchema.parse(req.body);
     if (!refreshToken) return res.sendStatus(401);
@@ -355,7 +380,7 @@ app.post('/api/auth/refresh', async (req, res) => {
 });
 
 app.post(
-  '/api/auth/logout',
+  '/user/auth/logout',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -374,18 +399,18 @@ app.post(
  * Endpoints for editing user details
  */
 app.put(
-  '/api/users/me/profile',
+  '/user/me/profile',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
       const validatedData = updateProfileSchema.parse(req.body);
+
       if (Object.keys(validatedData).length === 0) {
         return res
           .status(400)
           .json({ message: 'No fields to update provided.' });
       }
 
-      // NOT GNA ALLOW TO UPDATE USERNAME??
       if (validatedData.username) {
         const existingUser = await prisma.user.findUnique({
           where: { username: validatedData.username },
@@ -397,29 +422,111 @@ app.put(
         }
       }
 
-      const updatedUser = await prisma.user.update({
-        where: { id: req.user!.userId },
-        data: validatedData,
+      res.status(200).json({
+        message: 'Profile updated successfully.',
       });
-
-      if (updatedUser) {
-        res.status(200).json({ message: 'Profile updated successfully.' });
-      } else {
-        res.status(500).json({ message: 'Internal server error' });
-      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid input', details: error.issues });
+          .json({ message: 'Invalid text input', details: error.issues });
       }
+      if (error instanceof multer.MulterError) {
+        return res
+          .status(400)
+          .json({ message: `File upload error: ${error.message}` });
+      }
+      if (
+        error instanceof Error &&
+        error.message.includes('Invalid file type')
+      ) {
+        return res.status(400).json({ message: error.message });
+      }
+      console.error('Profile Update Error:', error);
       res.status(500).json({ message: 'Internal server error' });
     }
   },
 );
 
+app.get(
+  '/user/me/profile',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.userId;
+
+      const userProfile = await prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          role: true,
+          createdAt: true,
+          bio: true,
+          profilePictureUrl: true,
+        },
+      });
+
+      if (!userProfile) {
+        return res.status(404).json({ message: 'User profile not found.' });
+      }
+
+      res.status(200).json(userProfile);
+    } catch (error) {
+      console.error('Failed to retrieve user profile:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
+app.post(
+  '/user/me/profile-picture',
+  authenticateToken,
+  upload.single('profilePicture'),
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.file) {
+        return res
+          .status(400)
+          .json({ message: 'No profile picture file uploaded.' });
+      }
+
+      const file = req.file;
+      const fileName = `${req.user!.userId}-${Date.now()}-${file.originalname.replace(/\s+/g, '_')}`;
+
+      const uploadParams = {
+        Bucket: process.env.AWS_S3_BUCKET_NAME!,
+        Key: fileName,
+        Body: file.buffer,
+        ContentType: file.mimetype,
+      };
+
+      await s3Client.send(new PutObjectCommand(uploadParams));
+
+      const profilePictureS3Url = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${fileName}`;
+
+      await prisma.user.update({
+        where: { id: req.user!.userId },
+        data: { profilePictureUrl: profilePictureS3Url },
+      });
+
+      res.status(200).json({
+        message: 'Profile picture updated successfully.',
+        profilePictureUrl: profilePictureS3Url,
+      });
+    } catch (error) {
+      res
+        .status(500)
+        .json({ message: 'Internal server error', details: error });
+    }
+  },
+);
+
 app.put(
-  '/api/users/me/email',
+  '/user/me/email',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -463,7 +570,7 @@ app.put(
 );
 
 app.put(
-  '/api/users/me/password',
+  '/user/me/password',
   authenticateToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -498,7 +605,7 @@ app.put(
   },
 );
 
-app.post('/api/auth/verify-email', async (req, res) => {
+app.post('/user/auth/verify-email', async (req, res) => {
   try {
     const { email, otp } = verifyEmailSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
@@ -521,7 +628,7 @@ app.post('/api/auth/verify-email', async (req, res) => {
   }
 });
 
-app.post('/api/auth/resend-otp', async (req, res) => {
+app.post('/user/auth/resend-otp', async (req, res) => {
   try {
     const { email } = resendOtpSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
@@ -531,13 +638,22 @@ app.post('/api/auth/resend-otp', async (req, res) => {
         message: 'Already verified, cannot resend OTP for this account.',
       });
     }
-
+    if (
+      user.otpLastSentAt &&
+      new Date().getTime() - user.otpLastSentAt.getTime() <
+        OTP_COOLDOWN_SECONDS * 1000
+    ) {
+      return res.status(429).json({
+        message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      });
+    }
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const now = new Date();
 
     await prisma.user.update({
       where: { email },
-      data: { verificationOtp: otp, otpExpiresAt },
+      data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
     });
 
     await sendOtpEmail(email, otp);
@@ -548,7 +664,31 @@ app.post('/api/auth/resend-otp', async (req, res) => {
   }
 });
 
-app.get('/api/users/:id', async (req: Request, res: Response) => {
+// username availability check
+app.get('/user/check-username', async (req: Request, res: Response) => {
+  try {
+    const { username } = req.query;
+
+    if (!username || typeof username !== 'string') {
+      return res
+        .status(400)
+        .json({ message: 'Username query parameter is required.' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { username: username },
+      select: { id: true },
+    });
+
+    res.status(200).json({ isAvailable: !user });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: 'Internal server error checking username.', error });
+  }
+});
+
+app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const user = await prisma.user.findUnique({
@@ -580,7 +720,7 @@ app.get('/api/users/:id', async (req: Request, res: Response) => {
  */
 // UTILITY TO BE DELETED !!!!!
 // list all users in db
-app.post('/api/auth/list', async (req, res) => {
+app.get('/user/utility/list', async (req, res) => {
   try {
     const allUsers = await prisma.user.findMany();
     res.status(200).json({ message: 'List successful', details: allUsers });

@@ -6,7 +6,7 @@ import React, { useEffect, useRef } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import type { editor as MonacoEditor } from 'monaco-editor';
-import { Monaco, OnMount } from '@monaco-editor/react';
+import { OnMount } from '@monaco-editor/react';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -63,7 +63,6 @@ export default function CollabMonaco() {
 
   const handleEditorDidMount: OnMount = async (
     editor: MonacoEditor.IStandaloneCodeEditor,
-    monaco: Monaco,
   ) => {
     // editor model must exist
     const model = editor.getModel();
