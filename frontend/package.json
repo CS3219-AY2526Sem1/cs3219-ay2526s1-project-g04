@@ -27,6 +27,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-markdown": "^10.1.0",
+    "recharts": "^3.3.0",
     "y-monaco": "^0.1.6",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.27"
