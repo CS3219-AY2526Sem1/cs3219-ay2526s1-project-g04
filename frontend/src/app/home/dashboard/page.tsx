@@ -41,12 +41,13 @@ const mockSessionData = [
     { sessionId: 3, questionId: 'q3', userIds: [1, 4], createdAt: '2025-09-06T14:00:00Z', isSolved: false }, // Not solved
     { sessionId: 4, questionId: 'q4', userIds: [1, 2], createdAt: '2025-09-05T16:00:00Z', isSolved: true },
     { sessionId: 5, questionId: 'q1', userIds: [1, 3], createdAt: '2025-09-04T12:00:00Z', isSolved: true },
+    { sessionId: 6, questionId: 'q1', userIds: [1, 3], createdAt: '2025-09-04T12:00:00Z', isSolved: true },
 ];
 const mockQuestionDatabase: Record<string, any> = {
     q1: { id: 'q1', title: 'Two Sum', difficulty: 'Easy', topics: ['Array', 'Hash Table'] },
-    q2: { id: 'q2', title: 'Contains Duplicate', difficulty: 'Easy', topics: ['Array'] },
-    q3: { id: 'q3', title: 'Add Two Numbers', difficulty: 'Medium', topics: ['Linked List', 'Math'] },
-    q4: { id: 'q4', title: 'Median of 2 Sorted Arrays', difficulty: 'Hard', topics: ['Array', 'Binary Search'] },
+    q2: { id: 'q2', title: 'Contains Duplicate', difficulty: 'Easy', topics: ['soidfjosijfodjf'] },
+    q3: { id: 'q3', title: 'Add Two Numbers', difficulty: 'Medium', topics: ['sdfdfjojdojfodjf List', 'bfibjibjij'] },
+    q4: { id: 'q4', title: 'Median of 2 Sorted Arrays', difficulty: 'Hard', topics: ['dfiosjiofjiodjfoi', 'dkfjdifjidjfidjfidjf Search'] },
 };
 const mockUserDatabase: Record<number, any> = {
     1: { id: 1, username: 'kailash201' },
@@ -314,7 +315,9 @@ export default function DashboardPage() {
                         <Typography variant="h4" sx={{ fontWeight: 700, fontFamily: openSans.style.fontFamily, color: '#374151', opacity: 0.6 }}>
                             Recent Sessions
                         </Typography>
-                        <Link href="#" sx={{ fontWeight: 600, color: '#4F46E5' }}>View all</Link>
+                        <Link href="/home/practice-history" sx={{ fontWeight: 600, color: '#4F46E5' }}>
+                            View all
+                        </Link>
                     </Stack>
                     <TableContainer>
                         <Table sx={{ '& .MuiTableCell-root': { borderBottom: 'none', py: 1.5 } }}>
@@ -328,7 +331,7 @@ export default function DashboardPage() {
                             </TableHead>
                             <TableBody>
                                 {/* --- RENDER FROM DYNAMIC HISTORY STATE --- */}
-                                {history.slice(0, 10).map((row) => (
+                                {history.slice(0, 6).map((row) => (
                                     <TableRow key={row.id} sx={{ '&:nth-of-type(odd)': { backgroundColor: '#F9FAFB' } }}>
                                         <TableCell sx={{ fontWeight: 500, color: '#374151' }}>
                                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
@@ -432,10 +435,10 @@ export default function DashboardPage() {
                     </Box>
 
                     <Paper sx={{ p: 3, borderRadius: 3, boxShadow: '0px 4px 12px rgba(0,0,0,0.05)' }}>
-                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#374151', mb: 2, opacity: 0.8 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: '#374151', mb: 0, opacity: 0.8 }}>
                             Topics
                         </Typography>
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 250, borderRadius: 2 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 350, borderRadius: 2 }}>
                             <CategoryChart data={stats.categories} />
                         </Box>
                     </Paper>
