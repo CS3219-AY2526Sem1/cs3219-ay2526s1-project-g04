@@ -1,6 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { jwtDecode } from 'jwt-decode';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
 import {
   Box,
   Button,
@@ -19,6 +23,7 @@ import {
   TableHead,
   TableRow,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -89,22 +94,63 @@ const summaryStats = {
 };
 // --- End of Mock Data ---
 
-const getDifficultyColor = (difficulty: string) => {
-  switch (difficulty.toLowerCase()) {
-    case 'easy':
-      return 'success';
-    case 'medium':
-      return 'warning';
-    case 'hard':
-      return 'error';
-    default:
-      return 'default';
-  }
+interface UserJwtPayload {
+  userId: string;
+  username: string;
+  role: 'USER' | 'ADMIN';
+  iat: number;
+  exp: number;
+}
+
+const getDifficultyHex = (difficultyName: string) => {
+  const level = DIFFICULTY_LEVELS.find(
+    (l) => l.name.toLowerCase() === difficultyName.toLowerCase(),
+  );
+  return level ? level.color_hex : '#808080'; // Default gray
 };
 
 export default function DashboardPage() {
   const [showMatching, setShowMatching] = React.useState(false);
 
+  const [user, setUser] = useState<UserJwtPayload | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      // If no token, redirect to login
+      router.push('/accounts/login');
+      return;
+    }
+    try {
+      // Decode the token and set the user state
+      const decodedToken = jwtDecode<UserJwtPayload>(token);
+      setUser(decodedToken);
+    } catch (error) {
+      console.error('Invalid token:', error);
+      // If token is invalid, clear it and redirect
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      router.push('/accounts/login');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [router]);
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#F9FAFB',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
   return (
     <Box
       sx={{
@@ -125,7 +171,7 @@ export default function DashboardPage() {
             color: '#374151',
           }}
         >
-          Welcome back, {user.name}!
+          Welcome back, {user?.username}!
         </Typography>
 
         <Box
@@ -273,16 +319,19 @@ export default function DashboardPage() {
                               >
                                 {row.problem}
                               </Typography>
-                              <Chip
-                                label={row.difficulty}
-                                color={getDifficultyColor(row.difficulty)}
-                                size="small"
-                                sx={{
-                                  width: 'fit-content',
-                                  fontWeight: 600,
+                              <span
+                                className="py-1 px-3 rounded-full"
+                                style={{
+                                  border: `1px solid ${getDifficultyHex(row.difficulty)}`,
+                                  color: getDifficultyHex(row.difficulty),
                                   fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  width: 'fit-content',
+                                  display: 'inline-block',
                                 }}
-                              />
+                              >
+                                {row.difficulty}
+                              </span>
                             </Stack>
                           </TableCell>
                           <TableCell sx={{ color: '#6B7280' }}>
