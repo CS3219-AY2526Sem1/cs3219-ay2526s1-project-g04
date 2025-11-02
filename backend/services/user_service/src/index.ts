@@ -140,7 +140,6 @@ const updatePasswordSchema = z.object({
 // --- JWT Payload Interface ---
 interface JwtPayload {
   userId: string;
-  email: string;
   role: Role;
   username: string;
   iat: number;
