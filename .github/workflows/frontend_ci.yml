@@ -59,7 +59,8 @@ jobs:
       
       - name: Verify env variables
         run: |
-          export -p | grep NEXT_PUBLIC
+          echo "QUESTION_SERVICE_URL=$NEXT_PUBLIC_API_QUESTION_SERVICE"
+          echo "COLLAB_SERVICE_URL=$NEXT_PUBLIC_API_COLLAB_SERVICE"
         
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
