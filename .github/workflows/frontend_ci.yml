@@ -58,3 +58,4 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: peerprep4/peerprep4:frontend
+          platforms: linux/amd64,linux/arm64
