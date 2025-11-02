@@ -56,7 +56,11 @@ jobs:
           set -a
           source .env.public.prod 
           set +a
-          
+      
+      - name: Verify env variables
+        run: |
+          export -p | grep NEXT_PUBLIC
+        
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
