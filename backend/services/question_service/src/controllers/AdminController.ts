@@ -29,10 +29,11 @@ function normalizeDifficulty(d: unknown): Difficulty | null {
 function isAttachment(obj: unknown): obj is AttachmentInput {
   if (typeof obj !== 'object' || obj === null) return false;
   const o = obj as Partial<AttachmentInput> & Record<string, unknown>;
+  const hasName = typeof o.filename === 'string';
   const hasKey = typeof o.object_key === 'string';
   const hasMime = typeof o.mime === 'string';
   const hasValidAlt = o.alt === undefined || typeof o.alt === 'string';
-  return hasKey && hasMime && hasValidAlt;
+  return hasName && hasKey && hasMime && hasValidAlt;
 }
 
 function isAttachmentArray(x: unknown): x is AttachmentInput[] {
@@ -191,7 +192,7 @@ export async function create(req: Request, res: Response) {
       body_md,
       difficulty: diff,
       topics: topicList,
-      attachments: [], // we'll fill these properly below
+      attachments: [],
     });
 
     // finalize staged attachments now that we know draft.id

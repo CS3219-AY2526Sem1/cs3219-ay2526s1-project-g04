@@ -180,9 +180,21 @@ export async function signUploadUrl(
  */
 export async function finalizeStagedAttachments(
   questionId: string,
-  attachments: Array<{ object_key: string; mime: string; alt?: string }>,
-): Promise<Array<{ object_key: string; mime: string; alt?: string }>> {
-  const out: Array<{ object_key: string; mime: string; alt?: string }> = [];
+  attachments: Array<{
+    filename: string;
+    object_key: string;
+    mime: string;
+    alt?: string;
+  }>,
+): Promise<
+  Array<{ filename: string; object_key: string; mime: string; alt?: string }>
+> {
+  const out: Array<{
+    filename: string;
+    object_key: string;
+    mime: string;
+    alt?: string;
+  }> = [];
 
   for (const att of attachments) {
     const srcKey = att.object_key;
@@ -218,8 +230,13 @@ export async function finalizeStagedAttachments(
 
     out.push(
       att.alt !== undefined
-        ? { object_key: destKey, mime: att.mime, alt: att.alt }
-        : { object_key: destKey, mime: att.mime },
+        ? {
+            filename: att.filename,
+            object_key: destKey,
+            mime: att.mime,
+            alt: att.alt,
+          }
+        : { filename: att.filename, object_key: destKey, mime: att.mime },
     );
   }
 

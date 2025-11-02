@@ -113,6 +113,9 @@ components:
       type: object
       description: Attachment metadata stored on the question row.
       properties:
+        filename:
+          type: string
+          example: diagram.png
         object_key:
           type: string
           example: questions/two-sum/20251031/abc123-diagram.png
@@ -366,9 +369,13 @@ components:
           items:
             type: object
             required:
+              - filename
               - object_key
               - mime
             properties:
+              filename:
+                type: string
+                example: diagram.png
               object_key:
                 type: string
                 example: staging/dev-user/01ABC.../20251101/01XYZ-diagram.png
@@ -435,9 +442,12 @@ components:
           items:
             type: object
             required:
+              - filename
               - object_key
               - mime
             properties:
+              filename:
+                type: string
               object_key:
                 type: string
               mime:
