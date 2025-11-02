@@ -50,17 +50,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-       
-      - name: Load env file
-        run: |
-          set -a
-          source .env.public.prod 
-          set +a
-      
-      - name: Verify env variables
-        run: |
-          echo "QUESTION_SERVICE_URL=$NEXT_PUBLIC_API_QUESTION_SERVICE"
-          echo "COLLAB_SERVICE_URL=$NEXT_PUBLIC_API_COLLAB_SERVICE"
         
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -70,3 +59,10 @@ jobs:
           push: true
           tags: peerprep4/peerprep4:frontend
           platforms: linux/arm64
+          build-args: |
+            NEXT_PUBLIC_API_QUESTION_SERVICE=${{ secrets.NEXT_PUBLIC_API_QUESTION_SERVICE }}
+            NEXT_PUBLIC_API_COLLAB_SERVICE=${{ secrets.NEXT_PUBLIC_API_COLLAB_SERVICE }}
+            NEXT_PUBLIC_API_MATCHING_SERVICE=${{ secrets.NEXT_PUBLIC_API_MATCHING_SERVICE }}
+            NEXT_PUBLIC_API_USER_SERVICE=${{ secrets.NEXT_PUBLIC_API_USER_SERVICE }}
+            NEXT_PUBLIC_API_CODE_EXE_SERVICE=${{ secrets.NEXT_PUBLIC_API_CODE_EXE_SERVICE }}
+            NEXT_PUBLIC_API_COMMS_SERVICE=${{ secrets.NEXT_PUBLIC_API_COMMS_SERVICE }}
