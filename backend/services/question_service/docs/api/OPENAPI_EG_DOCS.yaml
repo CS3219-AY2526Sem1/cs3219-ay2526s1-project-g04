@@ -1,13 +1,27 @@
 openapi: 3.0.3
 info:
   title: Question Service API (PeerPrep)
-  version: 0.1.3
+  version: 0.3.0
   description: |
     Microservice to manage and serve coding interview questions.
-    - Read APIs for users/services
-    - Selection API (idempotent by matching_id)
-    - Admin CRUD + publish/versioning
-    - Markdown sanitized on read; images via signed URLs
+
+    Key behaviors:
+    - Questions have:
+      - problem statement in Markdown (`body_md`)
+      - sanitized HTML (`body_html`) with signed image URLs on read
+      - attachments stored in S3, surfaced through presigned/signed URLs
+      - difficulty, topics, version, status
+      - execution resources:
+        - starter code (currently python only)
+        - test cases (sample vs hidden)
+
+    - Topics are managed separately via `/admin/topics` and referenced by slug.
+
+    - `/select` is idempotent for a `matching_id` for ~10 minutes.
+
+    - Admin endpoints require `admin` role (via `x-role: admin` in dev or RBAC'ed JWT in prod).
+
+    - Service-to-service calls (like the matching worker) may use `x-role: service`.
 
 servers:
   - url: http://localhost:3000
@@ -21,6 +35,9 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: |
+        Production calls should include a Bearer token.
+        In local/dev we also allow `x-role: admin` or `x-role: service`.
 
   parameters:
     Difficulty:
@@ -29,13 +46,7 @@ components:
       description: Optional difficulty filter
       schema:
         $ref: '#/components/schemas/Difficulty'
-    Highlight:
-      name: highlight
-      in: query
-      description: Include short snippet highlighting matches
-      schema:
-        type: boolean
-        default: false
+
     Page:
       name: page
       in: query
@@ -44,14 +55,9 @@ components:
         type: integer
         minimum: 1
         default: 1
-    Q:
-      name: q
-      in: query
-      description: Full-text search (title/body)
-      schema:
-        type: string
-    Size:
-      name: size
+
+    PageSize:
+      name: page_size
       in: query
       description: Page size (max 50)
       schema:
@@ -59,42 +65,37 @@ components:
         minimum: 1
         maximum: 50
         default: 20
-    Topics:
-      name: topics
+
+    Q:
+      name: q
       in: query
-      description: 'Comma-separated topic slugs (e.g., `graphs,dp`)'
+      description: Full-text search (title/body)
       schema:
         type: string
 
-  schemas:
-    Attachment:
-      type: object
-      properties:
-        object_key:
-          type: string
-          example: q/two-sum/diagram.png
-        mime:
-          type: string
-          example: image/png
-        byte_size:
-          type: integer
-          minimum: 0
-        width:
-          type: integer
-          minimum: 1
-          nullable: true
-        height:
-          type: integer
-          minimum: 1
-          nullable: true
-        alt:
-          type: string
-          nullable: true
-      required: [object_key, mime]
+    Topics:
+      name: topics
+      in: query
+      description: 'Comma-separated topic slugs (e.g., `arrays,graphs`).'
+      schema:
+        type: string
 
+    Highlight:
+      name: highlight
+      in: query
+      description: Include short snippet highlighting matches (only applies if `q` is provided)
+      schema:
+        type: boolean
+        default: false
+
+  schemas:
     Difficulty:
       type: string
       enum: [Easy, Medium, Hard]
+
+    Status:
+      type: string
+      enum: [draft, published, archived]
 
     Error:
       type: object
@@ -105,34 +106,205 @@ components:
         message:
           type: string
           example: Question not found
-        details:
-          type: object
-          additionalProperties: true
+      required:
+        - error
+
+    Attachment:
+      type: object
+      description: Attachment metadata stored on the question row.
+      properties:
+        filename:
+          type: string
+          example: diagram.png
+        object_key:
+          type: string
+          example: questions/two-sum/20251031/abc123-diagram.png
+        mime:
+          type: string
+          example: image/png
+        alt:
+          type: string
           nullable: true
-      required: [error, message]
+          example: diagram
+        byte_size:
+          type: integer
+          minimum: 0
+          nullable: true
+        width:
+          type: integer
+          minimum: 1
+          nullable: true
+        height:
+          type: integer
+          minimum: 1
+          nullable: true
+      required:
+        - object_key
+        - mime
+
+    TopicTag:
+      type: object
+      description: Topic metadata (used in read models).
+      additionalProperties: false
+      properties:
+        slug:
+          type: string
+          example: arrays
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        color_hex:
+          type: string
+          example: '#3b82f6'
+          pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
+      required:
+        - slug
+        - color_hex
+
+    TopicCreate:
+      type: object
+      description: |
+        Create a new canonical topic so questions can reference it.
+        - The service slugifies `display` into `slug`.
+        - That slug can then be used in `questions.topics`.
+      properties:
+        display:
+          type: string
+          description: Human-readable topic name. The service will slugify this.
+          example: Arrays
+        color_hex:
+          type: string
+          description: Hex color used for rendering topic pills.
+          example: '#3B82F6'
+          pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
+      required:
+        - display
+        - color_hex
+
+    TopicListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopicTag'
+
+    TestCaseWrite:
+      type: object
+      description: |
+        Test case provided by admin on create/patch.
+      properties:
+        visibility:
+          type: string
+          enum: [sample, hidden]
+          description: |
+            - sample -> visible to users
+            - hidden -> internal only, not exposed publicly
+        input_data:
+          type: string
+          description: Raw input (JSON, stdin args, etc.)
+        expected_output:
+          type: string
+          description: Expected output (JSON, stdout, etc.)
+        ordinal:
+          type: integer
+          description: Stable order for runner / UI
+          example: 0
+      required:
+        - visibility
+        - input_data
+        - expected_output
+
+    TestCaseAdminRead:
+      type: object
+      description: Test case returned to admin/service.
+      properties:
+        name:
+          type: string
+          example: case-0
+        visibility:
+          type: string
+          enum: [sample, hidden]
+        input:
+          type: string
+          example: '[[1,2],[3,4]]'
+        expected:
+          type: string
+          example: '[[3,1],[4,2]]'
+        ordinal:
+          type: integer
+          example: 0
+      required:
+        - visibility
+        - input
+        - expected
+        - ordinal
+
+    TestCasePublicRead:
+      type: object
+      description: Test case visible to normal users/clients (no hidden cases).
+      properties:
+        name:
+          type: string
+          example: case-0
+        input:
+          type: string
+          example: '[[1,2],[3,4]]'
+        expected:
+          type: string
+          example: '[[3,1],[4,2]]'
+        ordinal:
+          type: integer
+          example: 0
+      required:
+        - input
+        - expected
+        - ordinal
+
+    StarterCodeBundle:
+      type: object
+      description: Starter code snippets keyed by language. Currently python-only.
+      additionalProperties: false
+      properties:
+        python:
+          type: string
+          example: |
+            def solve(nums):
+                # TODO
+                pass
 
     QuestionBase:
       type: object
       properties:
         id:
           type: string
-          example: two-sum
+          example: rotate-image-in-place
         title:
           type: string
         body_md:
           type: string
+          description: |
+            Markdown body.
+
+            Inline images in authoring can refer to internal objects using:
+            `pp://<object_key>`.
+
+            These keys are finalized on create/patch:
+            `staging/...` → `questions/{slug}/...`.
         difficulty:
           $ref: '#/components/schemas/Difficulty'
         topics:
           type: array
-          description: Topic tags for this question (with color metadata)
+          description: |
+            Topics for this question.
+
+            On READ (admin/public):
+            - array of `{ slug, color_hex }`.
+
+            On WRITE (create/patch):
+            - just an array of slugs.
           items:
             $ref: '#/components/schemas/TopicTag'
-          example:
-            - slug: arrays
-              color_hex: '#3B82F6'
-            - slug: hash-map
-              color_hex: '#10B981'
         attachments:
           type: array
           items:
@@ -147,34 +319,221 @@ components:
         updated_at:
           type: string
           format: date-time
-      required: [id, title, body_md, difficulty, status, version]
+      required:
+        - id
+        - title
+        - body_md
+        - difficulty
+        - status
+        - version
 
     QuestionCreate:
       type: object
+      description: |
+        Create a new draft question.
+
+        Flow:
+        1. Admin uploads assets to S3 via /admin/attachments/sign-upload.
+        2. Admin references those `staging/...` keys in `attachments` and
+           `body_md` using `pp://<object_key>`.
+        3. Service persists draft, copies any staging objects into
+           `questions/{slug}/...`, rewrites `body_md`, and stores final attachments.
+        4. Service also upserts execution resources (starter code + test cases).
       properties:
-        id:
-          type: string
-          description: Stable slug/identifier
         title:
           type: string
+          example: Rotate Image In-Place
         body_md:
           type: string
-          description: |
-            Markdown body. Image links may reference internal object keys (preferred) using
-            `pp://<object_key>` or the alias `/attachments/<object_key>`. The service will adopt any
-            staging keys and rewrite links to signed/CDN URLs in body_html on read.
+          example: |
+            Given n x n matrix, rotate 90°.
+            ![diagram](pp://staging/dev-user/.../diagram.png)
         difficulty:
           $ref: '#/components/schemas/Difficulty'
         topics:
           type: array
-          description: Topic slugs (no color metadata in write models)
+          description: |
+            Array of topic slugs (must already exist, created via /admin/topics).
           items:
             type: string
+          example:
+            - arrays
+            - matrix
+            - in-place
+        attachments:
+          type: array
+          description: |
+            Attachments for the question.
+
+            Each object_key may still be `staging/...`; the service will finalize it.
+          items:
+            type: object
+            required:
+              - filename
+              - object_key
+              - mime
+            properties:
+              filename:
+                type: string
+                example: diagram.png
+              object_key:
+                type: string
+                example: staging/dev-user/01ABC.../20251101/01XYZ-diagram.png
+              mime:
+                type: string
+                example: image/png
+              alt:
+                type: string
+                example: diagram
+        starter_code:
+          type: string
+          description: |
+            Starter code for the candidate (Python).
+            Stored in `question_python_starter`.
+          example: |
+            def rotate_image(matrix: list[list[int]]) -> None:
+                # TODO: rotate in place
+                pass
+        test_cases:
+          type: array
+          description: |
+            Complete list of test cases to associate with this draft.
+            Both `sample` and `hidden` are allowed.
+            This replaces any existing test cases.
+          items:
+            $ref: '#/components/schemas/TestCaseWrite'
+      required:
+        - title
+        - body_md
+        - difficulty
+
+    QuestionUpdate:
+      type: object
+      description: |
+        Partial update to an existing draft.
+
+        Behavior:
+        - Any provided simple fields (title, difficulty, etc.) are updated.
+        - If `attachments` includes new `staging/...` keys, those are finalized under
+          `questions/{id}/...`, and if `body_md` is also provided, its `pp://staging/...`
+          refs are rewritten to the finalized keys.
+        - If `starter_code` is provided, the python starter row is upserted.
+        - If `test_cases` is provided, ALL existing test cases are replaced by the new list.
+        - If `topics` is provided, the entire topic set is replaced.
+          All slugs must already exist in `/admin/topics`.
+      properties:
+        title:
+          type: string
+        body_md:
+          type: string
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        topics:
+          type: array
+          description: |
+            Array of topic slugs. All slugs must already exist in `/admin/topics`.
+          items:
+            type: string
+          example:
+            - arrays
+            - matrix
         attachments:
           type: array
           items:
-            $ref: '#/components/schemas/Attachment'
-      required: [title, body_md, difficulty]
+            type: object
+            required:
+              - filename
+              - object_key
+              - mime
+            properties:
+              filename:
+                type: string
+              object_key:
+                type: string
+              mime:
+                type: string
+              alt:
+                type: string
+                nullable: true
+        starter_code:
+          type: string
+          example: |
+            def rotate_image(matrix):
+                # improved version
+                pass
+        test_cases:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestCaseWrite'
+
+    QuestionAdminRead:
+      allOf:
+        - $ref: '#/components/schemas/QuestionBase'
+        - type: object
+          description: |
+            Admin/internal full view (works for any status):
+            - question metadata
+            - sanitized body_html with signed URLs
+            - ALL test cases (including hidden)
+            - starter_code
+          properties:
+            body_html:
+              type: string
+              description: Sanitized HTML derived from body_md, with signed image URLs.
+            starter_code:
+              type: string
+              nullable: true
+              description: Pulled from `question_python_starter`.
+            test_cases:
+              type: array
+              description: All test cases, including `hidden`.
+              items:
+                $ref: '#/components/schemas/TestCaseAdminRead'
+          required:
+            - body_html
+
+    QuestionPublicRead:
+      allOf:
+        - $ref: '#/components/schemas/QuestionBase'
+        - type: object
+          description: |
+            Safe view for published questions:
+            - sanitized `body_html`
+            - starter_code
+            - ONLY sample (public) test cases
+          properties:
+            body_html:
+              type: string
+              description: |
+                Sanitized HTML derived from body_md, with short-lived signed image URLs.
+            starter_code:
+              type: string
+              nullable: true
+              description: Starter code exposed to candidates.
+            test_cases:
+              type: array
+              description: |
+                Sample (public) test cases only.
+                Hidden cases are never included here.
+              items:
+                $ref: '#/components/schemas/TestCasePublicRead'
+          required:
+            - body_html
+
+    QuestionListItem:
+      allOf:
+        - $ref: '#/components/schemas/QuestionBase'
+        - type: object
+          description: Row in a paginated list.
+          properties:
+            body_md:
+              type: string
+              nullable: true
+              description: body_md may be truncated or omitted in list responses.
+            snippet:
+              type: string
+              nullable: true
+              description: Highlighted excerpt if `q` and `highlight=true`.
 
     QuestionListResponse:
       type: object
@@ -188,78 +547,121 @@ components:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/QuestionSummary'
-      required: [page, page_size, total, items]
+            $ref: '#/components/schemas/QuestionListItem'
+      required:
+        - page
+        - page_size
+        - total
+        - items
 
-    QuestionRead:
-      allOf:
-        - $ref: '#/components/schemas/QuestionBase'
-        - type: object
-          properties:
-            body_html:
-              type: string
-              description: Sanitized HTML derived from body_md
-
-    QuestionSummary:
-      allOf:
-        - $ref: '#/components/schemas/QuestionBase'
-        - type: object
-          properties:
-            body_md:
-              description: Omitted or truncated in list responses
-              type: string
-              nullable: true
-            snippet:
-              type: string
-              description: Present when `highlight=true` and `q` provided
-              nullable: true
-
-    QuestionUpdate:
+    QuestionResourcesPublic:
       type: object
-      description: Partial update (any provided fields will be updated)
+      description: |
+        Lightweight execution bundle for a published question.
+        Returned by GET /questions/{id}/resources.
+        Only includes SAMPLE test cases (no hidden).
       properties:
-        title:
+        question_id:
           type: string
-        body_md:
-          type: string
+          example: rotate-image-in-place
+        starter_code:
+          type: object
           description: |
-            Markdown body. Image links may reference internal object keys (preferred) using
-            `pp://<object_key>` or the alias `/attachments/<object_key>`. The service will adopt any
-            staging keys and rewrite links to signed/CDN URLs in body_html on read.
-        difficulty:
-          $ref: '#/components/schemas/Difficulty'
-        topics:
-          type: array
-          description: Topic slugs (no color metadata in write models)
-          items:
+            Map of language -> starter code.
+            Currently { python: string } or {}.
+          additionalProperties:
             type: string
-        attachments:
+          example:
+            python: |
+              def rotate_image(matrix):
+                  # TODO
+                  pass
+        test_cases:
           type: array
+          description: SAMPLE test cases only.
           items:
-            $ref: '#/components/schemas/Attachment'
+            type: object
+            properties:
+              name:
+                type: string
+                example: case-0
+              visibility:
+                type: string
+                enum: [sample]
+              input:
+                type: string
+                example: '[[1,2],[3,4]]'
+              expected:
+                type: string
+                example: '[[3,1],[4,2]]'
+              ordinal:
+                type: integer
+                example: 0
+            required:
+              - visibility
+              - input
+              - expected
+              - ordinal
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - question_id
+        - starter_code
+        - test_cases
+        - updated_at
+
+    QuestionResourcesAdmin:
+      type: object
+      description: |
+        Internal execution bundle for any question status.
+        Returned by GET /admin/questions/{id}/resources.
+        Includes HIDDEN and SAMPLE test cases.
+      properties:
+        question_id:
+          type: string
         status:
           $ref: '#/components/schemas/Status'
-
-    SelectionRequest:
-      type: object
-      properties:
-        matching_id:
+        starter_code:
+          type: object
+          description: |
+            Map of language -> starter code.
+            Currently { python: string } or {}.
+          additionalProperties:
+            type: string
+        test_cases:
+          type: array
+          description: |
+            All test cases: SAMPLE and HIDDEN.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: case-1
+              visibility:
+                type: string
+                enum: [sample, hidden]
+              input:
+                type: string
+              expected:
+                type: string
+              ordinal:
+                type: integer
+            required:
+              - visibility
+              - input
+              - expected
+              - ordinal
+        updated_at:
           type: string
-        difficulty:
-          $ref: '#/components/schemas/Difficulty'
-        topics:
-          type: array
-          description: Topic slugs to filter by
-          items:
-            type: string
-        recent_ids:
-          type: array
-          items:
-            type: string
-        seed:
-          type: number
-          description: Deterministic selection seed (testing)
-      required: [matching_id]
+          format: date-time
+      required:
+        - question_id
+        - status
+        - starter_code
+        - test_cases
+        - updated_at
 
     SignUploadRequest:
       type: object
@@ -267,18 +669,21 @@ components:
       properties:
         content_type:
           type: string
-          description: MIME type of the file to upload (must match PUT)
           example: image/png
         filename:
           type: string
-          description: Original filename from client (sanitized server-side)
           example: diagram.png
         suggested_prefix:
           type: string
           nullable: true
-          description: Optional key prefix, e.g. 'questions/{id}' for existing questions; defaults to 'staging/{userId}/sessionUlid'
+          description: |
+            Optional prefix hint for permanent keys.
+            If omitted, backend will default to a staging prefix like:
+            staging/{adminUser}/{sessionUlid}/{YYYYMMDD}/{ulid-filename}
           example: questions/two-sum
-      required: [content_type, filename]
+      required:
+        - content_type
+        - filename
 
     SignUploadResponse:
       type: object
@@ -286,21 +691,45 @@ components:
       properties:
         object_key:
           type: string
-          description: Stable storage key to reference in Markdown (pp:// alias)
-          example: staging/u123/01J9K3H0X2/20251010/a1b2c3-diagram.png
+          description: |
+            Object key you should refer to in body_md via `pp://<object_key>`.
+          example: staging/dev-user/01K8.../20251101/01K8...-diagram.png
         upload_url:
           type: string
-          description: Short-lived presigned PUT URL for direct upload to S3
-          example: https://s3.ap-southeast-1.amazonaws.com/bucket/...signature...
+          description: Short-lived presigned PUT URL for direct S3 upload.
         expires_at:
           type: string
           format: date-time
-          description: Expiration time for the upload_url
         max_bytes:
           type: integer
-          minimum: 1
-          description: Maximum allowed object size in bytes
-      required: [object_key, upload_url, expires_at]
+          description: Max allowed upload size in bytes.
+      required:
+        - object_key
+        - upload_url
+        - expires_at
+
+    SignViewRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        object_key:
+          type: string
+          example: questions/two-sum-1761915450/20251031/01abc-diagram.png
+        as_attachment:
+          type: boolean
+          description: |
+            Force Content-Disposition: attachment if true.
+          default: false
+        filename:
+          type: string
+          description: Suggested filename in Content-Disposition.
+          example: diagram.png
+        content_type_hint:
+          type: string
+          description: Optional hint for Content-Type.
+          example: image/png
+      required:
+        - object_key
 
     SignViewResponse:
       type: object
@@ -308,60 +737,50 @@ components:
       properties:
         object_key:
           type: string
-          example: questions/two-sum/20251010/a1b2c3-diagram.png
         view_url:
           type: string
-          description: Short-lived presigned GET (or CDN-signed) URL suitable for previews
-          example: https://dxxx.cloudfront.net/...signed...
+          description: Short-lived presigned GET / CDN-signed URL for browser preview.
         expires_at:
           type: string
           format: date-time
-      required: [object_key, view_url, expires_at]
+      required:
+        - object_key
+        - view_url
+        - expires_at
 
-    Status:
-      type: string
-      enum: [draft, published, archived]
-
-    TopicListResponse:
+    SelectionRequest:
       type: object
+      description: |
+        Request one eligible published question to start a collaboration session.
+        Idempotent per `matching_id` for ~10 minutes (persisted in Postgres).
       properties:
-        total:
-          type: integer
-        items:
+        matching_id:
+          type: string
+          example: sess-123
+        difficulty:
+          $ref: '#/components/schemas/Difficulty'
+        topics:
           type: array
+          description: Filter pool by these topics (slugs).
           items:
-            $ref: '#/components/schemas/TopicTag'
-
-    TopicTag:
-      type: object
-      description: Topic tag metadata used in read models.
-      additionalProperties: false
-      properties:
-        slug:
-          type: string
-          description: Topic identifier (kebab-case)
-          example: arrays
-          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
-        color_hex:
-          type: string
-          description: Hex color for frontend rendering
-          example: '#3B82F6'
-          pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
-      required: [slug, color_hex]
-
-    TopicCreate:
-      type: object
-      properties:
-        display:
-          type: string
-          description: Topic name to be displayed
-          example: Arrays
-        color_hex:
-          type: string
-          description: Hex color for frontend rendering
-          example: '#3B82F6'
-          pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
-      required: [display, color_hex]
+            type: string
+          example:
+            - arrays
+        recent_ids:
+          type: array
+          description: Try to avoid giving these question IDs again.
+          items:
+            type: string
+        exclude_ids:
+          type: array
+          description: Hard block these IDs if possible.
+          items:
+            type: string
+        seed:
+          type: number
+          description: Deterministic selection seed (testing)
+      required:
+        - matching_id
 
 security:
   - bearerAuth: []
@@ -373,385 +792,10 @@ tags:
   - name: Selection
 
 paths:
-  /admin/attachments/sign-upload:
-    post:
-      tags: [Admin]
-      summary: Get a presigned URL to upload a file directly to object storage
-      description: |
-        Returns a short-lived presigned **PUT** URL and an `object_key` that can be referenced in Markdown
-        as `pp://<object_key>` or `/attachments/<object_key>`. Buckets remain private; do not embed the
-        presigned URL in Markdown.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SignUploadRequest'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SignUploadResponse'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
-  /admin/attachments/sign-view:
-    get:
-      tags: [Admin]
-      summary: Get a short-lived view URL for an existing object key (editor preview)
-      parameters:
-        - name: object_key
-          in: query
-          required: true
-          schema:
-            type: string
-          description: Storage key previously returned from sign-upload or stored on the question
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SignViewResponse'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
-  /admin/questions:
-    get:
-      tags: [Admin]
-      summary: List questions (any status) for admin
-      description: Admin view with filters by status/difficulty/topics.
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Size'
-        - $ref: '#/components/parameters/Difficulty'
-        - name: status
-          in: query
-          schema:
-            $ref: '#/components/schemas/Status'
-        - $ref: '#/components/parameters/Topics'
-        - $ref: '#/components/parameters/Q'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestionListResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
-    post:
-      tags: [Admin]
-      summary: Create a question (draft)
-      description: |
-        Creates a draft question.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QuestionCreate'
-      responses:
-        '201':
-          description: Created (draft)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestionRead'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
-  /admin/questions/{id}:
-    get:
-      tags: [Admin]
-      summary: Get a question by ID (draft / published / archived)
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestionRead'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-    patch:
-      tags: [Admin]
-      summary: Update a question (partial)
-      description: |
-        Partial update. If body_md contains 'pp://' or '/attachments' links to staging keys, the service will adopt them and update attachments accordingly.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/QuestionUpdate'
-      responses:
-        '200':
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestionRead'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
-    delete:
-      tags: [Admin]
-      summary: Archive a question (soft delete)
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '204':
-          description: Archived
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
-  /admin/questions/{id}/publish:
-    post:
-      tags: [Admin]
-      summary: Publish the current head as a new version
-      description: >
-        Copies current fields, topics, and attachments into `question_versions`,
-        increments head `version`, sets status to `published`, and emits an event.
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Published
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  question:
-                    $ref: '#/components/schemas/QuestionRead'
-                  published_version:
-                    type: integer
-                    example: 3
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '409':
-          description: Invalid state (e.g., archived)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
-  /admin/topics:
-    post:
-      tags: [Admin]
-      summary: Create a new topic tag
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TopicCreate'
-      responses:
-        '201':
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TopicTag'
-        '400':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles: [admin]
-
   /healthz:
     get:
-      tags: [Health]
+      tags:
+        - Health
       summary: Liveness probe
       security: []
       responses:
@@ -766,102 +810,11 @@ paths:
                     type: boolean
                     example: true
 
-  /questions:
-    get:
-      tags: [Read]
-      summary: List and filter published questions
-      description: |
-        Returns a paginated list of **published** questions.
-        Optional filters: difficulty, topics, full-text `q`.
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Size'
-        - $ref: '#/components/parameters/Difficulty'
-        - $ref: '#/components/parameters/Topics'
-        - $ref: '#/components/parameters/Q'
-        - $ref: '#/components/parameters/Highlight'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestionListResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /questions/{id}:
-    get:
-      tags: [Read]
-      summary: Get a published question by ID
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestionRead'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-
-  /questions/topics:
-    get:
-      tags: [Read]
-      parameters:
-        - name: difficulty
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TopicListResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '404':
-          description: Not Found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
   /readyz:
     get:
-      tags: [Health]
-      summary: Readiness probe (DB reachable)
+      tags:
+        - Health
+      summary: Readiness probe (DB/AMQP reachable)
       security: []
       responses:
         '200':
@@ -884,13 +837,657 @@ paths:
                         type: boolean
                         example: true
 
+  /admin/topics:
+    post:
+      tags:
+        - Admin
+      summary: Create a new canonical topic
+      description: |
+        Creates a `topics` row.
+
+        - The service slugifies `display` into `slug`.
+        - That slug can then be referenced in `questions.topics`.
+        - If the slug already exists, the repo may upsert (implementation detail).
+
+        Controller expects `display` and `color_hex` in the JSON body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicCreate'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicTag'
+        '400':
+          description: Validation error (e.g. missing display, invalid hex)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+  /topics:
+    get:
+      tags:
+        - Read
+      summary: List all known topic tags (slug + color)
+      description: |
+        Returns *all* topics in the system, even if they are not used by any
+        published question. Useful for admin UIs, dropdowns, etc.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /questions/topics:
+    get:
+      tags:
+        - Read
+      summary: List topics that appear in published questions
+      description: |
+        Returns distinct topic slugs + colors that are currently attached
+        to at least one PUBLISHED question.
+
+        Useful for building topic filters in the public UI.
+
+        This is different from `GET /topics`, which returns *all* known topics,
+        even if they are not used by any published question.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+
+  /admin/attachments/sign-upload:
+    post:
+      tags:
+        - Admin
+      summary: Get a presigned PUT URL for direct S3 upload
+      description: |
+        Returns:
+        - `object_key` (staging/... key you will reference in Markdown via `pp://<object_key>`)
+        - a short-lived presigned PUT URL
+        - size/expiry metadata
+
+        Flow:
+        1. Call this to get `upload_url` + `object_key`.
+        2. `PUT` bytes directly to S3 using `upload_url`.
+        3. Use that `object_key` when creating/updating questions.
+
+        The service will later "finalize" staging keys into `questions/{id}/...`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignUploadRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignUploadResponse'
+        '400':
+          description: Bad input
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+  /admin/attachments/sign-view:
+    post:
+      tags:
+        - Admin
+      summary: Get a short-lived view URL for an object key
+      description: |
+        Mainly for preview in the admin editor.
+
+        Public `GET /questions/{id}` already returns `body_html`
+        with signed `<img>` tags, so you usually don't need this for end users.
+
+        Backend will 404 if the key doesn't exist / not allowed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignViewRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignViewResponse'
+        '400':
+          description: Bad input
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+  /admin/questions:
+    get:
+      tags:
+        - Admin
+      summary: List questions (any status)
+      description: |
+        Admin view over all questions (`draft`, `published`, `archived`) with filters.
+        Result items are summaries (no test cases inline).
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Difficulty'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/Status'
+        - $ref: '#/components/parameters/Topics'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Highlight'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionListResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+    post:
+      tags:
+        - Admin
+      summary: Create a new draft question
+      description: |
+        - Creates the initial `questions` row with `status = draft`.
+        - Generates a unique slug (`id`).
+        - Finalizes any `staging/...` attachments (copies them under `questions/{id}/...`)
+          and rewrites `body_md` accordingly.
+        - Persists starter code (python) into `question_python_starter`.
+        - Replaces any existing test cases for that question with the provided array.
+        - Rewrites topics → `question_topics` join table (FK to `topics.slug`).
+        - Returns full admin view (including hidden tests and starter code).
+
+        IMPORTANT:
+        - All slugs in `topics` MUST already exist in `/admin/topics`.
+        - If you reference an unknown topic slug, the service SHOULD 400
+          with `unknown_topics` (FK failures will otherwise surface as 500).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionCreate'
+      responses:
+        '201':
+          description: Created draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionAdminRead'
+        '400':
+          description: Validation error (missing title, bad topic slug, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+  /admin/questions/{id}:
+    get:
+      tags:
+        - Admin
+      summary: Get full question (draft / published / archived)
+      description: |
+        Returns the internal/admin bundle:
+        - question metadata
+        - sanitized `body_html` with signed URLs
+        - ALL test cases (including hidden)
+        - starter_code
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionAdminRead'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+    patch:
+      tags:
+        - Admin
+      summary: Update an existing draft
+      description: |
+        Partial update.
+
+        Behavior:
+        - Any provided simple fields (title, difficulty, etc.) are updated.
+        - If `attachments` includes new `staging/...` keys, those are finalized
+          under `questions/{id}/...`, and if `body_md` is provided,
+          its `pp://staging/...` refs are rewritten.
+        - If `starter_code` is provided, python starter is upserted.
+        - If `test_cases` is provided, ALL test cases are replaced by the new list.
+        - If `topics` is provided, the entire topic set is replaced
+          (all slugs must already exist via `/admin/topics`).
+
+        Returns the updated admin view, including hidden tests.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionUpdate'
+      responses:
+        '200':
+          description: Updated draft
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionAdminRead'
+        '400':
+          description: Validation error (e.g. unknown_topics)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+    delete:
+      tags:
+        - Admin
+      summary: Archive a published question
+      description: |
+        Soft-delete semantics:
+        - Only allowed if current status is `published`.
+        - Updates `questions.status = archived`,
+          bumps `version`, writes snapshot.
+        - Returns the updated row as JSON.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Archived
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionAdminRead'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found or not eligible
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+  /admin/questions/{id}/publish:
+    post:
+      tags:
+        - Admin
+      summary: Publish the current head
+      description: |
+        Takes the current question (draft or published) and:
+        - bumps `version`
+        - sets `status = published`
+        - writes an immutable snapshot into `question_versions`
+        - emits a `question.published` event
+
+        Returns the updated, now-published question
+        (same shape as QuestionAdminRead).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Published OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionAdminRead'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden / invalid role
+        '404':
+          description: Not found
+        '409':
+          description: Invalid state (e.g. archived)
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+  /admin/questions/{id}/resources:
+    get:
+      tags:
+        - Admin
+      summary: Get full execution resources for a question (any status)
+      description: |
+        Returns the internal runtime bundle for a question:
+        - starter code
+        - ALL test cases, including hidden
+        - status
+
+        This endpoint is intended for:
+        - admin editing / previewing
+        - internal judge / grader services
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResourcesAdmin'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      x-roles:
+        - admin
+
+  /questions:
+    get:
+      tags:
+        - Read
+      summary: List published questions
+      description: |
+        Returns a paginated list of **published** questions only.
+
+        Filters:
+        - `difficulty`
+        - `topics` (comma-separated slugs)
+        - `q` (basic search / FTS)
+        - `highlight` (include `snippet`)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Difficulty'
+        - $ref: '#/components/parameters/Topics'
+        - $ref: '#/components/parameters/Q'
+        - $ref: '#/components/parameters/Highlight'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionListResponse'
+        '401':
+          description: Unauthorized (if anonymous read is disabled)
+        '403':
+          description: Forbidden
+
+  /debug/questions/{id}:
+    get:
+      tags:
+        - Debug
+      summary: Render a published question as sanitized HTML (DEV ONLY)
+      description: |
+        DEVELOPMENT / TEST ONLY.
+
+        Returns a preview of what a published question would look like to the public UI:
+        - Sanitized `body_html` with short-lived signed URLs for inline images.
+        - Basic question metadata (`id`, `title`, `difficulty`, `topics`, `version`).
+
+        This endpoint is:
+        - NOT mounted at all in production (`NODE_ENV=production`).
+        - Additionally guarded in the controller.
+
+        Intended for local authoring / debugging the Markdown pipeline.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK (development preview)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  title:
+                    type: string
+                  difficulty:
+                    $ref: '#/components/schemas/Difficulty'
+                  version:
+                    type: integer
+                  body_html:
+                    type: string
+                    description: Sanitized HTML with signed <img> sources.
+                  topics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TopicTag'
+        '400':
+          description: Missing/invalid id
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Disabled outside development/test
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: debug disabled
+        '404':
+          description: Not found / not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      security: []
+      x-internal: true
+      x-env:
+        - development
+        - test
+
+  /questions/{id}:
+    get:
+      tags:
+        - Read
+      summary: Get a published question by ID (public-safe view)
+      description: |
+        Returns:
+        - published question metadata
+        - sanitized `body_html` (with signed image URLs)
+        - public-safe execution bundle:
+          - `starter_code`
+          - `test_cases` (SAMPLE ONLY; hidden cases are not included)
+
+        Returns 404 if the question is not `published`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK (published)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionPublicRead'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not found / not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /questions/{id}/resources:
+    get:
+      tags:
+        - Read
+      summary: Get execution resources for a published question
+      description: |
+        Returns the runtime bundle for a published question:
+        - starter code (per language, currently python)
+        - SAMPLE test cases only (no hidden cases)
+
+        If the question does not exist or is not published, returns 404.
+
+        This is a lighter-weight, runner-friendly view compared to
+        GET /questions/{id}, which focuses on the problem statement and rendered HTML.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionResourcesPublic'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Not found / not published
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /select:
     post:
-      tags: [Selection]
-      summary: Select one eligible question for a session (idempotent)
+      tags:
+        - Selection
+      summary: Select one eligible published question for a session
       description: |
-        Returns one **matching, published** question. Idempotent for the same `matching_id` for 10 minutes.
-        Requires role `service` (or `admin`).
+        Returns exactly one **published** question that matches the requested filters.
+
+        Also:
+        - Idempotent for a given `matching_id` for ~10 minutes
+          (stored in Postgres `reservations` table).
+        - Attempts to avoid `recent_ids` and `exclude_ids`.
+        - Emits a `question.selected` event to RabbitMQ.
+
+        Auth:
+        - Typically called by the matching / collaboration service.
+        - Requires a role of `service` (or `admin`) in dev,
+          or a valid JWT with proper audience/scope in prod.
+
+        Response body is basically the same safe shape
+        that `/questions/{id}` returns
+        (i.e. public/published view, not including hidden tests).
       requestBody:
         required: true
         content:
@@ -901,9 +1498,13 @@ paths:
               basic:
                 value:
                   matching_id: 'sess-123'
-                  difficulty: 'medium'
-                  topics: ['graphs']
-                  exclude_ids: ['two-sum']
+                  difficulty: 'Medium'
+                  topics:
+                    - arrays
+                  exclude_ids:
+                    - two-sum
+                  recent_ids:
+                    - rotate-image-in-place
       responses:
         '200':
           description: Selected question
@@ -911,51 +1512,24 @@ paths:
             Cache-Control:
               schema:
                 type: string
-              description: no-store recommended
+                example: no-store
+              description: Clients should not cache this.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QuestionRead'
+                $ref: '#/components/schemas/QuestionPublicRead'
         '401':
           description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '403':
           description: Forbidden (role)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
         '409':
-          description: No eligible question
+          description: No eligible question / pool empty
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-
-  /topics:
-    get:
-      tags: [Read]
-      summary: List topic tags (slug + color)
-      description: Returns a paginated list of topic tags for UI rendering.
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TopicListResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-        '403':
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+      security:
+        - bearerAuth: []
+      x-roles:
+        - service
+        - admin
