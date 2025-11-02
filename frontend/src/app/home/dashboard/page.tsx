@@ -168,6 +168,7 @@ export default function DashboardPage() {
   return (
     <Box
       sx={{
+        pt: 5,
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
