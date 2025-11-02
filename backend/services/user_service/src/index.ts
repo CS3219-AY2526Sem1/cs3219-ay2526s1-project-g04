@@ -139,7 +139,7 @@ const updatePasswordSchema = z.object({
 
 // --- JWT Payload Interface ---
 interface JwtPayload {
-  userId: string;
+  userId: number;
   role: Role;
   username: string;
   iat: number;
@@ -147,7 +147,7 @@ interface JwtPayload {
 }
 
 interface RefreshTokenPayload {
-  userId: string;
+  userId: number;
 }
 
 // --- Middleware for Authentication & Authorization ---
@@ -248,19 +248,14 @@ async function sendOtpEmail(email: string, otp: string) {
 app.post('/user/auth/signup', async (req, res) => {
   try {
     const { email, password, username } = signupSchema.parse(req.body);
-
-    // --- UPDATED LOGIC ---
-    // 1. Check if EMAIL already exists
     const userByEmail = await prisma.user.findUnique({ where: { email } });
 
     if (userByEmail) {
-      // If email exists (verified OR unverified), block the signup immediately
       return res.status(409).json({
         message: 'An account with this email already exists. Please log in.',
       });
     }
 
-    // 2. Check if USERNAME already exists (only if email is new)
     const userByUsername = await prisma.user.findUnique({
       where: { username },
     });
@@ -270,7 +265,6 @@ app.post('/user/auth/signup', async (req, res) => {
         .json({ message: 'This username is already taken.' });
     }
 
-    // --- If both email and username are available, proceed to create ---
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -296,6 +290,7 @@ app.post('/user/auth/signup', async (req, res) => {
       user: { email: newUser.email, username: newUser.username },
     });
   } catch (error) {
+    console.error('Signup Endpoint Error:', error);
     if (error instanceof z.ZodError) {
       return res
         .status(400)
@@ -744,9 +739,45 @@ app.get('/user/check-username', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/user', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const idsQuery = req.query.ids as string;
+    if (!idsQuery) {
+      return res.status(400).json({ message: 'User IDs are required.' });
+    }
+
+    const userIds = idsQuery.split(',').map((id) => parseInt(id, 10));
+    // Check if any of the conversions failed
+    if (userIds.some(isNaN)) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid user ID format in list.' });
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        id: {
+          in: userIds,
+        },
+      },
+      select: {
+        id: true,
+        username: true,
+      },
+    });
+
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
 app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid user ID format.' });
+    }
     const user = await prisma.user.findUnique({
       where: {
         id: id,
