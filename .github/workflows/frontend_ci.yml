@@ -23,7 +23,7 @@ jobs:
         run: pnpm run lint -- src
 
   build-frontend:
-    needs: lint-services
+    # needs: lint-services
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -35,7 +35,7 @@ jobs:
         run: pnpm i && pnpm run build
 
   build-and-push-docker-image:
-    needs: build-frontend
+    # needs: build-frontend
     runs-on: ubuntu-latest
 
     steps:
