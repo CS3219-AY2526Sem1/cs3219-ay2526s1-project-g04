@@ -378,7 +378,7 @@ components:
               alt:
                 type: string
                 example: diagram
-        starter_code_python:
+        starter_code:
           type: string
           description: |
             Starter code for the candidate (Python).
@@ -410,7 +410,7 @@ components:
         - If `attachments` includes new `staging/...` keys, those are finalized under
           `questions/{id}/...`, and if `body_md` is also provided, its `pp://staging/...`
           refs are rewritten to the finalized keys.
-        - If `starter_code_python` is provided, the python starter row is upserted.
+        - If `starter_code` is provided, the python starter row is upserted.
         - If `test_cases` is provided, ALL existing test cases are replaced by the new list.
         - If `topics` is provided, the entire topic set is replaced.
           All slugs must already exist in `/admin/topics`.
@@ -445,7 +445,7 @@ components:
               alt:
                 type: string
                 nullable: true
-        starter_code_python:
+        starter_code:
           type: string
           example: |
             def rotate_image(matrix):
@@ -465,12 +465,12 @@ components:
             - question metadata
             - sanitized body_html with signed URLs
             - ALL test cases (including hidden)
-            - starter_code_python
+            - starter_code
           properties:
             body_html:
               type: string
               description: Sanitized HTML derived from body_md, with signed image URLs.
-            starter_code_python:
+            starter_code:
               type: string
               nullable: true
               description: Pulled from `question_python_starter`.
@@ -489,14 +489,14 @@ components:
           description: |
             Safe view for published questions:
             - sanitized `body_html`
-            - starter_code_python
+            - starter_code
             - ONLY sample (public) test cases
           properties:
             body_html:
               type: string
               description: |
                 Sanitized HTML derived from body_md, with short-lived signed image URLs.
-            starter_code_python:
+            starter_code:
               type: string
               nullable: true
               description: Starter code exposed to candidates.
@@ -1083,7 +1083,7 @@ paths:
         - question metadata
         - sanitized `body_html` with signed URLs
         - ALL test cases (including hidden)
-        - starter_code_python
+        - starter_code
       parameters:
         - name: id
           in: path
@@ -1122,7 +1122,7 @@ paths:
         - If `attachments` includes new `staging/...` keys, those are finalized
           under `questions/{id}/...`, and if `body_md` is provided,
           its `pp://staging/...` refs are rewritten.
-        - If `starter_code_python` is provided, python starter is upserted.
+        - If `starter_code` is provided, python starter is upserted.
         - If `test_cases` is provided, ALL test cases are replaced by the new list.
         - If `topics` is provided, the entire topic set is replaced
           (all slugs must already exist via `/admin/topics`).
@@ -1394,7 +1394,7 @@ paths:
         - published question metadata
         - sanitized `body_html` (with signed image URLs)
         - public-safe execution bundle:
-          - `starter_code_python`
+          - `starter_code`
           - `test_cases` (SAMPLE ONLY; hidden cases are not included)
 
         Returns 404 if the question is not `published`.
