@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import { PrismaClient, Role } from '../generated/prisma';
+import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
@@ -9,6 +9,7 @@ import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import multer from 'multer';
+import fs from 'fs';
 
 dotenv.config();
 console.log('DATABASE_URL:', process.env.DATABASE_URL);
@@ -38,7 +39,9 @@ const upload = multer({
   },
 });
 
-// --- Middleware ---
+const privateKey = fs.readFileSync('./private.pem', 'utf8');
+const publicKey = fs.readFileSync('./public.pem', 'utf8');
+
 app.use(cors());
 app.use(express.json());
 
@@ -171,8 +174,11 @@ const authenticateToken = (
 
   if (token == null) return res.sendStatus(401); // Unauthorized
 
-  jwt.verify(token, process.env.JWT_SECRET!, (err, user) => {
-    if (err) return res.sendStatus(403); // Forbidden
+  jwt.verify(token, publicKey, { algorithms: ['RS256'] }, (err, user) => {
+    if (err) {
+      console.error('JWT Verification Error:', err);
+      return res.sendStatus(403);
+    }
     req.user = user as JwtPayload;
     next();
   });
@@ -325,8 +331,11 @@ app.post('/user/auth/login', async (req, res) => {
     // assign jwt to user
     const token = jwt.sign(
       { userId: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET!,
-      { expiresIn: '15m' },
+      privateKey,
+      {
+        expiresIn: '15m',
+        algorithm: 'RS256',
+      },
     );
 
     // assign refresh token to user + save in db
@@ -367,8 +376,11 @@ app.post('/user/auth/refresh', async (req, res) => {
 
     const newAccessToken = jwt.sign(
       { userId: user.id, username: user.username, role: user.role },
-      process.env.JWT_SECRET!,
-      { expiresIn: '15m' },
+      privateKey,
+      {
+        expiresIn: '15m',
+        algorithm: 'RS256',
+      },
     );
 
     res.json({ accessToken: newAccessToken });
@@ -422,8 +434,28 @@ app.put(
         }
       }
 
+      const updatedUser = await prisma.user.update({
+        where: { id: req.user!.userId },
+        data: validatedData,
+      });
+
+      // if username updated successfully, issue new jwt
+      let newAccessToken: string | undefined = undefined;
+      if (validatedData.username) {
+        newAccessToken = jwt.sign(
+          {
+            userId: updatedUser.id,
+            username: updatedUser.username,
+            role: updatedUser.role,
+          },
+          privateKey,
+          { expiresIn: '15m', algorithm: 'RS256' },
+        );
+      }
+
       res.status(200).json({
         message: 'Profile updated successfully.',
+        accessToken: newAccessToken,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -622,7 +654,32 @@ app.post('/user/auth/verify-email', async (req, res) => {
       data: { isVerified: true, verificationOtp: null, otpExpiresAt: null },
     });
 
-    res.status(200).json({ message: 'Email verified successfully.' });
+    const accessToken = jwt.sign(
+      { userId: user.id, username: user.username, role: user.role },
+      privateKey,
+      {
+        expiresIn: '15m',
+        algorithm: 'RS256',
+      },
+    );
+
+    const refreshToken = jwt.sign(
+      { userId: user.id },
+      process.env.REFRESH_TOKEN_SECRET!,
+      { expiresIn: '7d' },
+    );
+
+    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: hashedRefreshToken },
+    });
+
+    res.status(200).json({
+      message: 'Email verified successfully.',
+      accessToken,
+      refreshToken,
+    });
   } catch (error) {
     res.status(500).json({ message: 'Internal server error', error });
   }
