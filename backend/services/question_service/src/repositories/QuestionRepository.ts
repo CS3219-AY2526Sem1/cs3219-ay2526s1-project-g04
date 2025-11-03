@@ -664,3 +664,37 @@ export async function getInternalResourcesBundle(questionId: string) {
     updated_at: isoOrNow(q.updated_at),
   };
 }
+
+export async function getPublishedManyById(ids: string[]) {
+  if (!ids.length) return [];
+
+  const rows = await prisma.questions.findMany({
+    where: {
+      id: { in: ids },
+      status: 'published',
+    },
+    select: {
+      id: true,
+      title: true,
+      body_md: true,
+      difficulty: true,
+      status: true,
+      version: true,
+      attachments: true,
+      created_at: true,
+      updated_at: true,
+      question_topics: {
+        select: {
+          topics: {
+            select: {
+              slug: true,
+              color_hex: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return rows;
+}
