@@ -175,7 +175,7 @@ export default function DashboardPage() {
       }}
     >
       {/* Main Content */}
-      <Container maxWidth="xl" >
+      <Container maxWidth="xl">
         <Typography
           variant="h4"
           component="h1"
@@ -426,14 +426,14 @@ export default function DashboardPage() {
             <Stack spacing={4}>
               <Box>
                 <Typography
-                    variant="h4"
-                    sx={{
-                      fontWeight: 700,
-                      fontFamily: openSans.style.fontFamily,
-                      color: '#374151',
-                      mb: 2,
-                      opacity: 0.6,
-                    }}
+                  variant="h4"
+                  sx={{
+                    fontWeight: 700,
+                    fontFamily: openSans.style.fontFamily,
+                    color: '#374151',
+                    mb: 2,
+                    opacity: 0.6,
+                  }}
                 >
                   Summary
                 </Typography>
