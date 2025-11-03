@@ -29,7 +29,7 @@ import { openSans } from '@/styles/fonts';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // For "Solved" status
 import CancelIcon from '@mui/icons-material/Cancel';
-import CategoryChart from "@/components/ui/home/dashboard/CategoryChart"; // For "Attempted" status
+import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For "Attempted" status
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
 
 // --- Mock Data (Replace with your API data) ---
@@ -167,11 +167,11 @@ const getDifficultyHex = (difficultyName: string) => {
 };
 
 export default function DashboardPage() {
-    const [showMatching, setShowMatching] = React.useState(false);
-    const [user, setUser] = useState<UserJwtPayload | null>(null);
-    const [history, setHistory] = useState<EnrichedSession[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const router = useRouter();
+  const [showMatching, setShowMatching] = React.useState(false);
+  const [user, setUser] = useState<UserJwtPayload | null>(null);
+  const [history, setHistory] = useState<EnrichedSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   // 1. Data Fetching and Orchestration
   useEffect(() => {
@@ -659,4 +659,3 @@ export default function DashboardPage() {
     </Box>
   );
 }
-
