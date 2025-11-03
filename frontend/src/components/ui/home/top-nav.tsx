@@ -39,7 +39,19 @@ export default function TopNavigationBar({
 
   const [openDialog, setOpenDialog] = useState(false);
 
-  useEffect(() => {}, [onHeightChange]);
+  useEffect(() => {
+    if (appBarRef.current && onHeightChange) {
+      // Set initial height
+      onHeightChange(appBarRef.current.offsetHeight);
+
+      // Update height dynamically when window resizes
+      const resizeHandler = () =>
+        onHeightChange(appBarRef.current!.offsetHeight);
+      window.addEventListener('resize', resizeHandler);
+
+      return () => window.removeEventListener('resize', resizeHandler);
+    }
+  }, [onHeightChange]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
