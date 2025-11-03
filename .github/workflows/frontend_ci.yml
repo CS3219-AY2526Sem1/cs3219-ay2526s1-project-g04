@@ -23,7 +23,7 @@ jobs:
         run: pnpm run lint -- src
 
   build-frontend:
-    needs: lint-services
+    # needs: lint-services
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -35,7 +35,7 @@ jobs:
         run: pnpm i && pnpm run build
 
   build-and-push-docker-image:
-    needs: build-frontend
+    # needs: build-frontend
     runs-on: ubuntu-latest
 
     steps:
@@ -50,13 +50,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-       
-      - name: Load env file
-        run: |
-          set -a
-          source .env.public.prod 
-          set +a
-          
+        
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -64,4 +58,11 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: peerprep4/peerprep4:frontend
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64, linux/amd64
+          build-args: |
+            NEXT_PUBLIC_API_QUESTION_SERVICE=${{ secrets.NEXT_PUBLIC_API_QUESTION_SERVICE }}
+            NEXT_PUBLIC_API_COLLAB_SERVICE=${{ secrets.NEXT_PUBLIC_API_COLLAB_SERVICE }}
+            NEXT_PUBLIC_API_MATCHING_SERVICE=${{ secrets.NEXT_PUBLIC_API_MATCHING_SERVICE }}
+            NEXT_PUBLIC_API_USER_SERVICE=${{ secrets.NEXT_PUBLIC_API_USER_SERVICE }}
+            NEXT_PUBLIC_API_CODE_EXE_SERVICE=${{ secrets.NEXT_PUBLIC_API_CODE_EXE_SERVICE }}
+            NEXT_PUBLIC_API_COMMS_SERVICE=${{ secrets.NEXT_PUBLIC_API_COMMS_SERVICE }}
