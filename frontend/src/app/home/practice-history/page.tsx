@@ -21,10 +21,9 @@ import {
   TableRow,
   Typography,
   CircularProgress,
-  Pagination, // Import Pagination
+  Pagination,
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack'; // Import Back Icon
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 

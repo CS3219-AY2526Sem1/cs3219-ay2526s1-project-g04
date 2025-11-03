@@ -942,7 +942,7 @@ export default function Page() {
                     Change Email Address
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#6B7280', mt: 1 }}>
-                    Update your email address. You'll need to enter your current
+                    Update your email address. You&apos;ll need to enter your current
                     password for security.
                   </Typography>
                   <Divider sx={{ mt: 2 }} />
@@ -1163,7 +1163,7 @@ export default function Page() {
                     Change Password
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#6B7280', mt: 1 }}>
-                    Update your password. Make sure it's strong and secure.
+                    Update your password. Make sure it&apos;s strong and secure.
                   </Typography>
                   <Divider sx={{ mt: 2 }} />
                 </Box>
