@@ -49,9 +49,12 @@ export default function Page() {
     }
 
     try {
-      const response = await fetchWithAuth('http://localhost:3001/user/me/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchWithAuth(
+        'http://localhost:3001/user/me/profile',
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
@@ -124,14 +127,17 @@ export default function Page() {
 
     if (Object.keys(textPayload).length > 0) {
       try {
-        const res = await fetchWithAuth('http://localhost:3001/user/me/profile', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
+        const res = await fetchWithAuth(
+          'http://localhost:3001/user/me/profile',
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(textPayload),
           },
-          body: JSON.stringify(textPayload),
-        });
+        );
         if (!res.ok) throw new Error(await res.json().then((d) => d.message));
         textUpdated = true;
       } catch (err) {

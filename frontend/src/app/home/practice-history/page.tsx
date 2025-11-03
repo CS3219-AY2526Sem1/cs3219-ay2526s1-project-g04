@@ -320,14 +320,14 @@ export default function PracticeHistoryPage() {
     >
       <Container maxWidth="xl" sx={{ py: 0 }}>
         <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 700,
-              fontFamily: openSans.style.fontFamily,
-              color: '#374151',
-              opacity: 0.7,
-              pb: 3
-            }}
+          variant="h4"
+          sx={{
+            fontWeight: 700,
+            fontFamily: openSans.style.fontFamily,
+            color: '#374151',
+            opacity: 0.7,
+            pb: 3,
+          }}
         >
           Practice History
         </Typography>
@@ -345,9 +345,7 @@ export default function PracticeHistoryPage() {
             justifyContent="space-between"
             alignItems="center"
             sx={{ mb: 2 }}
-          >
-
-          </Stack>
+          ></Stack>
           <TableContainer>
             <Table
               sx={{ '& .MuiTableCell-root': { borderBottom: 'none', py: 1.5 } }}
