@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
 
 // --- Mock Data (Replace with your API data) ---
 const user = {
@@ -102,10 +103,11 @@ const getDifficultyColor = (difficulty: string) => {
 };
 
 export default function DashboardPage() {
+  const [showMatching, setShowMatching] = React.useState(false);
+
   return (
     <Box
       sx={{
-        pt: 5,
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
@@ -178,6 +180,7 @@ export default function DashboardPage() {
                   </Box>
                   <Button
                     variant="contained"
+                    onClick={() => setShowMatching(true)}
                     sx={{
                       backgroundColor: 'white',
                       color: '#4F46E5',
@@ -375,6 +378,8 @@ export default function DashboardPage() {
           </Grid>
         </Box>
       </Container>
+
+      {showMatching && <MatchingPopUp setShowMatching={setShowMatching} />}
     </Box>
   );
 }
