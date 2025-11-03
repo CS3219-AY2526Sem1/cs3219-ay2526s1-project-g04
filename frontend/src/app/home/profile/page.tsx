@@ -201,14 +201,7 @@ export default function Page() {
   }
 
   return (
-    <Box sx={{ pt: 12, pb: 4, px: 20 }}>
-      <Button
-        startIcon={<ArrowBackIcon />}
-        onClick={() => router.push('/home/dashboard')} // Navigate to dashboard
-        sx={{ mb: 2, alignSelf: 'flex-start' }} // Add margin below
-      >
-        Back to Dashboard
-      </Button>
+    <Box sx={{ pt: 0, pb: 4, px: 20 }}>
       <Paper sx={{ p: 3, borderRadius: 3, boxShadow: 3 }}>
         <Stack spacing={3} alignItems="center">
           <Typography variant="h4" component="h1" gutterBottom>
