@@ -21,7 +21,13 @@ spec:
               name: postgres
           env:
             - name: POSTGRES_PASSWORD
-              value: "ylchin0715"
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-qs-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+
           volumeMounts:
             - name: postgres-qs-data
               mountPath: /var/lib/postgresql/data
@@ -34,4 +40,4 @@ spec:
         resources:
           requests:
             storage: 10Gi
-        storageClassName: standard
+        storageClassName: gp2
