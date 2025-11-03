@@ -62,7 +62,7 @@ export default function TopNavigationBar({
   };
 
   const handleProfileClick = () => {
-    router.push('/home/profile');
+    router.push('/accounts/profile');
     handleMenuClose();
   };
 
