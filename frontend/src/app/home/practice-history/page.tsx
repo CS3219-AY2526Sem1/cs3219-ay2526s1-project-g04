@@ -312,29 +312,32 @@ export default function PracticeHistoryPage() {
   return (
     <Box
       sx={{
-        pt: 5,
+        pt: 0,
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
-        background: '#F9FAFB',
       }}
     >
-      <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* --- Back Button --- */}
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => router.push('/home/dashboard')}
-          sx={{ mb: 2 }}
+      <Container maxWidth="xl" sx={{ py: 0 }}>
+        <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 700,
+              fontFamily: openSans.style.fontFamily,
+              color: '#374151',
+              opacity: 0.7,
+              pb: 3
+            }}
         >
-          Back to Dashboard
-        </Button>
+          Practice History
+        </Typography>
 
         {/* Practice History */}
         <Paper
           sx={{
-            p: 3,
+            p: 0,
             borderRadius: 3,
-            boxShadow: '0px 4px 12px rgba(0,0,0,0.05)',
+            boxShadow: '0px 4px 12px rgba(0,0,0,0.2)',
           }}
         >
           <Stack
@@ -343,17 +346,7 @@ export default function PracticeHistoryPage() {
             alignItems="center"
             sx={{ mb: 2 }}
           >
-            <Typography
-              variant="h4"
-              sx={{
-                fontWeight: 700,
-                fontFamily: openSans.style.fontFamily,
-                color: '#374151',
-                opacity: 0.7,
-              }}
-            >
-              Practice History
-            </Typography>
+
           </Stack>
           <TableContainer>
             <Table

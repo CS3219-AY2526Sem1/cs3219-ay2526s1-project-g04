@@ -14,6 +14,7 @@ import {
   Alert,
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { fetchWithAuth } from '@/lib/utils/apiClient';
 
 interface UserProfile {
   username: string;
@@ -48,7 +49,7 @@ export default function Page() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/user/me/profile', {
+      const response = await fetchWithAuth('http://localhost:3001/user/me/profile', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -123,7 +124,7 @@ export default function Page() {
 
     if (Object.keys(textPayload).length > 0) {
       try {
-        const res = await fetch('http://localhost:3001/user/me/profile', {
+        const res = await fetchWithAuth('http://localhost:3001/user/me/profile', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -146,7 +147,7 @@ export default function Page() {
         const formData = new FormData();
         formData.append('profilePicture', selectedFile); // This is the logic from your test
 
-        const res = await fetch(
+        const res = await fetchWithAuth(
           'http://localhost:3001/user/me/profile-picture',
           {
             method: 'POST',

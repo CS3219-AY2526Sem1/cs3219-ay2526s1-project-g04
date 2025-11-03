@@ -290,14 +290,14 @@ export default function DashboardPage() {
   return (
     <Box
       sx={{
-        pt: 5,
+        pt: 0,
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
       }}
     >
       {/* Main Content */}
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth="xl" >
         <Typography
           variant="h4"
           component="h1"
@@ -389,7 +389,7 @@ export default function DashboardPage() {
                 sx={{
                   p: 3,
                   borderRadius: 3,
-                  boxShadow: '0px 4px 12px rgba(0,0,0,0.05)',
+                  boxShadow: '0px 4px 12px rgba(0,0,0,0.2)',
                 }}
               >
                 <Stack
@@ -551,14 +551,14 @@ export default function DashboardPage() {
             <Stack spacing={4}>
               <Box>
                 <Typography
-                  variant="h4"
-                  sx={{
-                    fontWeight: 700,
-                    fontFamily: openSans.style.fontFamily,
-                    color: '#374151',
-                    mb: 2,
-                    opacity: 0.6,
-                  }}
+                    variant="h4"
+                    sx={{
+                      fontWeight: 700,
+                      fontFamily: openSans.style.fontFamily,
+                      color: '#374151',
+                      mb: 2,
+                      opacity: 0.6,
+                    }}
                 >
                   Summary
                 </Typography>
@@ -567,7 +567,7 @@ export default function DashboardPage() {
                     sx={{
                       p: 3,
                       borderRadius: 3,
-                      boxShadow: '0px 4px 12px rgba(0,0,0,0.05)',
+                      boxShadow: '0px 4px 12px rgba(0,0,0,0.2)',
                     }}
                   >
                     <Typography
@@ -624,7 +624,7 @@ export default function DashboardPage() {
                 sx={{
                   p: 3,
                   borderRadius: 3,
-                  boxShadow: '0px 4px 12px rgba(0,0,0,0.05)',
+                  boxShadow: '0px 4px 12px rgba(0,0,0,0.2)',
                 }}
               >
                 <Typography
