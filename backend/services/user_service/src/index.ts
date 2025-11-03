@@ -812,124 +812,136 @@ app.post('/user/auth/resend-otp', async (req, res) => {
 });
 
 // Request OTP for email change
-app.post('/user/me/email/request-otp', authenticateToken, async (req, res) => {
-  try {
-    const { newEmail, password } = requestEmailChangeOtpSchema.parse(req.body);
-    const userId = (req as any).user.userId;
+app.post(
+  '/user/me/email/request-otp',
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const { newEmail, password } = requestEmailChangeOtpSchema.parse(
+        req.body,
+      );
+      const userId = req.user?.userId;
 
-    // Get current user
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
+      // Get current user
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
 
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid current password.' });
-    }
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: 'Invalid current password.' });
+      }
 
-    // Check if new email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: newEmail },
-    });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email already in use.' });
-    }
-
-    // Check OTP cooldown
-    if (
-      user.otpLastSentAt &&
-      new Date().getTime() - user.otpLastSentAt.getTime() <
-        OTP_COOLDOWN_SECONDS * 1000
-    ) {
-      return res.status(429).json({
-        message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      // Check if new email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: newEmail },
       });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already in use.' });
+      }
+
+      // Check OTP cooldown
+      if (
+        user.otpLastSentAt &&
+        new Date().getTime() - user.otpLastSentAt.getTime() <
+          OTP_COOLDOWN_SECONDS * 1000
+      ) {
+        return res.status(429).json({
+          message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+        });
+      }
+
+      // Generate and store OTP
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const now = new Date();
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
+      });
+
+      // Send OTP to new email
+      await sendOtpEmail(newEmail, otp);
+
+      res.status(200).json({
+        message: 'OTP sent to your new email address. Please check your inbox.',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error', error });
     }
-
-    // Generate and store OTP
-    const otp = crypto.randomInt(100000, 999999).toString();
-    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    const now = new Date();
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
-    });
-
-    // Send OTP to new email
-    await sendOtpEmail(newEmail, otp);
-
-    res.status(200).json({
-      message: 'OTP sent to your new email address. Please check your inbox.',
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-});
+  },
+);
 
 // Verify OTP and change email
-app.post('/user/me/email/verify-otp', authenticateToken, async (req, res) => {
-  try {
-    const { newEmail, password, otp } = verifyEmailChangeSchema.parse(req.body);
-    const userId = (req as any).user.userId;
+app.post(
+  '/user/me/email/verify-otp',
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const { newEmail, password, otp } = verifyEmailChangeSchema.parse(
+        req.body,
+      );
+      const userId = req.user?.userId;
 
-    // Get current user
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
+      // Get current user
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: 'Invalid current password.' });
+      }
+
+      // Verify OTP
+      if (!user.verificationOtp || user.verificationOtp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP.' });
+      }
+      if (new Date() > user.otpExpiresAt!) {
+        return res.status(400).json({ message: 'OTP has expired.' });
+      }
+
+      // Check if new email already exists (double-check)
+      const existingUser = await prisma.user.findUnique({
+        where: { email: newEmail },
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already in use.' });
+      }
+
+      // Update email and clear OTP
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: newEmail,
+          verificationOtp: null,
+          otpExpiresAt: null,
+        },
+      });
+
+      res.status(200).json({
+        message: 'Email updated successfully.',
+        newEmail,
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error', error });
     }
-
-    // Verify current password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ message: 'Invalid current password.' });
-    }
-
-    // Verify OTP
-    if (!user.verificationOtp || user.verificationOtp !== otp) {
-      return res.status(400).json({ message: 'Invalid OTP.' });
-    }
-    if (new Date() > user.otpExpiresAt!) {
-      return res.status(400).json({ message: 'OTP has expired.' });
-    }
-
-    // Check if new email already exists (double-check)
-    const existingUser = await prisma.user.findUnique({
-      where: { email: newEmail },
-    });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Email already in use.' });
-    }
-
-    // Update email and clear OTP
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        email: newEmail,
-        verificationOtp: null,
-        otpExpiresAt: null,
-      },
-    });
-
-    res.status(200).json({
-      message: 'Email updated successfully.',
-      newEmail,
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
-  }
-});
+  },
+);
 
 // Request OTP for password change
 app.post(
   '/user/me/password/request-otp',
   authenticateToken,
-  async (req, res) => {
+  async (req: AuthRequest, res) => {
     try {
       const { oldPassword } = requestPasswordChangeOtpSchema.parse(req.body);
-      const userId = (req as any).user.userId;
+      const userId = req.user?.userId;
 
       // Get current user
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -980,11 +992,11 @@ app.post(
 app.post(
   '/user/me/password/verify-otp',
   authenticateToken,
-  async (req, res) => {
+  async (req: AuthRequest, res) => {
     try {
       const { oldPassword, newPassword, otp } =
         verifyPasswordChangeSchema.parse(req.body);
-      const userId = (req as any).user.userId;
+      const userId = req.user?.userId;
 
       // Get current user
       const user = await prisma.user.findUnique({ where: { id: userId } });
