@@ -260,6 +260,22 @@ export default function LoginPage() {
                     fontSize: '14px',
                   }}
                 >
+                  <Link
+                    href="/accounts/forgot-password"
+                    sx={{ color: '#8B5CF6', fontWeight: 600 }}
+                  >
+                    Forgot Password?
+                  </Link>
+                </Typography>
+
+                <Typography
+                  sx={{
+                    textAlign: 'center',
+                    fontFamily: openSans.style.fontFamily,
+                    color: '#6B7280',
+                    fontSize: '14px',
+                  }}
+                >
                   Don&apos;t have an account?{' '}
                   <Link
                     href="/accounts/sign-up"

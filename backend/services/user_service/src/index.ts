@@ -154,6 +154,29 @@ const verifyPasswordChangeSchema = z.object({
   otp: z.string().length(6),
 });
 
+// Forgot password schemas
+const forgotPasswordRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+const forgotPasswordResetSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().length(6),
+  newPassword: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters.' })
+    .regex(/[A-Z]/, {
+      message: 'Password must contain at least one uppercase letter.',
+    })
+    .regex(/[a-z]/, {
+      message: 'Password must contain at least one lowercase letter.',
+    })
+    .regex(/\d/, { message: 'Password must contain at least one number.' })
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, {
+      message: 'Password must contain at least one special character.',
+    }),
+});
+
 const updatePasswordSchema = z.object({
   oldPassword: z.string(),
   newPassword: z
@@ -258,6 +281,45 @@ async function sendOtpEmail(email: string, otp: string) {
               ${otp}
             </p>
             <p>If you did not request this, please ignore this email.</p>
+          </div>
+          <style>
+            .main { background-color: white; }
+            a:hover { border-left-width: 1em; min-height: 2em; }
+          </style>
+        </body>
+      </html>
+    `,
+  });
+}
+
+async function sendPasswordResetOtpEmail(email: string, otp: string) {
+  const productIconUrl =
+    'https://s3.ap-southeast-2.amazonaws.com/peerprep.prep/peerprep_banner.png';
+
+  await transporter.sendMail({
+    from: '"PeerPrep" <no-reply@peerprep.com>',
+    to: email,
+    subject: 'PeerPrep Password Reset Code',
+    text: `Your PeerPrep password reset code is: ${otp}. It will expire in 10 minutes.`,
+    html: `
+      <!doctype html>
+      <html>
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        </head>
+        <body style="font-family: sans-serif;">
+          <div style="display: block; margin: auto; max-width: 600px;" class="main">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img alt="PeerPrep Banner" src="${productIconUrl}" style="width: 400px; display: inline-block;">
+            </div>
+            <h1 style="font-size: 18px; font-weight: bold; margin-top: 20px">Password Reset Request</h1>
+            <p>We received a request to reset your PeerPrep account password.</p>
+            <p>Please use the following code to reset your password. The code is valid for 10 minutes.</p>
+            <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #f2f2f2; padding: 10px 20px; text-align: center;">
+              ${otp}
+            </p>
+            <p><strong>If you did not request this password reset, please ignore this email and your password will remain unchanged.</strong></p>
+            <p>For security reasons, this code will expire in 10 minutes.</p>
           </div>
           <style>
             .main { background-color: white; }
@@ -965,6 +1027,109 @@ app.post(
     }
   },
 );
+
+// Request OTP for forgot password
+app.post('/user/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = forgotPasswordRequestSchema.parse(req.body);
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return res.status(200).json({
+        message:
+          'If an account with this email exists, you will receive a password reset code.',
+      });
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(400).json({
+        message:
+          'Please verify your email first before resetting your password.',
+      });
+    }
+
+    // Check OTP cooldown
+    if (
+      user.otpLastSentAt &&
+      new Date().getTime() - user.otpLastSentAt.getTime() <
+        OTP_COOLDOWN_SECONDS * 1000
+    ) {
+      return res.status(429).json({
+        message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      });
+    }
+
+    // Generate and store OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const now = new Date();
+
+    await prisma.user.update({
+      where: { email },
+      data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
+    });
+
+    // Send password reset OTP email
+    await sendPasswordResetOtpEmail(email, otp);
+
+    res.status(200).json({
+      message:
+        'If an account with this email exists, you will receive a password reset code.',
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
+// Reset password with OTP
+app.post('/user/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = forgotPasswordResetSchema.parse(
+      req.body,
+    );
+
+    // Get user
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid reset request.' });
+    }
+
+    // Verify OTP
+    if (!user.verificationOtp || user.verificationOtp !== otp) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid or expired reset code.' });
+    }
+    if (new Date() > user.otpExpiresAt!) {
+      return res.status(400).json({ message: 'Reset code has expired.' });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear OTP
+    await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedNewPassword,
+        verificationOtp: null,
+        otpExpiresAt: null,
+        // Invalidate all refresh tokens for security
+        refreshToken: null,
+      },
+    });
+
+    res.status(200).json({
+      message:
+        'Password reset successfully. Please log in with your new password.',
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
 
 // username availability check
 app.get('/user/check-username', async (req: Request, res: Response) => {
