@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -26,6 +25,7 @@ model User {
   isVerified     Boolean   @default(false)
   verificationOtp String?
   otpExpiresAt   DateTime?
+  otpLastSentAt  DateTime?
 
   @@map("users")
 }
