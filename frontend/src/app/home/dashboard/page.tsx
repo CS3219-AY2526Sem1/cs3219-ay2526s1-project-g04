@@ -78,7 +78,7 @@ const mockSessionData = [
     isSolved: true,
   },
 ];
-const mockQuestionDatabase: Record<string, object> = {
+const mockQuestionDatabase: Record<string, any> = {
   q1: {
     id: 'q1',
     title: 'Two Sum',
@@ -104,7 +104,7 @@ const mockQuestionDatabase: Record<string, object> = {
     topics: ['dfiosjiofjiodjfoi', 'dkfjdifjidjfidjfidjf Search'],
   },
 };
-const mockUserDatabase: Record<number, object> = {
+const mockUserDatabase: Record<number, any> = {
   1: { id: 1, username: 'kailash201' },
   2: { id: 2, username: 'flexibo' },
   3: { id: 3, username: 'ylchin' },
@@ -113,7 +113,7 @@ const mockUserDatabase: Record<number, object> = {
 // --- End of Mock Data ---
 
 // Helper to simulate API calls
-const fakeFetch = (db: Record<string, object>, ids: string[] | number[]) => {
+const fakeFetch = (db: Record<string, any>, ids: string[] | number[]) => {
   return new Promise<any[]>((resolve) => {
     setTimeout(() => {
       const results = ids.map((id) => db[id]).filter(Boolean);

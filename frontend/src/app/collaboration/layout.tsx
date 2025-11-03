@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import CollabNavigationBar from '@/components/ui/collaboration/collabTopNav';
+import AuthGuard from '@/lib/utils/AuthGuard';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,18 +11,20 @@ interface LayoutProps {
 export default function HomeLayout({ children }: LayoutProps) {
   const [appBarHeight, setAppBarHeight] = React.useState(0);
   return (
-    <>
-      <CollabNavigationBar onHeightChange={setAppBarHeight} />
+    <AuthGuard>
+      <>
+        <CollabNavigationBar onHeightChange={setAppBarHeight} />
 
-      <main
-        className="flex p-5"
-        style={{
-          marginTop: appBarHeight,
-          height: `calc(100vh - ${appBarHeight}px)`,
-        }}
-      >
-        {children}
-      </main>
-    </>
+        <main
+          className="flex p-5"
+          style={{
+            marginTop: appBarHeight,
+            height: `calc(100vh - ${appBarHeight}px)`,
+          }}
+        >
+          {children}
+        </main>
+      </>
+    </AuthGuard>
   );
 }
