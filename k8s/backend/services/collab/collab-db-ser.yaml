@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-qs
+  labels:
+    app: postgres-qs
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres-qs
+  ports:
+    - name: postgres-qs
+      port: 5432
+      targetPort: 5432

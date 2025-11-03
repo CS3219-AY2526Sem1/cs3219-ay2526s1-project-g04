@@ -1,0 +1,25 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: matching-service
+  namespace: default
+spec:
+  parentRefs:
+    - name: gateway
+      sectionName: http
+  # hostnames:
+  # - "cafe.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/matching-service
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /
+      backendRefs:
+        - name: matching-service
+          port: 3007

@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: question-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: question-service
+  template:
+    metadata:
+      labels:
+        app: question-service
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: question-service
+          image: peerprep4/peerprep4:question_service
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3008
+          env:
+            - name: DATABASE_URL
+              value: postgresql://postgres:ylchin0715@postgres-qs:5432/qs
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3008
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3008

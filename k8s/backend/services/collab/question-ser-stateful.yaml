@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-qs
+spec:
+  serviceName: "postgres-qs"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-qs
+  template:
+    metadata:
+      labels:
+        app: postgres-qs
+    spec:
+      containers:
+        - name: postgres-qs
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_PASSWORD
+              value: "ylchin0715"
+          volumeMounts:
+            - name: postgres-qs-data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres-qs-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        storageClassName: standard
