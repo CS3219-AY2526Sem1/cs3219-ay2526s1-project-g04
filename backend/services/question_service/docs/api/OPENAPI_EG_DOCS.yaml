@@ -151,12 +151,16 @@ components:
           type: string
           example: arrays
           pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        display:
+          type: string
+          example: Arrays
         color_hex:
           type: string
           example: '#3b82f6'
           pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
       required:
         - slug
+        - display
         - color_hex
 
     TopicCreate:

@@ -79,6 +79,7 @@ export async function getPublishedById(id: string) {
           topics: {
             select: {
               slug: true,
+              display: true,
               color_hex: true,
             },
           },
@@ -106,6 +107,7 @@ export async function getQuestionById(id: string) {
           topics: {
             select: {
               slug: true,
+              display: true,
               color_hex: true,
             },
           },
@@ -151,6 +153,7 @@ export async function listPublished(opts: {
             topics: {
               select: {
                 slug: true,
+                display: true,
                 color_hex: true,
               },
             },
@@ -258,6 +261,7 @@ export async function listAll(opts: {
           topics: {
             select: {
               slug: true,
+              display: true,
               color_hex: true,
             },
           },
