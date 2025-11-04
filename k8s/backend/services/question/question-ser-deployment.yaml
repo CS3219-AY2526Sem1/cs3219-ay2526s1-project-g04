@@ -22,7 +22,10 @@ spec:
             - containerPort: 3008
           env:
             - name: DATABASE_URL
-              value: postgresql://postgres:ylchin0715@postgres-qs:5432/qs
+              valueFrom:
+                secretKeyRef:
+                  name: qs-secret
+                  key: DATABASE_URL
           readinessProbe:
             httpGet:
               path: /healthz

@@ -1,37 +1,42 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: postgres-qs
+  name: postgres-cs
 spec:
-  serviceName: "postgres-qs"
+  serviceName: "postgres-cs"
   replicas: 1
   selector:
     matchLabels:
-      app: postgres-qs
+      app: postgres-cs
   template:
     metadata:
       labels:
-        app: postgres-qs
+        app: postgres-cs
     spec:
       containers:
-        - name: postgres-qs
-          image: postgres:16
+        - name: postgres-cs
+          image: postgres
           ports:
             - containerPort: 5432
               name: postgres
           env:
             - name: POSTGRES_PASSWORD
-              value: "ylchin0715"
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-cs-secret
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
-            - name: postgres-qs-data
+            - name: postgres-cs-data
               mountPath: /var/lib/postgresql/data
   volumeClaimTemplates:
     - metadata:
-        name: postgres-qs-data
+        name: postgres-cs-data
       spec:
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
             storage: 10Gi
-        storageClassName: standard
+        storageClassName: gp2

@@ -1,14 +1,14 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: postgres-cs
+  name: postgres-us
   labels:
-    app: postgres-cs
+    app: postgres-us
 spec:
   type: ClusterIP
   selector:
-    app: postgres-cs
+    app: postgres-us
   ports:
-    - name: postgres-cs
+    - name: postgres-us
       port: 5432
       targetPort: 5432
