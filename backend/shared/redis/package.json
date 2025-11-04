@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "redis",
   "type": "module",
+  "scripts": {
+    "build": "tsc"
+  },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
     "@types/node": "^24.6.2",

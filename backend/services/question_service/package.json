@@ -22,7 +22,7 @@
   "scripts": {
     "dev": "tsx --watch src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
+    "start": "node dist/src/index.js",
     "prisma:gen": "prisma generate",
     "prisma:pull": "prisma db pull",
     "db:recreate": "docker compose exec -T postgres bash -lc \"psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c \\\"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname='qs' AND pid <> pg_backend_pid();\\\" -c \\\"DROP DATABASE IF EXISTS qs;\\\" -c \\\"CREATE DATABASE qs;\\\"\"",
@@ -38,17 +38,21 @@
     "smoke": "tsx scripts/prisma_smoke.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.918.0",
+    "@aws-sdk/s3-request-presigner": "^3.918.0",
     "@prisma/adapter-pg": "^6.17.1",
     "@prisma/client": "^6.17.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "express-jwt": "^8.5.1",
     "helmet": "^8.1.0",
+    "jose": "^6.1.0",
     "jwks-rsa": "^3.2.0",
     "marked": "^16.4.0",
     "morgan": "^1.10.1",
     "pg": "^8.16.3",
     "sanitize-html": "^2.17.0",
+    "ulid": "^3.0.1",
     "uuid": "^13.0.0"
   },
   "devDependencies": {

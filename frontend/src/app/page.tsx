@@ -24,7 +24,6 @@ export default function Home() {
         }}
       >
         <Toolbar>
-          {/* Logo */}
           <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
             <Box
               component="img"

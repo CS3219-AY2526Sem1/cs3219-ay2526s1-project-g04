@@ -1,9 +1,36 @@
 {
-  "scripts": {
-    "build": "tsc"
+  "name": "matching_service",
+  "version": "1.0.0",
+  "description": "The following sequence diagram shows the sequence for the endpoints for the Matching Service:",
+  "main": "main.js",
+  "type": "module",
+  "directories": {
+    "doc": "docs"
   },
+  "scripts": {
+    "dev": "tsx --watch src/main.ts",
+    "start": "node dist/services/matching_service/src/main.js",
+    "build": "tsc && tsc-alias",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "cd ../.. && npm run lint -- services/matching_service/src "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "devDependencies": {
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "@tsconfig/node22": "^22.0.2",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.8.0",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "redis": "^5.8.3",
+    "winston": "^3.18.3"
   }
 }

@@ -7,8 +7,37 @@ import {
   Typography,
 } from '@mui/material';
 import '@/styles/globals.css';
+import ReactMarkdown from 'react-markdown';
+import { getQuestionById } from '@/services/questionServiceApi';
+import { useEffect, useState } from 'react';
+import { getQuestionIdBySessId } from '@/services/collaborationServiceApi';
+import { Question, Topic } from '@/lib/question-service';
 
-export const QuestionCard = () => {
+interface questionProps {
+  sessionId: string;
+}
+
+export const QuestionCard = (p: questionProps) => {
+  const { sessionId } = p;
+
+  const [questionTitle, setQuestionTitle] = useState('');
+  const [questionMd, setQuestionMd] = useState('');
+  const [questionTopics, setQuestionTopics] = useState<Topic[]>([]);
+
+  useEffect(() => {
+    const fetchQuestion = async () => {
+      const questionId: string | null = await getQuestionIdBySessId(sessionId);
+      console.log(1, questionId);
+      if (!questionId) return;
+      const question: Question | null = await getQuestionById(questionId);
+      console.log(question);
+      setQuestionMd(question?.body_md ?? '');
+      setQuestionTitle(question?.title ?? '');
+      setQuestionTopics(question?.topics ?? []);
+    };
+    fetchQuestion();
+  }, []);
+
   return (
     <Card
       className="rounded-2xl shadow-xl h-full w-full"
@@ -22,64 +51,28 @@ export const QuestionCard = () => {
     >
       <CardHeader
         title={
-          <Typography
-            variant="h3"
-            fontWeight="bold"
-            sx={{ color: 'text.secondary' }}
-          >
-            Two Sum
+          <Typography variant="h5" fontWeight="bold">
+            {questionTitle}
           </Typography>
         }
         subheader={
           <Stack direction="row" spacing={1}>
-            <Chip
-              label="Array"
-              variant="outlined"
-              size="medium"
-              className="border border-blue-500 text-blue-500 min-w-10"
-            />
-            <Chip
-              label="Hash Table"
-              variant="outlined"
-              size="medium"
-              className="border border-green-500 text-green-500 min-w-10"
-            />
-            <Chip
-              label="Math"
-              variant="outlined"
-              size="medium"
-              className="border border-purple-500 text-purple-500 min-w-10"
-            />
+            {questionTopics.map((topic: Topic, idx: number) => (
+              <Chip
+                key={idx}
+                label={topic.slug}
+                variant="outlined"
+                size="medium"
+                className="border border-blue-500 text-blue-500 min-w-10"
+              />
+            ))}
           </Stack>
         }
       />
-
-      <CardContent
-        sx={{
-          flexGrow: 1,
-          overflowY: 'auto',
-          paddingRight: 2,
-          paddingBottom: 2,
-        }}
-      >
-        <Stack spacing={2}>
-          {/* Description */}
-          <Typography
-            variant="body1"
-            sx={{ whiteSpace: 'pre-wrap' }}
-            dangerouslySetInnerHTML={{
-              __html: `Given an array of <strong>indices</strong> nums and an integer target, 
-return indices of the two numbers such that they add up to target.
-
-You may assume that each input would have exactly one solution, and you may not use the same element twice.
-
-`,
-            }}
-          />
-
-          {/* Example 1 */}
-          <Typography fontWeight="bold" sx={{ mt: 1 }}>
-            Example 1
+      <CardContent>
+        <Stack>
+          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+            <ReactMarkdown>{questionMd}</ReactMarkdown>
           </Typography>
           <Card
             variant="outlined"

@@ -1,9 +1,7 @@
 {
   "extends": "../../tsconfig.json",
-  // Visit https://aka.ms/tsconfig to read more about this file
   "compilerOptions": {
-    // File Layout
-    "rootDirs": ["./src"],
+    "rootDirs": ["./src", "../../shared"],
     "outDir": "./dist",
     "declarationDir": "./dist",
 

@@ -46,12 +46,13 @@ export class SessionManager {
   public async createSession(matchedId: string) {
     //Get data from redis
     const matchedData: Record<string, string> =
-      await this.redis.getMatchedUser(matchedId);
+      await this.redis.getMatchedData(matchedId);
 
     //Create session id
     const sessionId: number = await this.db.createSessionDataModel(
       Number(matchedData['user_a']),
       Number(matchedData['user_b']),
+      matchedData['question_id'] ?? '',
     );
 
     // create session object
@@ -59,6 +60,7 @@ export class SessionManager {
       sessionId,
       Number(matchedData['user_a']),
       Number(matchedData['user_b']),
+      matchedData['question_id'] ?? '',
     );
     this.sessions[sessionId] = {
       session: session,
