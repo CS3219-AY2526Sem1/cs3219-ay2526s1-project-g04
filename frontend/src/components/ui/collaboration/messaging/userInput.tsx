@@ -1,30 +1,61 @@
 'use client';
 
-import { IconButton, OutlinedInput } from '@mui/material';
-import '@/styles/globals.css';
+import React, { useState } from 'react';
+import { useCollab } from '../CollabProvider';
+import { IconButton, TextField, InputAdornment, Box } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { useState, useEffect } from 'react';
 
 export const UserInput = () => {
-  const [mounted, setMounted] = useState(false);
+  const { sendMessage, userId } = useCollab();
+  const [input, setInput] = useState('');
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const handleSend = () => {
+    if (!input.trim()) return;
+    sendMessage(input, userId);
+    setInput('');
+  };
 
-  if (!mounted) {
-    return;
-  }
   return (
-    <OutlinedInput
-      placeholder="Message"
-      size="small"
-      className="rounded-full text-sm w-full min-h-fit mb-2"
-      endAdornment={
-        <IconButton>
-          <SendIcon></SendIcon>
-        </IconButton>
-      }
-    />
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        px: 2,
+        py: 1,
+        bgcolor: 'white',
+        borderBottomLeftRadius: 16,
+        borderBottomRightRadius: 16,
+      }}
+    >
+      <TextField
+        variant="outlined"
+        size="small"
+        fullWidth
+        placeholder="Type a message..."
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSend();
+          }
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            borderRadius: '9999px',
+            bgcolor: '#f9fafb',
+          },
+        }}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton onClick={handleSend}>
+                <SendIcon sx={{ color: '#7C3AED' }} />
+              </IconButton>
+            </InputAdornment>
+          ),
+        }}
+      />
+    </Box>
   );
 };

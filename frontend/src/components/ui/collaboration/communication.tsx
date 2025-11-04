@@ -2,6 +2,7 @@ import { Box, Card, Stack } from '@mui/material';
 import '@/styles/globals.css';
 import { MessageBoard } from './messaging';
 import { DrawingBoard } from './drawing';
+import { CollabProvider } from './CollabProvider';
 
 export const Communication = () => {
   return (
@@ -9,7 +10,9 @@ export const Communication = () => {
       <Stack direction="row" className="flex justify-center h-full ">
         <MessageBoard></MessageBoard>
         <Box className="flex w-full h-full p-2">
-          <DrawingBoard></DrawingBoard>
+          <CollabProvider>
+            <DrawingBoard></DrawingBoard>
+          </CollabProvider>
         </Box>
       </Stack>
     </Card>

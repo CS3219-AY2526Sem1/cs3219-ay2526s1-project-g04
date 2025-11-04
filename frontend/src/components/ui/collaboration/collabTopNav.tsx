@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useCodeContext } from '../collaboration/CodeContext';
 import Link from 'next/link';
 import '@/styles/globals.css';
 import {
@@ -31,6 +32,8 @@ export default function CollabNavigationBar({
 }: TopNavigationBarProps) {
   const appBarRef = useRef<HTMLDivElement>(null);
 
+  const { code, language, testCases, setResults } = useCodeContext();
+
   useEffect(() => {
     if (appBarRef.current && onHeightChange) {
       onHeightChange(appBarRef.current.offsetHeight);
@@ -40,6 +43,64 @@ export default function CollabNavigationBar({
       return () => window.removeEventListener('resize', resizeHandler);
     }
   }, [onHeightChange]);
+
+  async function runCode(language: string, code: string) {
+    try {
+      const response = await fetch('http://localhost:5000/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language, code }),
+      });
+      const result = await response.json();
+      console.log('[Runner Output]', result);
+      alert(`Output:\n${result.stdout || result.stderr}`);
+      return result;
+    } catch (err) {
+      console.error('Error running code:', err);
+    }
+  }
+
+  async function runBatchCode(
+    code: string,
+    inputs: (number | string | boolean | object)[],
+  ) {
+    console.log('[Batch Runner Inputs]', inputs);
+
+    try {
+      const response = await fetch('http://localhost:5000/batch-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, inputs }),
+      });
+
+      const results = await response.json();
+      console.log('[Batch Runner Results]', results);
+
+      if (results?.outputs) {
+        setResults(results.outputs);
+        console.log('[Context Updated] Stored outputs in test case context.');
+      } else {
+        console.warn('⚠️ No outputs found in response.');
+      }
+
+      return results;
+    } catch (err) {
+      console.error('❌ Error running batch code:', err);
+    }
+  }
+
+  // Hook it up to the button
+  const handleRunClick = () => {
+    if (!code) {
+      alert('No code to run!');
+      return;
+    }
+    // runCode(language, code);
+    runBatchCode(
+      code,
+      testCases.map((t) => t.input),
+    );
+  };
 
   return (
     <AppBar
@@ -69,8 +130,11 @@ export default function CollabNavigationBar({
         {/* Sesssion Buttons */}
         <Stack direction="row" className="w-full justify-center " spacing={2}>
           <Tooltip title="Run code">
-            <IconButton className="text-[var(--foreground)]">
-              <PlayArrowOutlinedIcon className="text-4xl"></PlayArrowOutlinedIcon>
+            <IconButton
+              className="text-[var(--foreground)]"
+              onClick={handleRunClick} // ✅ calls your function
+            >
+              <PlayArrowOutlinedIcon className="text-4xl" />
             </IconButton>
           </Tooltip>
 
