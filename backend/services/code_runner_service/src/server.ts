@@ -159,52 +159,8 @@ if __name__ == "__main__":
   });
 });
 
-/**
- * Utility: run Python code once with given input
- */
-function runPythonOnce(code: string, input: string) {
-  return new Promise((resolve) => {
-    const args = [
-      'run',
-      '--rm',
-      '--network=none',
-      '--cpus=1',
-      '--memory=256m',
-      'python:3.11-alpine',
-      'sh',
-      '-c',
-      `echo "${escapeForShell(code)}" > /tmp/main.py && python3 /tmp/main.py`,
-    ];
-
-    const child = spawn('docker', args, { shell: false });
-    let stdout = '',
-      stderr = '';
-
-    child.stdin.write(input);
-    child.stdin.end();
-
-    const timeout = setTimeout(() => {
-      stderr += '\nTimeout: execution exceeded 3s.\n';
-      child.kill('SIGKILL');
-    }, 5000);
-
-    child.stdout.on('data', (d) => (stdout += d));
-    child.stderr.on('data', (d) => (stderr += d));
-
-    child.on('close', (exitCode) => {
-      clearTimeout(timeout);
-      resolve({
-        input,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-        exitCode,
-      });
-    });
-  });
-}
-
 function escapeForShell(input: string): string {
   return input.replace(/(["\\$`])/g, '\\$1');
 }
 
-app.listen(5000, () => console.log('✅ Python Runner ready on :5000'));
+app.listen(5000, () => console.log('Python Runner ready on :5000'));

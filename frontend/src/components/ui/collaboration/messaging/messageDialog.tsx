@@ -4,9 +4,16 @@ import React, { useEffect, useState } from 'react';
 import { useCollab } from '../CollabProvider';
 import { Stack, Typography, Box } from '@mui/material';
 
+interface ChatMessage {
+  id: string;
+  text: string;
+  user: string;
+  timestamp: number;
+}
+
 export const MessageDialogs = () => {
   const { messages, userId } = useCollab();
-  const [chatList, setChatList] = useState<any[]>([]);
+  const [chatList, setChatList] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
     if (!messages) return;
@@ -25,7 +32,7 @@ export const MessageDialogs = () => {
 
         return (
           <Box
-            key={idx}
+            key={msg.id ?? idx}
             display="flex"
             flexDirection="column"
             alignItems={isOwn ? 'flex-end' : 'flex-start'}

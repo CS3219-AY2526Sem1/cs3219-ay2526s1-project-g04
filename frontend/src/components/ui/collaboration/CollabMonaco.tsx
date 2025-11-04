@@ -17,6 +17,7 @@ import {
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import type { MonacoBinding } from 'y-monaco';
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
@@ -24,7 +25,7 @@ export default function CollabMonaco() {
   const { code, setCode } = useCodeContext();
   const { ydoc, provider } = useCollab();
   const yTextRef = useRef<Y.Text | null>(null);
-  const bindingRef = useRef<any>(null);
+  const bindingRef = useRef<MonacoBinding | null>(null);
 
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = React.useState(false);

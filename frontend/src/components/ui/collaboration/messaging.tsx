@@ -16,18 +16,32 @@ import { CollabProvider, useCollab } from './CollabProvider';
 import React from 'react';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 
+// 👇 awareness state type
+interface AwarenessUser {
+  id: string;
+  color?: string;
+  name?: string;
+}
+
+interface AwarenessState {
+  user?: AwarenessUser;
+  cursor?: { x: number; y: number };
+}
+
 const ChatHeader = () => {
   const { awareness, userId } = useCollab();
-  const [otherUser, setOtherUser] = React.useState<{ id: string } | null>(null);
+  const [otherUser, setOtherUser] = React.useState<AwarenessUser | null>(null);
 
   React.useEffect(() => {
     if (!awareness) return;
 
     const update = () => {
-      const states = Array.from(awareness.getStates().values());
+      const states = Array.from(
+        awareness.getStates().values(),
+      ) as AwarenessState[];
       const others = states
-        .map((s: any) => s.user)
-        .filter((u) => u && u.id !== userId);
+        .map((s) => s.user)
+        .filter((u): u is AwarenessUser => !!u && u.id !== userId);
       setOtherUser(others[0] || null);
     };
 
@@ -47,7 +61,7 @@ const ChatHeader = () => {
               color: '#8b5cf7',
             }}
           >
-            <PersonOutlineIcon sx={{ fontSize: 30 }} />{' '}
+            <PersonOutlineIcon sx={{ fontSize: 30 }} />
           </Avatar>
           <Typography className="font-semibold">
             {otherUser?.id
@@ -69,7 +83,7 @@ export const MessageBoard = () => {
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          overflow: 'hidden', // ✅ ensures internal scroll only
+          overflow: 'hidden',
         }}
       >
         <ChatHeader />

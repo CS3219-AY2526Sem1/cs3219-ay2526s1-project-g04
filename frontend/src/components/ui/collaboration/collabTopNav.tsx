@@ -60,7 +60,10 @@ export default function CollabNavigationBar({
     }
   }
 
-  async function runBatchCode(code: string, inputs: any[]) {
+  async function runBatchCode(
+    code: string,
+    inputs: (number | string | boolean | object)[],
+  ) {
     console.log('[Batch Runner Inputs]', inputs);
 
     try {

@@ -3,8 +3,14 @@
 import React, { createContext, useContext } from 'react';
 
 interface TestCase {
-  input: any[];
+  input: (number | string | boolean | object)[];
   expectedOutput: string;
+}
+
+interface ExecutionResult {
+  output: string;
+  passed: boolean;
+  error?: string;
 }
 
 interface CodeContextType {
@@ -13,8 +19,8 @@ interface CodeContextType {
   language: string;
   setLanguage: React.Dispatch<React.SetStateAction<string>>;
   testCases: TestCase[];
-  results: any[];
-  setResults: React.Dispatch<React.SetStateAction<any[]>>;
+  results: ExecutionResult[];
+  setResults: React.Dispatch<React.SetStateAction<ExecutionResult[]>>;
 }
 
 const CodeContext = createContext<CodeContextType | undefined>(undefined);
@@ -24,8 +30,7 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
     '// Collaborative Monaco with Yjs',
   );
   const [language, setLanguage] = React.useState<string>('python');
-
-  const [results, setResults] = React.useState<any[]>([]);
+  const [results, setResults] = React.useState<ExecutionResult[]>([]);
 
   const testCases: TestCase[] = [
     { input: [[2, 7, 11, 15], 9], expectedOutput: '[0, 1]' },
