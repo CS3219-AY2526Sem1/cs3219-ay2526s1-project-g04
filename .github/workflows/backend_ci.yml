@@ -10,7 +10,7 @@ defaults:
 
 jobs:
   
-  lint-collab:
+  lint-collab-service:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -18,7 +18,7 @@ jobs:
       - run: npm i
       - run: npm run lint -- services/collaboration_service/src
 
-  lint-user:
+  lint-user-service:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -26,7 +26,7 @@ jobs:
       - run: npm i
       - run: npm run lint -- services/user_service/src
 
-  lint-question:
+  lint-question-service:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -34,7 +34,7 @@ jobs:
       - run: npm i
       - run: npm run lint -- services/question_service/src
 
-  lint-matching:
+  lint-matching-service:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -43,8 +43,8 @@ jobs:
       - run: npm run lint -- services/matching_service/src
 
 
-  build-collab:
-    # needs: [lint-collab]
+  node-build-collab-service:
+    needs: [lint-collab-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -53,24 +53,24 @@ jobs:
       - run: cd shared/redis && npm i
       - run: cd services/collaboration_service && npm i && npm run build
 
-  build-user:
-    # needs: [lint-user]
+  node-build-user-service:
+    needs: [lint-user-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
       - run: cd services/user_service && npm i && npm run build
 
-  build-question:
-    # needs: [lint-question]
+  node-build-question-service:
+    needs: [lint-question-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
       - run: cd services/question_service && npm i && npm run build
 
-  build-matching:
-    # needs: [lint-matching]
+  node-build-matching-service:
+    needs: [lint-matching-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -79,8 +79,8 @@ jobs:
       - run: cd shared/redis && npm i
       - run: cd services/matching_service && npm i && npm run build
 
-  push-collab:
-    # needs: [build-collab]
+  docker-build-push-collab-service:
+    needs: [node-build-collab-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -97,8 +97,8 @@ jobs:
           tags: peerprep4/peerprep4:collaboration_service
           platforms: linux/amd64,linux/arm64
 
-  push-user:
-    # needs: [build-user]
+  docker-build-push-user-service:
+    needs: [node-build-user-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -115,8 +115,8 @@ jobs:
           tags: peerprep4/peerprep4:user_service
           platforms: linux/amd64,linux/arm64
 
-  push-question:
-    # needs: [build-question]
+  docker-build-push-question-service:
+    needs: [node-build-question-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -133,8 +133,8 @@ jobs:
           tags: peerprep4/peerprep4:question_service
           platforms: linux/amd64,linux/arm64
 
-  push-matching:
-    # needs: [build-matching]
+  docker-build-push-matching-service:
+    needs: [node-build-matching-service]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
