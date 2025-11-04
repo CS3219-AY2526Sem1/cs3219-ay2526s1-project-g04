@@ -28,7 +28,8 @@
     "react-markdown": "^10.1.0",
     "y-monaco": "^0.1.6",
     "y-websocket": "^3.0.0",
-    "yjs": "^13.6.27"
+    "yjs": "^13.6.27",
+    "y-protocols": "^1.0.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
