@@ -60,7 +60,7 @@ export function CollabProvider({ children }: { children: React.ReactNode }) {
     // setup Yjs doc & websocket provider
     const doc = new Y.Doc();
     const wsUrl =
-      process.env.NEXT_PUBLIC_COLLAB_SERVER_URL || 'ws://localhost:3000';
+      process.env.NEXT_PUBLIC_COLLAB_SERVER_URL || 'ws://localhost:3009';
 
     const wsProvider = new WebsocketProvider(
       wsUrl,

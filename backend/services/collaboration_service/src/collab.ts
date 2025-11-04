@@ -94,7 +94,7 @@ export class Collab {
       MESSAGE_TYPES.CollaborationService,
       JSON.stringify({
         type: 'matched',
-        matchedId: '123',
+        matchedId: '124',
       }),
     );
   }
