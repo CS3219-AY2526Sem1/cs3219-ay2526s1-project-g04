@@ -20,7 +20,7 @@
     "lib": ["ES2022"], // List of library files to be included in the compilation.
 
     /* ## Project Structure ## */
-    "rootDir": "./src", // Specify the root directory of input files.
+    "rootDirs": ["./src", "./prisma"],
 
     /* ## Other ## */
     "skipLibCheck": true // Skip type checking of declaration files (.d.ts) from dependencies.

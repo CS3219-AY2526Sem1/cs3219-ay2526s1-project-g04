@@ -1,7 +1,7 @@
 import { logger } from '../logger/logger.js';
 import type { QuestionSelectResponse } from './redis/types.js';
 
-const QUESTION_SERVICE_URL = 'http://localhost:3002'; // need to configure after deploying
+const QUESTION_SERVICE_URL = process.env['QUESTION_SERVICE_URL']; // need to configure after deploying
 
 export async function getQuestionId(
   matchingId: string,
