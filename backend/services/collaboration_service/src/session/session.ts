@@ -64,6 +64,7 @@ export class Session {
 
   public end(userId: string) {
     //TODO
+    console.log(userId);
   }
 
   public getId() {

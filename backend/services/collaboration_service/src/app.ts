@@ -4,7 +4,6 @@ import { PostgresPrisma } from './data/postgres/postgres.js';
 import { PostgresqlPersistence } from 'y-postgresql';
 import { error } from 'console';
 import { SessionManager } from './session/session_manager.js';
-import { CollabRedis } from './data/collab_redis.js';
 
 export const app = express();
 const db = PostgresPrisma.getInstance();

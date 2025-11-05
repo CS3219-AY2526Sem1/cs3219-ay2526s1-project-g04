@@ -13,6 +13,7 @@ export const WaitingSessionToBeCreatedPopUp = (p: props) => {
   const router = useRouter();
   const { sessionId } = p;
   useEffect(() => {
+    // eslint-disable-next-line prefer-const
     let intervalId: NodeJS.Timeout;
 
     const pollStatus = async () => {
