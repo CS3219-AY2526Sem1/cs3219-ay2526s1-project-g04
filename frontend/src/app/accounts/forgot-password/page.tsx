@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   AppBar,
@@ -53,6 +53,23 @@ export default function ForgotPasswordPage() {
     };
   }, [isCooldownActive]);
 
+  const passwordRequirements = useMemo(() => {
+    const hasMinLength = newPassword.length >= 8;
+    const hasCapital = /[A-Z]/.test(newPassword);
+    const hasNumber = /\d/.test(newPassword);
+    const hasSpecialChar = /[@$!%*?&]/.test(newPassword);
+    return [
+      { text: 'At least 8 characters', met: hasMinLength },
+      { text: 'At least one uppercase letter', met: hasCapital },
+      { text: 'At least one number', met: hasNumber },
+      { text: 'At least one special character (@$!%*?&)', met: hasSpecialChar },
+    ];
+  }, [newPassword]);
+
+  const isPasswordValid = passwordRequirements.every((req) => req.met);
+  const doPasswordsMatch =
+    newPassword === confirmPassword && newPassword !== '';
+
   const handleRequestOtp = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
@@ -77,8 +94,13 @@ export default function ForgotPasswordPage() {
     setError('');
     setSuccess('');
 
-    // Validate passwords match
-    if (newPassword !== confirmPassword) {
+    if (!isPasswordValid) {
+      setError('Password does not meet all requirements');
+      setIsLoading(false);
+      return;
+    }
+
+    if (!doPasswordsMatch) {
       setError('Passwords do not match');
       setIsLoading(false);
       return;
@@ -320,7 +342,22 @@ export default function ForgotPasswordPage() {
                     ),
                   }}
                 />
-
+                {newPassword && (
+                  <Box>
+                    {passwordRequirements.map((req) => (
+                      <Typography
+                        key={req.text}
+                        variant="caption"
+                        sx={{
+                          color: req.met ? 'green' : 'red',
+                          display: 'block',
+                        }}
+                      >
+                        {req.met ? '✓' : '✗'} {req.text}
+                      </Typography>
+                    ))}
+                  </Box>
+                )}
                 <TextField
                   label="Confirm New Password"
                   type={showConfirmPassword ? 'text' : 'password'}

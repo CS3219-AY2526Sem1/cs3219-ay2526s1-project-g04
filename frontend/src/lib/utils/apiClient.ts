@@ -1,6 +1,7 @@
 'use client';
 
 import { jwtDecode } from 'jwt-decode';
+import { refreshExpiredToken } from '@/services/userServiceApi';
 
 interface DecodedAccessToken {
   userId: number;
@@ -18,20 +19,9 @@ async function getNewAccessToken(): Promise<string | null> {
   }
 
   try {
-    const response = await fetch('http://localhost:3001/user/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: refreshToken }),
-    });
-
-    if (!response.ok) {
-      console.error('Refresh token failed');
-      return null;
-    }
-
-    const data = await response.json();
-    localStorage.setItem('accessToken', data.accessToken);
-    return data.accessToken;
+    const data = await refreshExpiredToken(refreshToken);
+    localStorage.setItem('accessToken', data.token);
+    return data.token;
   } catch (error) {
     console.error('Error refreshing token:', error);
     return null;
