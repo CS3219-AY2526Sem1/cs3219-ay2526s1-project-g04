@@ -2,10 +2,9 @@ import http from 'http';
 import { WebSocketServer } from 'ws';
 import { app } from './app.js';
 import type { Express } from 'express';
-import * as Y from 'yjs';
 import { CommunicationRedis } from './data/communication_redis.js';
 import { MessageListener } from './listener.js';
-import { CommunicationManager } from './session/communication_manager.js';
+import { CommunicationManager } from './communication_manager.js';
 
 export class Commmunication {
   public async start() {

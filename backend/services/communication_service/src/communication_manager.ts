@@ -1,4 +1,4 @@
-import { CommunicationRedis } from '../data/communication_redis.js';
+import { CommunicationRedis } from './data/communication_redis.js';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from '@y/websocket-server/utils';
 import * as Y from 'yjs';
@@ -9,6 +9,7 @@ export class CommunicationManager {
   private redis: CommunicationRedis;
   private wss: WebSocketServer;
   private sessionDict: Map<string, string>; // session id key, match id value
+  private docs: Map<string, Y.Doc>; // session id -> Y.doc
 
   constructor(redis: CommunicationRedis, wss: WebSocketServer) {
     this.redis = redis;
@@ -20,13 +21,27 @@ export class CommunicationManager {
     });
   }
 
-  public async createDocuments(sessionId: string) {
-    // const sessionId = await this.db.createSessionDataModel(...);
-    const communicationDoc = new Y.Doc();
-    const docName = sessionId.toString();
+  // Created when session is formed
+  public createDoc(sessionId: string) {
+    if (this.docs.has(sessionId)) {
+      console.log(`[Doc] already exists for session ${sessionId}`);
+      return this.docs.get(sessionId)!;
+    }
+
+    const doc = new Y.Doc();
+    doc.getArray('messages');
+    doc.getArray('strokes');
+
+    this.docs.set(sessionId, doc);
+    console.log(`[Doc] Created in-memory doc for session ${sessionId}`);
+    return doc;
   }
 
-  public destroyDocuments(sessionId: string) {
+  public destroyDoc(sessionId: string) {
+    if (this.docs.has(sessionId)) {
+      this.docs.delete(sessionId);
+      console.log(`[Doc] Destroyed doc for session ${sessionId}`);
+    }
     this.sessionDict.delete(sessionId);
   }
 
@@ -55,7 +70,9 @@ export class CommunicationManager {
       return;
     }
 
+    const doc = this.docs.get(sessionId);
     // Setup y-websocket
-    setupWSConnection(ws, req, { docName: sessionId });
+    setupWSConnection(ws, req, { doc, docName: sessionId });
+    console.log(`[WS] Connected user ${userId} to session ${sessionId}`);
   }
 }
