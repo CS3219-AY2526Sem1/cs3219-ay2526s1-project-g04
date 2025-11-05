@@ -38,6 +38,15 @@ import { fetchWithAuth } from '@/lib/utils/apiClient';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import {
+  getMyProfile,
+  requestEmailChange,
+  requestPasswordChange,
+  updateMyProfile,
+  updateMyProfilePicture,
+  verifyEmailChange,
+  verifyPasswordChange,
+} from '@/services/userServiceApi';
 
 interface UserProfile {
   username: string;
@@ -100,24 +109,7 @@ export default function Page() {
     }
 
     try {
-      const response = await fetchWithAuth(
-        'http://localhost:3001/user/me/profile',
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          setError('Session expired or invalid. Please log in again.');
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          router.push('/accounts/login');
-          return;
-        }
-        throw new Error('Failed to fetch profile');
-      }
-      const data: UserProfile = await response.json();
+      const data = await getMyProfile();
       setProfile(data);
       setEditData({
         username: data.username,
@@ -178,18 +170,7 @@ export default function Page() {
 
     if (Object.keys(textPayload).length > 0) {
       try {
-        const res = await fetchWithAuth(
-          'http://localhost:3001/user/me/profile',
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(textPayload),
-          },
-        );
-        if (!res.ok) throw new Error(await res.json().then((d) => d.message));
+        const data = await updateMyProfile(textPayload);
         textUpdated = true;
       } catch (err) {
         console.log(err);
@@ -203,25 +184,7 @@ export default function Page() {
       try {
         const formData = new FormData();
         formData.append('profilePicture', selectedFile);
-
-        // Use regular fetch for FormData to avoid Content-Type conflicts
-        const res = await fetch(
-          'http://localhost:3001/user/me/profile-picture',
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${token}`,
-              // Don't set Content-Type - let browser set it with boundary
-            },
-            body: formData,
-          },
-        );
-        if (!res.ok) {
-          const errorData = await res
-            .json()
-            .catch(() => ({ message: 'Upload failed' }));
-          throw new Error(errorData.message);
-        }
+        const data = await updateMyProfilePicture(formData);
         imageUpdated = true;
       } catch (err) {
         console.error('Image upload error:', err);
@@ -268,26 +231,10 @@ export default function Page() {
     }
 
     try {
-      const res = await fetchWithAuth(
-        'http://localhost:3001/user/me/email/request-otp',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            newEmail: emailChangeData.newEmail,
-            password: emailChangeData.password,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to send OTP');
-      }
-
+      const data = await requestEmailChange({
+        newEmail: emailChangeData.newEmail,
+        password: emailChangeData.password,
+      });
       setEmailChangeData((prev) => ({ ...prev, otpSent: true }));
       setEmailChangeSuccess(
         'OTP sent to your new email address. Please check your inbox.',
@@ -319,27 +266,11 @@ export default function Page() {
     }
 
     try {
-      const res = await fetchWithAuth(
-        'http://localhost:3001/user/me/email/verify-otp',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            newEmail: emailChangeData.newEmail,
-            password: emailChangeData.password,
-            otp: emailChangeData.otp,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to verify OTP');
-      }
-
+      const data = await verifyEmailChange({
+        newEmail: emailChangeData.newEmail,
+        password: emailChangeData.password,
+        otp: emailChangeData.otp,
+      });
       setEmailChangeSuccess(
         'Email updated successfully! Please use it for your next login.',
       );
@@ -386,25 +317,9 @@ export default function Page() {
     }
 
     try {
-      const res = await fetchWithAuth(
-        'http://localhost:3001/user/me/password/request-otp',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            oldPassword: passwordChangeData.oldPassword,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to send OTP');
-      }
-
+      const data = await requestPasswordChange({
+        oldPassword: passwordChangeData.oldPassword,
+      });
       setPasswordChangeData((prev) => ({ ...prev, otpSent: true }));
       setPasswordChangeSuccess(
         'OTP sent to your email address. Please check your inbox.',
@@ -476,27 +391,11 @@ export default function Page() {
     }
 
     try {
-      const res = await fetchWithAuth(
-        'http://localhost:3001/user/me/password/verify-otp',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            oldPassword: passwordChangeData.oldPassword,
-            newPassword: passwordChangeData.newPassword,
-            otp: passwordChangeData.otp,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to verify OTP');
-      }
-
+      const res = await verifyPasswordChange({
+        oldPassword: passwordChangeData.oldPassword,
+        newPassword: passwordChangeData.newPassword,
+        otp: passwordChangeData.otp,
+      });
       setPasswordChangeSuccess('Password updated successfully!');
       setPasswordChangeData({
         oldPassword: '',
@@ -942,8 +841,8 @@ export default function Page() {
                     Change Email Address
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#6B7280', mt: 1 }}>
-                    Update your email address. You&apos;ll need to enter your current
-                    password for security.
+                    Update your email address. You&apos;ll need to enter your
+                    current password for security.
                   </Typography>
                   <Divider sx={{ mt: 2 }} />
                 </Box>

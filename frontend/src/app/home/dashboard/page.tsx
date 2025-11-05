@@ -182,6 +182,7 @@ export default function DashboardPage() {
         return;
       }
       try {
+        console.log(token);
         const decodedToken = jwtDecode<UserJwtPayload>(token);
         setUser(decodedToken);
         currentUserId = decodedToken.userId;
@@ -224,7 +225,7 @@ export default function DashboardPage() {
           return {
             id: session.sessionId,
             createdAt: session.createdAt,
-            isSolved: session.isSolved, // --- ADDED ---
+            isSolved: session.isSolved,
             question: {
               title: question.title,
               difficulty: question.difficulty,
@@ -245,7 +246,6 @@ export default function DashboardPage() {
 
   // 2. Frontend Analytics Calculation
   const stats: AnalyticsStats = useMemo(() => {
-    // --- UPDATED: Only filter for solved sessions ---
     const solvedSessions = history.filter((session) => session.isSolved);
 
     const totalSolved = solvedSessions.length;
@@ -254,7 +254,6 @@ export default function DashboardPage() {
     let hard = 0;
     const categories: Record<string, number> = {};
 
-    // --- UPDATED: Loop over SOLVED sessions only ---
     for (const session of solvedSessions) {
       const difficulty = session.question.difficulty.toLowerCase();
       if (difficulty === 'easy') easy++;
