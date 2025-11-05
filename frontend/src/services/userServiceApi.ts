@@ -2,7 +2,7 @@ import * as Types from '@/lib/user-service';
 import { fetchWithAuth } from '@/lib/utils/apiClient';
 import { UpdatePictureResponse } from '@/lib/user-service';
 const USER_SERVICE_URL = process.env.NEXT_PUBLIC_API_USER_SERVICE!;
-// const USER_SERVICE_URL = 'http://localhost:3001';
+// const USER_SERVICE_URL = 'http://localhost:3005';
 
 /**
  * A utility function to handle API responses and throw errors

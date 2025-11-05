@@ -1247,4 +1247,6 @@ app.get('/user/utility/list', async (req, res) => {
 /**
  * port
  */
-app.listen(PORT, () => {});
+app.listen(PORT, () => {
+  console.log(PORT);
+});
