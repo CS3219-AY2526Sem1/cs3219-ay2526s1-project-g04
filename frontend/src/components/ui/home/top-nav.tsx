@@ -22,6 +22,7 @@ import {
   NotificationsOutlined,
   AccountCircleOutlined,
 } from '@mui/icons-material';
+import { logout } from '@/services/userServiceApi';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -93,17 +94,7 @@ export default function TopNavigationBar({
     }
 
     try {
-      const response = await fetch('http://localhost:3001/user/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        console.error('Backend logout failed:', await response.json());
-      }
+      const data = await logout();
     } catch (error) {
       console.error('Error during logout API call:', error);
     } finally {
