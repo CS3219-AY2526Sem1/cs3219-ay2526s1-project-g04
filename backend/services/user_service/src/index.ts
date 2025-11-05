@@ -16,7 +16,7 @@ console.log('DATABASE_URL:', process.env.DATABASE_URL);
 
 const app = express();
 const prisma = new PrismaClient();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3005;
 const OTP_COOLDOWN_SECONDS = 60;
 const s3Client = new S3Client({
   region: process.env.AWS_REGION,

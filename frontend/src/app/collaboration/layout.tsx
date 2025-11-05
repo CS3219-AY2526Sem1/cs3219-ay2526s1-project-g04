@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import CollabNavigationBar from '@/components/ui/collaboration/collabTopNav';
+import { CodeProvider } from '@/components/ui/collaboration/CodeContext';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,7 +11,7 @@ interface LayoutProps {
 export default function HomeLayout({ children }: LayoutProps) {
   const [appBarHeight, setAppBarHeight] = React.useState(0);
   return (
-    <>
+    <CodeProvider>
       <CollabNavigationBar onHeightChange={setAppBarHeight} />
 
       <main
@@ -22,6 +23,6 @@ export default function HomeLayout({ children }: LayoutProps) {
       >
         {children}
       </main>
-    </>
+    </CodeProvider>
   );
 }

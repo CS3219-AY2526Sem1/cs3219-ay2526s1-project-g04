@@ -30,6 +30,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // For "Solved" s
 import CancelIcon from '@mui/icons-material/Cancel';
 import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For "Attempted" status
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
+import { WaitingSessionToBeCreatedPopUp } from '@/components/ui/matching/modelwaitiingtoredirect';
 
 // --- Mock Data (Replace with your API data) ---
 
@@ -167,6 +168,9 @@ const getDifficultyHex = (difficultyName: string) => {
 
 export default function DashboardPage() {
   const [showMatching, setShowMatching] = React.useState(false);
+  const [showSessionBeingCreated, setShowSessionBeingCreated] =
+    React.useState(true);
+  const [sessionId, setSessionId] = React.useState<string | null>('40');
   const [user, setUser] = useState<UserJwtPayload | null>(null);
   const [history, setHistory] = useState<EnrichedSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -288,7 +292,6 @@ export default function DashboardPage() {
   return (
     <Box
       sx={{
-        pt: 0,
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
@@ -653,7 +656,18 @@ export default function DashboardPage() {
         </Box>
       </Container>
 
-      {showMatching && <MatchingPopUp setShowMatching={setShowMatching} />}
+      {showMatching && (
+        <MatchingPopUp
+          setSessionId={setSessionId}
+          setShowMatching={setShowMatching}
+        />
+      )}
+      {/** show wait for 10mins being matched pop */}
+
+      {/** show you are being matched, wait for session to be ctread*/}
+      {/* {showSessionBeingCreated && sessionId && (
+        <WaitingSessionToBeCreatedPopUp sessionId={sessionId} />
+      )} */}
     </Box>
   );
 }

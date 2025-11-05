@@ -1,6 +1,6 @@
 import * as Types from '@/lib/matching-service';
 
-const MATCHING_URL = process.env.NEXT_PUBLIC_API_MATCHING!;
+const MATCHING_URL = process.env.NEXT_PUBLIC_API_MATCHING_SERVICE!;
 
 /**
  * POST /match/request

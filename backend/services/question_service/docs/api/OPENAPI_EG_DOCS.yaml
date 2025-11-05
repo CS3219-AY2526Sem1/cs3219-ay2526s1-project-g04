@@ -12,7 +12,7 @@ info:
       - attachments stored in S3, surfaced through presigned/signed URLs
       - difficulty, topics, version, status
       - execution resources:
-        - starter code (currently python only)
+        - starter code (currently python only, as a string)
         - test cases (sample vs hidden)
 
     - Topics are managed separately via `/admin/topics` and referenced by slug.
@@ -151,12 +151,16 @@ components:
           type: string
           example: arrays
           pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        display:
+          type: string
+          example: Arrays
         color_hex:
           type: string
           example: '#3b82f6'
           pattern: '^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$'
       required:
         - slug
+        - display
         - color_hex
 
     TopicCreate:
@@ -225,10 +229,10 @@ components:
         visibility:
           type: string
           enum: [sample, hidden]
-        input:
+        input_data:
           type: string
           example: '[[1,2],[3,4]]'
-        expected:
+        expected_output:
           type: string
           example: '[[3,1],[4,2]]'
         ordinal:
@@ -236,8 +240,8 @@ components:
           example: 0
       required:
         - visibility
-        - input
-        - expected
+        - input_data
+        - expected_output
         - ordinal
 
     TestCasePublicRead:
@@ -247,31 +251,19 @@ components:
         name:
           type: string
           example: case-0
-        input:
+        input_data:
           type: string
           example: '[[1,2],[3,4]]'
-        expected:
+        expected_output:
           type: string
           example: '[[3,1],[4,2]]'
         ordinal:
           type: integer
           example: 0
       required:
-        - input
-        - expected
+        - input_data
+        - expected_output
         - ordinal
-
-    StarterCodeBundle:
-      type: object
-      description: Starter code snippets keyed by language. Currently python-only.
-      additionalProperties: false
-      properties:
-        python:
-          type: string
-          example: |
-            def solve(nums):
-                # TODO
-                pass
 
     QuestionBase:
       type: object
@@ -410,10 +402,10 @@ components:
     QuestionUpdate:
       type: object
       description: |
-        Partial update to an existing draft.
+        Partial update to an existing question (any status).
 
         Behavior:
-        - Any provided simple fields (title, difficulty, etc.) are updated.
+        - Any provided simple fields (title, difficulty, status, etc.) are updated.
         - If `attachments` includes new `staging/...` keys, those are finalized under
           `questions/{id}/...`, and if `body_md` is also provided, its `pp://staging/...`
           refs are rewritten to the finalized keys.
@@ -421,6 +413,11 @@ components:
         - If `test_cases` is provided, ALL existing test cases are replaced by the new list.
         - If `topics` is provided, the entire topic set is replaced.
           All slugs must already exist in `/admin/topics`.
+
+        Notes:
+        - Setting `status` directly changes live state without a version bump.
+        - Use **POST `/admin/questions/{id}/publish`** to publish with versioning + snapshot.
+          Patching `status: published` directly is **not** the recommended way to publish.
       properties:
         title:
           type: string
@@ -428,6 +425,8 @@ components:
           type: string
         difficulty:
           $ref: '#/components/schemas/Difficulty'
+        status:
+          $ref: '#/components/schemas/Status'
         topics:
           type: array
           description: |
@@ -475,7 +474,7 @@ components:
             - question metadata
             - sanitized body_html with signed URLs
             - ALL test cases (including hidden)
-            - starter_code
+            - starter_code (string)
           properties:
             body_html:
               type: string
@@ -483,7 +482,7 @@ components:
             starter_code:
               type: string
               nullable: true
-              description: Pulled from `question_python_starter`.
+              description: Pulled from `question_python_starter` (Python string).
             test_cases:
               type: array
               description: All test cases, including `hidden`.
@@ -499,7 +498,7 @@ components:
           description: |
             Safe view for published questions:
             - sanitized `body_html`
-            - starter_code
+            - starter_code (string)
             - ONLY sample (public) test cases
           properties:
             body_html:
@@ -509,7 +508,7 @@ components:
             starter_code:
               type: string
               nullable: true
-              description: Starter code exposed to candidates.
+              description: Starter code exposed to candidates (Python string).
             test_cases:
               type: array
               description: |
@@ -565,17 +564,14 @@ components:
           type: string
           example: rotate-image-in-place
         starter_code:
-          type: object
+          type: string
+          nullable: true
           description: |
-            Map of language -> starter code.
-            Currently { python: string } or {}.
-          additionalProperties:
-            type: string
-          example:
-            python: |
-              def rotate_image(matrix):
-                  # TODO
-                  pass
+            Starter code (Python string). May be null if not provided.
+          example: |
+            def rotate_image(matrix):
+                # TODO
+                pass
         test_cases:
           type: array
           description: SAMPLE test cases only.
@@ -588,10 +584,10 @@ components:
               visibility:
                 type: string
                 enum: [sample]
-              input:
+              input_data:
                 type: string
                 example: '[[1,2],[3,4]]'
-              expected:
+              expected_output:
                 type: string
                 example: '[[3,1],[4,2]]'
               ordinal:
@@ -599,8 +595,8 @@ components:
                 example: 0
             required:
               - visibility
-              - input
-              - expected
+              - input_data
+              - expected_output
               - ordinal
         updated_at:
           type: string
@@ -623,12 +619,9 @@ components:
         status:
           $ref: '#/components/schemas/Status'
         starter_code:
-          type: object
-          description: |
-            Map of language -> starter code.
-            Currently { python: string } or {}.
-          additionalProperties:
-            type: string
+          type: string
+          nullable: true
+          description: Starter code (Python string). May be null if not provided.
         test_cases:
           type: array
           description: |
@@ -642,16 +635,16 @@ components:
               visibility:
                 type: string
                 enum: [sample, hidden]
-              input:
+              input_data:
                 type: string
-              expected:
+              expected_output:
                 type: string
               ordinal:
                 type: integer
             required:
               - visibility
-              - input
-              - expected
+              - input_data
+              - expected_output
               - ordinal
         updated_at:
           type: string
@@ -1093,7 +1086,7 @@ paths:
         - question metadata
         - sanitized `body_html` with signed URLs
         - ALL test cases (including hidden)
-        - starter_code
+        - starter_code (string)
       parameters:
         - name: id
           in: path
@@ -1121,14 +1114,13 @@ paths:
         - admin
 
     patch:
-      tags:
-        - Admin
-      summary: Update an existing draft
+      tags: [Admin]
+      summary: Update an existing question (any status)
       description: |
         Partial update.
 
         Behavior:
-        - Any provided simple fields (title, difficulty, etc.) are updated.
+        - Any provided simple fields (`title`, `difficulty`, `status`, etc.) are updated.
         - If `attachments` includes new `staging/...` keys, those are finalized
           under `questions/{id}/...`, and if `body_md` is provided,
           its `pp://staging/...` refs are rewritten.
@@ -1137,13 +1129,14 @@ paths:
         - If `topics` is provided, the entire topic set is replaced
           (all slugs must already exist via `/admin/topics`).
 
-        Returns the updated admin view, including hidden tests.
+        ⚠️ Publishing:
+        - To **publish** with a version bump and snapshot, call
+          **POST `/admin/questions/{id}/publish`**.
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -1152,23 +1145,20 @@ paths:
               $ref: '#/components/schemas/QuestionUpdate'
       responses:
         '200':
-          description: Updated draft
+          description: Updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionAdminRead'
         '400':
-          description: Validation error (e.g. unknown_topics)
+          description: Validation error (e.g. topics_not_found)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '404':
-          description: Not found
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
       security:
         - bearerAuth: []
       x-roles:
@@ -1214,11 +1204,10 @@ paths:
         - Admin
       summary: Publish the current head
       description: |
-        Takes the current question (draft or published) and:
+        Promotes the current question to **published** from **draft** or **archived**:
         - bumps `version`
         - sets `status = published`
         - writes an immutable snapshot into `question_versions`
-        - emits a `question.published` event
 
         Returns the updated, now-published question
         (same shape as QuestionAdminRead).
@@ -1255,7 +1244,7 @@ paths:
       summary: Get full execution resources for a question (any status)
       description: |
         Returns the internal runtime bundle for a question:
-        - starter code
+        - starter code (string)
         - ALL test cases, including hidden
         - status
 
@@ -1404,7 +1393,7 @@ paths:
         - published question metadata
         - sanitized `body_html` (with signed image URLs)
         - public-safe execution bundle:
-          - `starter_code`
+          - `starter_code` (string)
           - `test_cases` (SAMPLE ONLY; hidden cases are not included)
 
         Returns 404 if the question is not `published`.
@@ -1437,7 +1426,7 @@ paths:
       summary: Get execution resources for a published question
       description: |
         Returns the runtime bundle for a published question:
-        - starter code (per language, currently python)
+        - starter code (string)
         - SAMPLE test cases only (no hidden cases)
 
         If the question does not exist or is not published, returns 404.

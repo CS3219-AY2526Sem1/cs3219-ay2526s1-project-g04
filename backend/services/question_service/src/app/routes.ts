@@ -24,6 +24,7 @@ if (NODE_ENV === 'development' || NODE_ENV === 'test') {
 }
 
 // Public read
+r.get('/questions/batch', QuestionController.getBatchById);
 r.get('/questions/topics', TopicController.listPublished);
 r.get(
   '/questions/:id/resources',

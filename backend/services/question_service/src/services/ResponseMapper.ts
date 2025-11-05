@@ -13,6 +13,7 @@ export interface QuestionRecordFromRepo {
   question_topics: Array<{
     topics: {
       slug: string;
+      display: string;
       color_hex: string;
     };
   }>;
@@ -25,6 +26,7 @@ export interface PublicQuestionView {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   topics: Array<{
     slug: string;
+    display: string;
     color_hex: string;
   }>;
   attachments: Array<{
@@ -52,6 +54,7 @@ export function toPublicQuestion(args: {
   const topics = Array.isArray(row.question_topics)
     ? row.question_topics.map((qt) => ({
         slug: qt.topics.slug,
+        display: qt.topics.display,
         color_hex: qt.topics.color_hex,
       }))
     : [];

@@ -49,3 +49,32 @@ export async function listPublished(opts: {
     }),
   );
 }
+
+export async function getPublishedBatch(ids: string[]) {
+  // pull raw rows from db
+  const rows = await Repo.getPublishedManyById(ids);
+
+  const enriched = await Promise.all(
+    rows.map(async (q) => {
+      const attachments = (q.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(q.body_md, attachments);
+
+      return toPublicQuestion({
+        row: q as QuestionRecordFromRepo,
+        body_html,
+      });
+    }),
+  );
+
+  // keep the order consistent with caller's ids[]
+  const orderIndex = new Map<string, number>();
+  ids.forEach((id, i) => orderIndex.set(id, i));
+
+  enriched.sort((a, b) => {
+    const ai = orderIndex.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+    const bi = orderIndex.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+    return ai - bi;
+  });
+
+  return enriched;
+}

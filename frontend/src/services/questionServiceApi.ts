@@ -1,7 +1,7 @@
 import * as Types from '@/lib/question-service';
 
-const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_API_QUESTION_SERVICE!;
-// const QUESTION_SERVICE_URL = 'http://localhost:3001';
+// const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_API_QUESTION_SERVICE!;
+const QUESTION_SERVICE_URL = 'http://localhost:3008';
 
 // get all topics + color hex assigned to each topic
 export async function getTopics(): Promise<Types.TopicList> {
@@ -19,8 +19,36 @@ export async function getTopics(): Promise<Types.TopicList> {
   } catch (err) {
     console.error('Error fetching from /topics:', err);
     return {
-      page: 0,
-      page_size: 0,
+      total: 0,
+      items: [] as Types.Topic[],
+    };
+  }
+}
+
+// GET questions/topics
+// filters for topics based on difficulty spcified from the list of published questions
+export async function getTopicbyDifficulty(
+  difficulty: string,
+): Promise<Types.TopicList> {
+  try {
+    const query = new URLSearchParams({
+      difficulty: difficulty,
+    });
+
+    const url = `${QUESTION_SERVICE_URL}/questions/topics?${query.toString}`;
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      throw new Error(
+        `Failed to fetch from /questions/topics: ${res.status} ${res.text}`,
+      );
+    }
+
+    const data: Types.TopicList = await res.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching /questions/topics: ', error);
+    return {
       total: 0,
       items: [] as Types.Topic[],
     };
