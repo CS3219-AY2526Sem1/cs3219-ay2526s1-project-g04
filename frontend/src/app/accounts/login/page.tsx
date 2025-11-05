@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 import { VerifyOtpForm } from '@/components/ui/accounts/VerifyOtp';
+import { login, resendOtp, verifyEmail } from '@/services/userServiceApi';
 
 const OTP_COOLDOWN_SECONDS = 60;
 
@@ -51,27 +52,10 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/user/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-
-      if (response.ok) {
-        localStorage.setItem('accessToken', data.token);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        router.push('/home/dashboard');
-      } else if (response.status === 403) {
-        setError('');
-        setResendMessage(data.message || 'A new OTP has been sent.');
-        setFormStep('verifyOtp');
-        setCooldownSeconds(OTP_COOLDOWN_SECONDS);
-      } else if (response.status === 429) {
-        setError(data.message || 'Too many attempts. Please wait.');
-      } else {
-        setError(data.message || 'Login failed.');
-      }
+      const data = await login({ email, password });
+      localStorage.setItem('accessToken', data.token);
+      localStorage.setItem('refreshToken', data.refreshToken);
+      router.push('/home/dashboard');
     } catch (err) {
       console.log(err);
       setError('Failed to connect to the server.');
@@ -87,23 +71,10 @@ export default function LoginPage() {
       setResendMessage('');
 
       try {
-        const response = await fetch(
-          'http://localhost:3001/user/auth/verify-email',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp: submittedOtp }),
-          },
-        );
-        const data = await response.json();
-
-        if (response.ok) {
-          localStorage.setItem('accessToken', data.accessToken);
-          localStorage.setItem('refreshToken', data.refreshToken);
-          router.push('/home/dashboard');
-        } else {
-          setError(data.message || 'Verification failed.');
-        }
+        const data = await verifyEmail({ email, otp: submittedOtp });
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('refreshToken', data.refreshToken);
+        router.push('/home/dashboard');
       } catch (err) {
         console.log(err);
         setError('Failed to connect to the server.');
@@ -121,22 +92,8 @@ export default function LoginPage() {
     setCooldownSeconds(OTP_COOLDOWN_SECONDS);
 
     try {
-      const response = await fetch(
-        'http://localhost:3001/user/auth/resend-otp',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        },
-      );
-      const data = await response.json();
-
-      if (response.ok) {
-        setResendMessage('A new OTP has been sent.');
-      } else {
-        setError(data.message || 'Failed to resend OTP.');
-        setCooldownSeconds(0);
-      }
+      const data = await resendOtp(email);
+      setResendMessage('A new OTP has been sent.');
     } catch (err) {
       console.log(err);
       setError('Failed to connect to the server.');

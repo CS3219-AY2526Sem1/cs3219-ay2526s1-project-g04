@@ -18,6 +18,10 @@ import {
 } from '@mui/material';
 import { Visibility, VisibilityOff, ArrowBack } from '@mui/icons-material';
 import { openSans } from '@/styles/fonts';
+import {
+  requestForgotPassword,
+  resetPassword,
+} from '@/services/userServiceApi';
 
 const OTP_COOLDOWN_SECONDS = 60;
 
@@ -56,24 +60,10 @@ export default function ForgotPasswordPage() {
     setSuccess('');
 
     try {
-      const response = await fetch(
-        'http://localhost:3001/user/auth/forgot-password',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(data.message);
-        setStep('otp');
-        setCooldownSeconds(OTP_COOLDOWN_SECONDS);
-      } else {
-        setError(data.message || 'Failed to send reset code');
-      }
+      const data = await requestForgotPassword({ email });
+      setSuccess(data.message);
+      setStep('otp');
+      setCooldownSeconds(OTP_COOLDOWN_SECONDS);
     } catch (error) {
       setError('Network error. Please try again.');
     } finally {
@@ -95,23 +85,9 @@ export default function ForgotPasswordPage() {
     }
 
     try {
-      const response = await fetch(
-        'http://localhost:3001/user/auth/reset-password',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, otp, newPassword }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(data.message);
-        setStep('success');
-      } else {
-        setError(data.message || 'Failed to reset password');
-      }
+      const data = await resetPassword({ email, otp, newPassword });
+      setSuccess(data.message);
+      setStep('success');
     } catch (error) {
       setError('Network error. Please try again.');
     } finally {
@@ -127,23 +103,9 @@ export default function ForgotPasswordPage() {
     setSuccess('');
 
     try {
-      const response = await fetch(
-        'http://localhost:3001/user/auth/forgot-password',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess('Reset code sent again!');
-        setCooldownSeconds(OTP_COOLDOWN_SECONDS);
-      } else {
-        setError(data.message || 'Failed to resend reset code');
-      }
+      const data = await requestForgotPassword({ email });
+      setSuccess('Reset code sent again!');
+      setCooldownSeconds(OTP_COOLDOWN_SECONDS);
     } catch (error) {
       setError('Network error. Please try again.');
     } finally {

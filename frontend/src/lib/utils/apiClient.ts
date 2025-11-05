@@ -38,29 +38,25 @@ async function getNewAccessToken(): Promise<string | null> {
   }
 }
 
-// This is your new "fetch" function that all components will use
 export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
   let token = localStorage.getItem('accessToken');
 
   // 1. Check if token exists and is expired
   if (token) {
     try {
-      // --- FIX IS HERE ---
-      // Both decode and check happen *inside* the try block
       const decoded = jwtDecode<DecodedAccessToken>(token);
 
-      // Check if 'exp' exists and if the token is expired
       if (decoded && decoded.exp * 1000 < Date.now()) {
         console.log('Access token expired, refreshing...');
         token = await getNewAccessToken();
       }
     } catch (error) {
-      // This catches malformed tokens
       console.error('Invalid token, refreshing...', error);
       token = await getNewAccessToken();
     }
   }
 
+  // 2. If no token after all checks, log out
   if (!token) {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -68,27 +64,29 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
     throw new Error('Session expired. Please log in again.');
   }
 
+  const headers = new Headers(options.headers || {});
+  headers.set('Authorization', `Bearer ${token}`);
+
+  if (!(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   let response = await fetch(url, {
     ...options,
-    headers: {
-      ...options.headers,
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: headers,
   });
 
+  // check for 403/401 and attempt refresh
   if (response.status === 403 || response.status === 401) {
     console.log('Token was rejected by server, attempting refresh...');
     const newToken = await getNewAccessToken();
 
     if (newToken) {
+      headers.set('Authorization', `Bearer ${newToken}`);
+
       response = await fetch(url, {
         ...options,
-        headers: {
-          ...options.headers,
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${newToken}`,
-        },
+        headers: headers,
       });
     } else {
       localStorage.removeItem('accessToken');
