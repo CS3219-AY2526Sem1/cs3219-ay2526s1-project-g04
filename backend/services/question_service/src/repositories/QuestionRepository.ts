@@ -37,26 +37,50 @@ type IncomingTestCase = {
   ordinal?: number;
 };
 
+/** Renumbers to contiguous ascending ordinals (1..n).
+ *  Why: prevents gaps/dupes from client payloads. */
+function sanitizeAndRenumberTestCases(
+  casesInput: IncomingTestCase[],
+): Array<IncomingTestCase & { ordinal: number }> {
+  const decorated = casesInput.map((tc, idx) => {
+    const validInt =
+      typeof tc.ordinal === 'number' &&
+      Number.isFinite(tc.ordinal) &&
+      Math.floor(tc.ordinal) === tc.ordinal &&
+      tc.ordinal > 0;
+    const sortKey = validInt
+      ? (tc.ordinal as number)
+      : Number.POSITIVE_INFINITY;
+    return { tc, idx, sortKey };
+  });
+
+  decorated.sort((a, b) =>
+    a.sortKey !== b.sortKey ? a.sortKey - b.sortKey : a.idx - b.idx,
+  );
+
+  return decorated.map((item, i) => ({ ...item.tc, ordinal: i + 1 }));
+}
+
 async function replaceTestCases(
   questionId: string,
   casesInput: IncomingTestCase[] | undefined,
 ) {
-  if (casesInput === undefined) return; // not provided -> dont edit
+  if (casesInput === undefined) return;
 
-  // when we update test cases: wipe all rows, then bulk insert new list (if any)
   await prisma.question_test_cases.deleteMany({
     where: { question_id: questionId },
   });
-
   if (!casesInput.length) return;
 
+  const normalized = sanitizeAndRenumberTestCases(casesInput);
+
   await prisma.question_test_cases.createMany({
-    data: casesInput.map((tc, idx) => ({
+    data: normalized.map((tc) => ({
       question_id: questionId,
       visibility: tc.visibility,
       input_data: tc.input_data,
       expected_output: tc.expected_output,
-      ordinal: tc.ordinal ?? idx,
+      ordinal: tc.ordinal, // always 1..n
     })),
   });
 }
@@ -128,7 +152,7 @@ export async function listPublished(opts: {
   const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
   const offset = (page - 1) * page_size;
 
-  // simple filters (no full-text search case)
+  // ============== Fast path: no FTS needed ==============
   if (!opts.q && !opts.topics?.length) {
     return prisma.questions.findMany({
       where: {
@@ -163,6 +187,97 @@ export async function listPublished(opts: {
     });
   }
 
+  //  Full-Text Search path (q present)
+  if (opts.q) {
+    type Row = {
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      attachments: unknown;
+      created_at: Date;
+      updated_at: Date;
+      question_topics: Array<{
+        topics: { slug: string; display: string; color_hex: string };
+      }>;
+    };
+
+    // Dynamic SQL parts
+    const whereClauses: string[] = [
+      `q.status = 'published'`,
+      `q.tsv_en @@ websearch_to_tsquery('english', $1)`,
+    ];
+    const params: unknown[] = [opts.q]; // $1
+
+    let paramIdx = params.length + 1; // next parameter index
+
+    if (opts.difficulty) {
+      whereClauses.push(`q.difficulty = $${paramIdx++}`);
+      params.push(opts.difficulty);
+    }
+
+    if (opts.topics?.length) {
+      // Filter: at least one topic matches
+      whereClauses.push(
+        `EXISTS (SELECT 1 FROM question_topics qt2 WHERE qt2.question_id = q.id AND qt2.topic_slug = ANY($${paramIdx++}::text[]))`,
+      );
+      params.push(opts.topics);
+    }
+
+    // Pagination params
+    const limitIdx = paramIdx++;
+    const offsetIdx = paramIdx++;
+    params.push(page_size, offset);
+
+    const sql = `
+      WITH qmatch AS (
+        SELECT
+          q.*,
+          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank
+        FROM questions q
+        WHERE ${whereClauses.join(' AND ')}
+      )
+      SELECT
+        qm.id,
+        qm.title,
+        qm.body_md,
+        qm.difficulty,
+        qm.status,
+        qm.version,
+        qm.attachments,
+        qm.created_at,
+        qm.updated_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'topics', json_build_object(
+                'slug', t.slug,
+                'display', t.display,
+                'color_hex', t.color_hex
+              )
+            )
+          ) FILTER (WHERE t.slug IS NOT NULL),
+          '[]'::json
+        ) AS question_topics
+      FROM qmatch qm
+      LEFT JOIN question_topics qt ON qt.question_id = qm.id
+      LEFT JOIN topics t ON t.slug = qt.topic_slug
+      GROUP BY
+        qm.id, qm.title, qm.body_md, qm.difficulty, qm.status, qm.version, qm.attachments, qm.created_at, qm.updated_at, qm.rank
+      ORDER BY
+        qm.rank DESC,
+        qm.updated_at DESC
+      LIMIT $${limitIdx}
+      OFFSET $${offsetIdx};
+    `;
+
+    const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+    return rows;
+  }
+
+  // topics-only filter
   return prisma.questions.findMany({
     where: {
       status: 'published',
@@ -176,7 +291,6 @@ export async function listPublished(opts: {
             },
           }
         : {}),
-      // TODO: q full-text search, hook up `tsv_en` + raw query here
     },
     orderBy: { updated_at: 'desc' },
     skip: offset,
@@ -216,10 +330,96 @@ export async function listAll(opts: {
   const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
   const offset = (page - 1) * page_size;
 
+  // ========= FTS path when q is present =========
+  if (opts.q) {
+    type Row = {
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      attachments: unknown;
+      created_at: Date;
+      updated_at: Date;
+      question_topics: Array<{
+        topics: { slug: string; display?: string; color_hex: string };
+      }>;
+    };
+
+    const whereClauses: string[] = [
+      `q.tsv_en @@ websearch_to_tsquery('english', $1)`,
+    ];
+    const params: unknown[] = [opts.q]; // $1
+    let i = 2;
+
+    if (opts.difficulty) {
+      whereClauses.push(`q.difficulty = $${i}`);
+      params.push(opts.difficulty);
+      i += 1;
+    }
+
+    if (opts.topics?.length) {
+      whereClauses.push(
+        `EXISTS (SELECT 1 FROM question_topics qt2 WHERE qt2.question_id = q.id AND qt2.topic_slug = ANY($${i}::text[]))`,
+      );
+      params.push(opts.topics);
+      i += 1;
+    }
+
+    const limitIdx = i++;
+    const offsetIdx = i++;
+    params.push(page_size, offset);
+
+    const sql = `
+      WITH qmatch AS (
+        SELECT
+          q.*,
+          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank
+        FROM questions q
+        WHERE ${whereClauses.join(' AND ')}
+      )
+      SELECT
+        qm.id,
+        qm.title,
+        qm.body_md,
+        qm.difficulty,
+        qm.status,
+        qm.version,
+        qm.attachments,
+        qm.created_at,
+        qm.updated_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'topics', json_build_object(
+                'slug', t.slug,
+                'display', t.display,
+                'color_hex', t.color_hex
+              )
+            )
+          ) FILTER (WHERE t.slug IS NOT NULL),
+          '[]'::json
+        ) AS question_topics
+      FROM qmatch qm
+      LEFT JOIN question_topics qt ON qt.question_id = qm.id
+      LEFT JOIN topics t ON t.slug = qt.topic_slug
+      GROUP BY
+        qm.id, qm.title, qm.body_md, qm.difficulty, qm.status, qm.version, qm.attachments, qm.created_at, qm.updated_at, qm.rank
+      ORDER BY
+        qm.rank DESC,
+        qm.updated_at DESC
+      LIMIT $${limitIdx}
+      OFFSET $${offsetIdx};
+    `;
+
+    const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+    return rows;
+  }
+
+  // ========= No q: keep Prisma path (topics/difficulty filters only) =========
   const where: Prisma.questionsWhereInput = {
     ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
-
-    // topics filter (if provided)
     ...(opts.topics?.length
       ? {
           question_topics: {
@@ -227,16 +427,6 @@ export async function listAll(opts: {
               topic_slug: { in: opts.topics },
             },
           },
-        }
-      : {}),
-
-    // q filter (very naive for now: match title OR body_md contains substring, case-insensitive)
-    ...(opts.q
-      ? {
-          OR: [
-            { title: { contains: opts.q, mode: 'insensitive' } },
-            { body_md: { contains: opts.q, mode: 'insensitive' } },
-          ],
         }
       : {}),
   };
@@ -341,7 +531,7 @@ export async function createDraftWithResources(q: {
   return created;
 }
 
-export async function updateDraft(
+export async function update(
   id: string,
   patch: Omit<Prisma.questionsUpdateInput, 'id'>,
 ) {
@@ -358,12 +548,13 @@ export async function updateDraft(
   }
 }
 
-export async function updateDraftWithResources(
+export async function updateWithResources(
   id: string,
   patch: {
     title?: string;
     body_md?: string;
     difficulty?: 'Easy' | 'Medium' | 'Hard';
+    status?: 'draft' | 'published' | 'archived';
     topics?: string[];
     attachments?: AttachmentInput[];
     starter_code?: string;
@@ -374,6 +565,7 @@ export async function updateDraftWithResources(
   const data: Prisma.questionsUpdateInput = {};
   if (patch.title !== undefined) data.title = patch.title;
   if (patch.body_md !== undefined) data.body_md = patch.body_md;
+  if (patch.status !== undefined) data.status = patch.status;
   if (patch.difficulty !== undefined) data.difficulty = patch.difficulty;
   if (patch.attachments !== undefined) {
     data.attachments = patch.attachments as unknown as Prisma.InputJsonValue;
@@ -382,7 +574,7 @@ export async function updateDraftWithResources(
     data.topics = patch.topics as unknown as Prisma.InputJsonValue;
   }
 
-  const updated = await updateDraft(id, data);
+  const updated = await update(id, data);
   if (!updated) return undefined;
 
   // 2. upsert starter code if included in payload
@@ -413,7 +605,27 @@ export async function updateDraftWithResources(
 
 export async function publish(id: string) {
   return prisma.$transaction(async (tx) => {
-    // 1) Update the source row and return the snapshot
+    // Allow publishing from 'draft' or 'archived' (but not if already published)
+    const current = await tx.questions.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        version: true,
+        title: true,
+        body_md: true,
+        difficulty: true,
+        topics: true,
+        attachments: true,
+      },
+    });
+    if (!current) return undefined;
+    if (current.status !== 'draft' && current.status !== 'archived') {
+      // already published or invalid state → signal not publishable
+      return undefined;
+    }
+
+    // Promote to published + bump version
     const updated = await tx
       .$queryRawUnsafe<Question[]>(
         `
@@ -424,7 +636,7 @@ export async function publish(id: string) {
             rand_key = random()
         WHERE id = $1
         RETURNING id, title, body_md, difficulty, topics, attachments,
-         status, version, created_at, updated_at
+                  status, version, created_at, updated_at
         `,
         id,
       )
@@ -433,7 +645,7 @@ export async function publish(id: string) {
 
     if (!updated) return undefined;
 
-    // 2) Normalize JSON fields for Prisma
+    // Normalize JSON for Prisma
     const topicsJson =
       (updated as unknown as { topics: unknown }).topics === null
         ? Prisma.JsonNull
@@ -446,7 +658,7 @@ export async function publish(id: string) {
         : ((updated as unknown as { attachments: unknown })
             .attachments as Prisma.InputJsonValue);
 
-    // 3) Insert into question_versions — ONLY fields that exist
+    // Snapshot to question_versions with published_at set
     await tx.question_versions.create({
       data: {
         id: updated.id,
@@ -456,7 +668,7 @@ export async function publish(id: string) {
         difficulty: updated.difficulty,
         topics: topicsJson,
         attachments: attachmentsJson,
-        status: updated.status,
+        status: updated.status, // 'published'
         published_at: new Date(),
       },
     });
@@ -618,8 +830,8 @@ export async function getPublicResourcesBundle(questionId: string) {
     test_cases: sampleCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility,
-      input: tc.input_data,
-      expected: tc.expected_output,
+      input_data: tc.input_data,
+      expected_output: tc.expected_output,
       ordinal: tc.ordinal,
     })),
     updated_at: isoOrNow(q.updated_at),
@@ -661,8 +873,8 @@ export async function getInternalResourcesBundle(questionId: string) {
     test_cases: allCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility, // includes 'hidden'
-      input: tc.input_data,
-      expected: tc.expected_output,
+      input_data: tc.input_data,
+      expected_output: tc.expected_output,
       ordinal: tc.ordinal,
     })),
     updated_at: isoOrNow(q.updated_at),
