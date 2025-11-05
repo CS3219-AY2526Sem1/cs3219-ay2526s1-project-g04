@@ -9,6 +9,7 @@ import { prisma } from '../repositories/prisma.js'; // for topic existence check
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
+type Status = 'draft' | 'published' | 'archived';
 
 type IncomingTestCase = {
   visibility: 'sample' | 'hidden';
@@ -24,6 +25,14 @@ function normalizeDifficulty(d: unknown): Difficulty | null {
   if (v === 'easy') return 'Easy';
   if (v === 'medium') return 'Medium';
   if (v === 'hard') return 'Hard';
+  return null;
+}
+
+function normalizeStatus(s: unknown): Status | null {
+  if (typeof s !== 'string') return null;
+  const v = s.toLowerCase();
+  if (v === 'draft' || v === 'published' || v === 'archived') return v;
+
   return null;
 }
 
@@ -88,6 +97,11 @@ function parseStr(x: unknown): string | undefined {
 function parseNum(x: unknown): number | undefined {
   const n = Number(x);
   return Number.isFinite(n) ? n : undefined;
+}
+
+function parseStatus(x: unknown): Status | undefined {
+  const s = normalizeStatus(x);
+  return s ?? undefined;
 }
 
 /**
@@ -259,7 +273,7 @@ export async function create(req: Request, res: Response) {
       patchForCreate.test_cases = testCasesList;
     }
 
-    const saved = await Repo.updateDraftWithResources(draft.id, patchForCreate);
+    const saved = await Repo.updateWithResources(draft.id, patchForCreate);
     if (!saved) {
       log.error(
         'updateDraftWithResources unexpectedly returned undefined for',
@@ -316,10 +330,21 @@ export async function update(req: Request, res: Response) {
       const diff = normalizeDifficulty(req.body.difficulty);
       if (!diff) {
         return res.status(400).json({
-          error: 'difficulty must be one of: easy, medium, hard',
+          error: 'difficulty must be one of: Easy, Medium, Hard',
         });
       }
       newDifficulty = diff;
+    }
+
+    let newStatus: Status | undefined;
+    if (req.body?.status !== undefined) {
+      const stat = normalizeStatus(req.body.status);
+      if (!stat) {
+        return res.status(400).json({
+          error: 'difficulty must be one of: draft, published, archived',
+        });
+      }
+      newStatus = stat;
     }
 
     let newTopics: string[] | undefined;
@@ -387,6 +412,7 @@ export async function update(req: Request, res: Response) {
       title?: string;
       body_md?: string;
       difficulty?: Difficulty;
+      status?: Status;
       topics?: string[];
       attachments?: AttachmentInput[];
       starter_code?: string;
@@ -397,13 +423,14 @@ export async function update(req: Request, res: Response) {
       patchForUpdate.title = req.body.title;
     if (newBodyMd !== undefined) patchForUpdate.body_md = newBodyMd;
     if (newDifficulty !== undefined) patchForUpdate.difficulty = newDifficulty;
+    if (newStatus !== undefined) patchForUpdate.status = newStatus;
     if (newTopics !== undefined) patchForUpdate.topics = newTopics;
     if (finalizedAtts !== undefined) patchForUpdate.attachments = finalizedAtts;
     if (starterCodeStr !== undefined)
       patchForUpdate.starter_code = starterCodeStr;
     if (newTestCases !== undefined) patchForUpdate.test_cases = newTestCases;
 
-    const updated = await Repo.updateDraftWithResources(id, patchForUpdate);
+    const updated = await Repo.updateWithResources(id, patchForUpdate);
 
     if (!updated) return res.status(404).json({ error: 'not_found' });
 

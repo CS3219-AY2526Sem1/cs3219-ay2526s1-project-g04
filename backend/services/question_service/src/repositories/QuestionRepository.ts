@@ -531,7 +531,7 @@ export async function createDraftWithResources(q: {
   return created;
 }
 
-export async function updateDraft(
+export async function update(
   id: string,
   patch: Omit<Prisma.questionsUpdateInput, 'id'>,
 ) {
@@ -548,12 +548,13 @@ export async function updateDraft(
   }
 }
 
-export async function updateDraftWithResources(
+export async function updateWithResources(
   id: string,
   patch: {
     title?: string;
     body_md?: string;
     difficulty?: 'Easy' | 'Medium' | 'Hard';
+    status?: 'draft' | 'published' | 'archived';
     topics?: string[];
     attachments?: AttachmentInput[];
     starter_code?: string;
@@ -564,6 +565,7 @@ export async function updateDraftWithResources(
   const data: Prisma.questionsUpdateInput = {};
   if (patch.title !== undefined) data.title = patch.title;
   if (patch.body_md !== undefined) data.body_md = patch.body_md;
+  if (patch.status !== undefined) data.status = patch.status;
   if (patch.difficulty !== undefined) data.difficulty = patch.difficulty;
   if (patch.attachments !== undefined) {
     data.attachments = patch.attachments as unknown as Prisma.InputJsonValue;
@@ -572,7 +574,7 @@ export async function updateDraftWithResources(
     data.topics = patch.topics as unknown as Prisma.InputJsonValue;
   }
 
-  const updated = await updateDraft(id, data);
+  const updated = await update(id, data);
   if (!updated) return undefined;
 
   // 2. upsert starter code if included in payload
@@ -603,7 +605,27 @@ export async function updateDraftWithResources(
 
 export async function publish(id: string) {
   return prisma.$transaction(async (tx) => {
-    // 1) Update the source row and return the snapshot
+    // Allow publishing from 'draft' or 'archived' (but not if already published)
+    const current = await tx.questions.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        version: true,
+        title: true,
+        body_md: true,
+        difficulty: true,
+        topics: true,
+        attachments: true,
+      },
+    });
+    if (!current) return undefined;
+    if (current.status !== 'draft' && current.status !== 'archived') {
+      // already published or invalid state → signal not publishable
+      return undefined;
+    }
+
+    // Promote to published + bump version
     const updated = await tx
       .$queryRawUnsafe<Question[]>(
         `
@@ -614,7 +636,7 @@ export async function publish(id: string) {
             rand_key = random()
         WHERE id = $1
         RETURNING id, title, body_md, difficulty, topics, attachments,
-         status, version, created_at, updated_at
+                  status, version, created_at, updated_at
         `,
         id,
       )
@@ -623,7 +645,7 @@ export async function publish(id: string) {
 
     if (!updated) return undefined;
 
-    // 2) Normalize JSON fields for Prisma
+    // Normalize JSON for Prisma
     const topicsJson =
       (updated as unknown as { topics: unknown }).topics === null
         ? Prisma.JsonNull
@@ -636,7 +658,7 @@ export async function publish(id: string) {
         : ((updated as unknown as { attachments: unknown })
             .attachments as Prisma.InputJsonValue);
 
-    // 3) Insert into question_versions — ONLY fields that exist
+    // Snapshot to question_versions with published_at set
     await tx.question_versions.create({
       data: {
         id: updated.id,
@@ -646,7 +668,7 @@ export async function publish(id: string) {
         difficulty: updated.difficulty,
         topics: topicsJson,
         attachments: attachmentsJson,
-        status: updated.status,
+        status: updated.status, // 'published'
         published_at: new Date(),
       },
     });

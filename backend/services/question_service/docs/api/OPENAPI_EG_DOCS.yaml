@@ -402,10 +402,10 @@ components:
     QuestionUpdate:
       type: object
       description: |
-        Partial update to an existing draft.
+        Partial update to an existing question (any status).
 
         Behavior:
-        - Any provided simple fields (title, difficulty, etc.) are updated.
+        - Any provided simple fields (title, difficulty, status, etc.) are updated.
         - If `attachments` includes new `staging/...` keys, those are finalized under
           `questions/{id}/...`, and if `body_md` is also provided, its `pp://staging/...`
           refs are rewritten to the finalized keys.
@@ -413,6 +413,11 @@ components:
         - If `test_cases` is provided, ALL existing test cases are replaced by the new list.
         - If `topics` is provided, the entire topic set is replaced.
           All slugs must already exist in `/admin/topics`.
+
+        Notes:
+        - Setting `status` directly changes live state without a version bump.
+        - Use **POST `/admin/questions/{id}/publish`** to publish with versioning + snapshot.
+          Patching `status: published` directly is **not** the recommended way to publish.
       properties:
         title:
           type: string
@@ -420,6 +425,8 @@ components:
           type: string
         difficulty:
           $ref: '#/components/schemas/Difficulty'
+        status:
+          $ref: '#/components/schemas/Status'
         topics:
           type: array
           description: |
@@ -1107,14 +1114,13 @@ paths:
         - admin
 
     patch:
-      tags:
-        - Admin
-      summary: Update an existing draft
+      tags: [Admin]
+      summary: Update an existing question (any status)
       description: |
         Partial update.
 
         Behavior:
-        - Any provided simple fields (title, difficulty, etc.) are updated.
+        - Any provided simple fields (`title`, `difficulty`, `status`, etc.) are updated.
         - If `attachments` includes new `staging/...` keys, those are finalized
           under `questions/{id}/...`, and if `body_md` is provided,
           its `pp://staging/...` refs are rewritten.
@@ -1123,13 +1129,14 @@ paths:
         - If `topics` is provided, the entire topic set is replaced
           (all slugs must already exist via `/admin/topics`).
 
-        Returns the updated admin view, including hidden tests.
+        ⚠️ Publishing:
+        - To **publish** with a version bump and snapshot, call
+          **POST `/admin/questions/{id}/publish`**.
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       requestBody:
         required: true
         content:
@@ -1138,23 +1145,20 @@ paths:
               $ref: '#/components/schemas/QuestionUpdate'
       responses:
         '200':
-          description: Updated draft
+          description: Updated
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionAdminRead'
         '400':
-          description: Validation error (e.g. unknown_topics)
+          description: Validation error (e.g. topics_not_found)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '404':
-          description: Not found
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
       security:
         - bearerAuth: []
       x-roles:
@@ -1200,11 +1204,10 @@ paths:
         - Admin
       summary: Publish the current head
       description: |
-        Takes the current question (draft or published) and:
+        Promotes the current question to **published** from **draft** or **archived**:
         - bumps `version`
         - sets `status = published`
         - writes an immutable snapshot into `question_versions`
-        - emits a `question.published` event
 
         Returns the updated, now-published question
         (same shape as QuestionAdminRead).
