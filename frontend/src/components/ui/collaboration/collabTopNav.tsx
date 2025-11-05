@@ -21,6 +21,8 @@ import {
 import PlayArrowOutlinedIcon from '@mui/icons-material/PlayArrowOutlined';
 import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
+import { useRouter } from 'next/navigation';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -33,6 +35,8 @@ export default function CollabNavigationBar({
   const appBarRef = useRef<HTMLDivElement>(null);
 
   const { code, language, testCases, setResults } = useCodeContext();
+
+  const router = useRouter();
 
   useEffect(() => {
     if (appBarRef.current && onHeightChange) {
@@ -102,6 +106,20 @@ export default function CollabNavigationBar({
     );
   };
 
+  const handleEndSession = async () => {
+    try {
+      const sessionId = '26';
+      const userId = '12';
+      const terminated = await terminateSessionIsSuccess(sessionId, userId);
+      if (terminated) {
+        router.push('/home/dashboard');
+      }
+    } catch (error) {
+      console.error('Failed to end session:', error);
+      // Show error message to user
+    }
+  };
+
   return (
     <AppBar
       ref={appBarRef}
@@ -162,6 +180,7 @@ export default function CollabNavigationBar({
               startIcon={
                 <CloseOutlinedIcon className="text-red-500"></CloseOutlinedIcon>
               }
+              onClick={handleEndSession}
             >
               <Typography
                 className="text-red-500 font-bold normal-case"

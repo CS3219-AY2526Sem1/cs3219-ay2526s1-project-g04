@@ -23,6 +23,7 @@ import {
 import { openSans } from '@/styles/fonts';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
+import { WaitingSessionToBeCreatedPopUp } from '@/components/ui/matching/modelwaitiingtoredirect';
 
 // --- Mock Data (Replace with your API data) ---
 const user = {
@@ -104,7 +105,9 @@ const getDifficultyColor = (difficulty: string) => {
 
 export default function DashboardPage() {
   const [showMatching, setShowMatching] = React.useState(false);
-
+  const [showSessionBeingCreated, setShowSessionBeingCreated] =
+    React.useState(true);
+  const [sessionId, setSessionId] = React.useState<string | null>('40');
   return (
     <Box
       sx={{
@@ -379,7 +382,18 @@ export default function DashboardPage() {
         </Box>
       </Container>
 
-      {showMatching && <MatchingPopUp setShowMatching={setShowMatching} />}
+      {showMatching && (
+        <MatchingPopUp
+          setSessionId={setSessionId}
+          setShowMatching={setShowMatching}
+        />
+      )}
+      {/** show wait for 10mins being matched pop */}
+
+      {/** show you are being matched, wait for session to be ctread*/}
+      {/* {showSessionBeingCreated && sessionId && (
+        <WaitingSessionToBeCreatedPopUp sessionId={sessionId} />
+      )} */}
     </Box>
   );
 }

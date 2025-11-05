@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_PASSWORD: example
     ports:
-      - '5433:5432'
+      - "5433:5432"
     networks:
       - peerprep-network
     # volumes:
@@ -39,7 +39,7 @@ services:
   #     # - redis
   #     # - rabbitmq
   #   ports:
-  #     - '3000:3000'
+  #     - "3009:3000"
   #   networks:
   #     - peerprep-network
 
@@ -47,6 +47,9 @@ services:
   #     - DATABASE_URL=postgres://postgres:example@postgres:5432/postgres
   #     - REDIS_URL=redis://redis:6379
   #     - RABBITMQ_URL=amqp://admin:rabbitmq123@rabbitmq:5672
+
+volumes:
+  collab_postgres_data:
 
 networks:
   peerprep-network:

@@ -19,14 +19,20 @@ type SessionEntry = {
   matchedId: string;
 };
 
+export enum SessionTerminations {
+  endByUser = 0,
+  timeout = 1,
+}
+
 export class SessionManager {
   private sessions: Record<string, SessionEntry>;
   private redis: CollabRedis;
   private db: PostgresPrisma;
   private wss: WebSocketServer;
   private pgdb: PostgresqlPersistence;
+  private static instance: SessionManager;
 
-  constructor(
+  private constructor(
     redis: CollabRedis,
     db: PostgresPrisma,
     wss: WebSocketServer,
@@ -35,12 +41,32 @@ export class SessionManager {
     this.redis = redis;
     this.db = db;
     this.wss = wss;
-    this.sessions = {};
+    this.sessions = {
+      40: {
+        session: new Session(40, 1, 2, 'two_sum'),
+        matchedId: '123',
+      },
+    };
     this.pgdb = pgdb;
 
     this.wss.on('connection', (ws, req) => {
       this.handleConnection(ws, req);
     });
+  }
+
+  public static getInstance(
+    redis?: CollabRedis,
+    db?: PostgresPrisma,
+    wss?: WebSocketServer,
+    pgdb?: PostgresqlPersistence,
+  ) {
+    if (!SessionManager.instance) {
+      if (!redis || !db || !wss || !pgdb) {
+        throw new Error('SessionManager not initialized yet.');
+      }
+      SessionManager.instance = new SessionManager(redis, db, wss, pgdb);
+    }
+    return SessionManager.instance;
   }
 
   public async createSession(matchedId: string) {
@@ -118,8 +144,28 @@ export class SessionManager {
     this.sessions[sessionId]?.session?.save();
   }
 
-  public endSession(sessionId: string) {
-    this.sessions[sessionId]?.session.end();
+  public endSession(sessionId: string, userId: string) {
+    this.sessions[sessionId]?.session.end(userId);
+    this.db.setTerminationSession(
+      Number(sessionId),
+      SessionTerminations.endByUser,
+    );
+  }
+
+  public async getSessionState(
+    session_id: string,
+  ): Promise<Record<string, string>> {
+    const matchedId = this.sessions[session_id]?.matchedId;
+    if (!matchedId) {
+      throw new Error(
+        `session cannot be found during state retrieval" ${session_id}`,
+      );
+    }
+    const session_state = await this.redis.getSessionState(matchedId);
+    const toRet = {
+      session_state: session_state ? session_state : 'NOTFOUND',
+    };
+    return toRet;
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
