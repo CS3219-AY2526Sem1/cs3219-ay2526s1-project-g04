@@ -152,7 +152,7 @@ export async function listPublished(opts: {
   const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
   const offset = (page - 1) * page_size;
 
-  // simple filters (no full-text search case)
+  // ============== Fast path: no FTS needed ==============
   if (!opts.q && !opts.topics?.length) {
     return prisma.questions.findMany({
       where: {
@@ -187,6 +187,97 @@ export async function listPublished(opts: {
     });
   }
 
+  //  Full-Text Search path (q present)
+  if (opts.q) {
+    type Row = {
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      attachments: unknown;
+      created_at: Date;
+      updated_at: Date;
+      question_topics: Array<{
+        topics: { slug: string; display: string; color_hex: string };
+      }>;
+    };
+
+    // Dynamic SQL parts
+    const whereClauses: string[] = [
+      `q.status = 'published'`,
+      `q.tsv_en @@ websearch_to_tsquery('english', $1)`,
+    ];
+    const params: unknown[] = [opts.q]; // $1
+
+    let paramIdx = params.length + 1; // next parameter index
+
+    if (opts.difficulty) {
+      whereClauses.push(`q.difficulty = $${paramIdx++}`);
+      params.push(opts.difficulty);
+    }
+
+    if (opts.topics?.length) {
+      // Filter: at least one topic matches
+      whereClauses.push(
+        `EXISTS (SELECT 1 FROM question_topics qt2 WHERE qt2.question_id = q.id AND qt2.topic_slug = ANY($${paramIdx++}::text[]))`,
+      );
+      params.push(opts.topics);
+    }
+
+    // Pagination params
+    const limitIdx = paramIdx++;
+    const offsetIdx = paramIdx++;
+    params.push(page_size, offset);
+
+    const sql = `
+      WITH qmatch AS (
+        SELECT
+          q.*,
+          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank
+        FROM questions q
+        WHERE ${whereClauses.join(' AND ')}
+      )
+      SELECT
+        qm.id,
+        qm.title,
+        qm.body_md,
+        qm.difficulty,
+        qm.status,
+        qm.version,
+        qm.attachments,
+        qm.created_at,
+        qm.updated_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'topics', json_build_object(
+                'slug', t.slug,
+                'display', t.display,
+                'color_hex', t.color_hex
+              )
+            )
+          ) FILTER (WHERE t.slug IS NOT NULL),
+          '[]'::json
+        ) AS question_topics
+      FROM qmatch qm
+      LEFT JOIN question_topics qt ON qt.question_id = qm.id
+      LEFT JOIN topics t ON t.slug = qt.topic_slug
+      GROUP BY
+        qm.id, qm.title, qm.body_md, qm.difficulty, qm.status, qm.version, qm.attachments, qm.created_at, qm.updated_at, qm.rank
+      ORDER BY
+        qm.rank DESC,
+        qm.updated_at DESC
+      LIMIT $${limitIdx}
+      OFFSET $${offsetIdx};
+    `;
+
+    const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+    return rows;
+  }
+
+  // topics-only filter
   return prisma.questions.findMany({
     where: {
       status: 'published',
@@ -200,7 +291,6 @@ export async function listPublished(opts: {
             },
           }
         : {}),
-      // TODO: q full-text search, hook up `tsv_en` + raw query here
     },
     orderBy: { updated_at: 'desc' },
     skip: offset,
@@ -240,10 +330,96 @@ export async function listAll(opts: {
   const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
   const offset = (page - 1) * page_size;
 
+  // ========= FTS path when q is present =========
+  if (opts.q) {
+    type Row = {
+      id: string;
+      title: string;
+      body_md: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      status: 'draft' | 'published' | 'archived';
+      version: number;
+      attachments: unknown;
+      created_at: Date;
+      updated_at: Date;
+      question_topics: Array<{
+        topics: { slug: string; display?: string; color_hex: string };
+      }>;
+    };
+
+    const whereClauses: string[] = [
+      `q.tsv_en @@ websearch_to_tsquery('english', $1)`,
+    ];
+    const params: unknown[] = [opts.q]; // $1
+    let i = 2;
+
+    if (opts.difficulty) {
+      whereClauses.push(`q.difficulty = $${i}`);
+      params.push(opts.difficulty);
+      i += 1;
+    }
+
+    if (opts.topics?.length) {
+      whereClauses.push(
+        `EXISTS (SELECT 1 FROM question_topics qt2 WHERE qt2.question_id = q.id AND qt2.topic_slug = ANY($${i}::text[]))`,
+      );
+      params.push(opts.topics);
+      i += 1;
+    }
+
+    const limitIdx = i++;
+    const offsetIdx = i++;
+    params.push(page_size, offset);
+
+    const sql = `
+      WITH qmatch AS (
+        SELECT
+          q.*,
+          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank
+        FROM questions q
+        WHERE ${whereClauses.join(' AND ')}
+      )
+      SELECT
+        qm.id,
+        qm.title,
+        qm.body_md,
+        qm.difficulty,
+        qm.status,
+        qm.version,
+        qm.attachments,
+        qm.created_at,
+        qm.updated_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'topics', json_build_object(
+                'slug', t.slug,
+                'display', t.display,
+                'color_hex', t.color_hex
+              )
+            )
+          ) FILTER (WHERE t.slug IS NOT NULL),
+          '[]'::json
+        ) AS question_topics
+      FROM qmatch qm
+      LEFT JOIN question_topics qt ON qt.question_id = qm.id
+      LEFT JOIN topics t ON t.slug = qt.topic_slug
+      GROUP BY
+        qm.id, qm.title, qm.body_md, qm.difficulty, qm.status, qm.version, qm.attachments, qm.created_at, qm.updated_at, qm.rank
+      ORDER BY
+        qm.rank DESC,
+        qm.updated_at DESC
+      LIMIT $${limitIdx}
+      OFFSET $${offsetIdx};
+    `;
+
+    const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+    return rows;
+  }
+
+  // ========= No q: keep Prisma path (topics/difficulty filters only) =========
   const where: Prisma.questionsWhereInput = {
     ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
-
-    // topics filter (if provided)
     ...(opts.topics?.length
       ? {
           question_topics: {
@@ -251,16 +427,6 @@ export async function listAll(opts: {
               topic_slug: { in: opts.topics },
             },
           },
-        }
-      : {}),
-
-    // q filter (very naive for now: match title OR body_md contains substring, case-insensitive)
-    ...(opts.q
-      ? {
-          OR: [
-            { title: { contains: opts.q, mode: 'insensitive' } },
-            { body_md: { contains: opts.q, mode: 'insensitive' } },
-          ],
         }
       : {}),
   };

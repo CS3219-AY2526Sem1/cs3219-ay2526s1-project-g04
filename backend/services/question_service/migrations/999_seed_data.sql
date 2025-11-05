@@ -1,4 +1,26 @@
+-- migrations/999_seed_data.sql
+-- Question Service: Dummy Data Seed
+
 BEGIN;
+
+-- ==============================================================
+-- Topics (canonical metadata)
+-- ==============================================================
+
+INSERT INTO topics (slug, display, color_hex) VALUES
+  ('strings', 'Strings', '#F4A261'),
+  ('algorithms', 'Algorithms', '#2A9D8F'),
+  ('data-structures', 'Data Structures', '#E76F51'),
+  ('arrays', 'Arrays', '#E9C46A'),
+  ('bit-manipulation', 'Bit Manipulation', '#264653'),
+  ('databases', 'Databases', '#8AB17D'),
+  ('recursion', 'Recursion', '#B56576'),
+  ('brainteaser', 'Brainteaser', '#9D4EDD')
+ON CONFLICT (slug) DO UPDATE
+  SET display = EXCLUDED.display,
+      color_hex = EXCLUDED.color_hex;
+
+
 -- ==============================================================
 -- Questions (core catalog)
 -- ==============================================================

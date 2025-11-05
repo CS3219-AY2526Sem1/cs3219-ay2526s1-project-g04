@@ -1,5 +1,4 @@
 // src/services/AttachmentService.ts
-
 import { ulid } from 'ulid';
 import {
   PutObjectCommand,
@@ -14,19 +13,10 @@ import { s3, S3_BUCKET, SIGNED_URL_TTL_SECONDS } from '../utils/s3.js';
 
 const SAFE_NAME_RE = /[^\w.-]+/g;
 
-/**
- * Sanitizes a filename by removing any characters that are not alphanumeric, hyphens, periods, or underscores, and then truncates the result to 150 characters.
- * @param {string} name - The filename to sanitize.
- * @returns {string} The sanitized filename.
- */
 function sanitizeFilename(name: string) {
   return name.replace(SAFE_NAME_RE, '-').slice(0, 150);
 }
 
-/**
- * Returns a string in the format "YYYYMMDD" representing the current date.
- * @returns {string} The current date in the format "YYYYMMDD".
- */
 function todayYmd() {
   const d = new Date();
   const y = d.getUTCFullYear();
@@ -35,11 +25,6 @@ function todayYmd() {
   return `${y}${m}${day}`;
 }
 
-/**
- * Checks if the given MIME type is allowed for attachment uploads.
- * @param {string} mime - The MIME type to check.
- * @returns {boolean} True if the MIME type is allowed, false otherwise.
- */
 function isAllowedContentType(mime: string) {
   return (
     mime.startsWith('image/') ||
@@ -52,23 +37,21 @@ function isAllowedContentType(mime: string) {
 export type SignUploadInput = {
   content_type: string;
   filename: string;
-  // optional; when present we place the object under this prefix (e.g., "questions/two-sum")
   suggested_prefix?: string;
-  // optional; default 5MB
   max_bytes?: number;
 };
 
 export type SignUploadResponse = {
-  object_key: string; // where the object will live once uploaded
-  upload_url: string; // presigned PUT URL
-  expires_at: string; // ISO timestamp
-  max_bytes: number; // soft limit (PUT can't strictly enforce; front-end should)
+  object_key: string;
+  upload_url: string;
+  expires_at: string;
+  max_bytes: number;
 };
 
 export type SignViewOptions = {
-  asAttachment?: boolean; // force browser download instead of inline view
-  filename?: string; // override filename shown in browser save dialog
-  contentTypeHint?: string; // optional content type hint to hint to s3 (helps some browsers)
+  asAttachment?: boolean;
+  filename?: string;
+  contentTypeHint?: string;
 };
 
 export type SignViewResponse = {
@@ -77,19 +60,6 @@ export type SignViewResponse = {
   expires_at: string;
 };
 
-/**
- * Builds an object key for attachment uploads to S3.
- * @param {string} adminUserId - The ID of the admin user uploading the attachment.
- * @param {string} filename - The name of the file being uploaded.
- * @param {string} contentType - The MIME type of the file being uploaded.
- * @param {string} suggestedPrefix - An optional prefix to use when building the object key.
- * If present, the object key will be built in the format `<prefix>/<date>/<token>-<safe>`.
- * If not present, the object key will be built in the format `staging/<userId>/<sessionUlid>/<date>/<token>-<safe>`.
- * @param {string} sessionUlid - An optional session UUID to use when building the object key.
- * If present, the object key will include this value.
- * If not present, a randomly generated UUID will be used instead.
- * @returns {string} The object key to use when uploading the attachment to S3.
- */
 export function buildObjectKey(args: {
   adminUserId: string;
   filename: string;
@@ -102,40 +72,23 @@ export function buildObjectKey(args: {
   const date = todayYmd();
 
   if (args.suggestedPrefix) {
-    // editing existing question
-    // e.g. 'questions/two-sum/20251010/ulid-diagram.png'
     return `${args.suggestedPrefix}/${date}/${token}-${safe}`;
   }
 
-  // creating (no slug yet) -> staging
-  // e.g. "staging/<userId>/<sessionUlid>/20251010/ulid-diagram.png"
   const sess = args.sessionUlid || ulid().toLowerCase();
   return `staging/${args.adminUserId}/${sess}/${date}/${token}-${safe}`;
 }
 
-/**
- * Signs a URL for uploading a file to S3.
- * @param {string} adminUserId - The ID of the admin user uploading the attachment.
- * @param {SignUploadInput} body - An object containing the required fields for signing the URL.
- * @param {string} sessionUlid - An optional session UUID to use when building the object key.
- * If present, the object key will include this value.
- * If not present, a randomly generated UUID will be used instead.
- * @returns {Promise<SignUploadResponse>} A promise that resolves with an object containing the signed upload URL, the object key, the maximum allowed bytes, and the expiration time of the signed URL.
- */
 export async function signUploadUrl(
   adminUserId: string,
   body: SignUploadInput,
   sessionUlid?: string,
 ): Promise<SignUploadResponse> {
   const { content_type, filename, suggested_prefix, max_bytes } = body;
-
-  if (!content_type || !filename) {
+  if (!content_type || !filename)
     throw new Error('content_type and filename are required');
-  }
-
-  if (!isAllowedContentType(content_type)) {
+  if (!isAllowedContentType(content_type))
     throw new Error(`unsupported content type: ${content_type}`);
-  }
 
   const objectKey = buildObjectKey({
     adminUserId,
@@ -156,7 +109,6 @@ export async function signUploadUrl(
   const upload_url = await getSignedUrl(s3, put, {
     expiresIn: SIGNED_URL_TTL_SECONDS,
   });
-
   const expires_at = new Date(
     Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
   ).toISOString();
@@ -170,13 +122,9 @@ export async function signUploadUrl(
 }
 
 /**
- * Finalize staged attachments for a question.
- * This function takes an array of attachments with object keys starting with 'staging/' and copies them to their final location under 'questions/<questionId>'.
- * Attachments with object keys not starting with 'staging/' are assumed to be already in their final location and are left untouched.
- * The function returns a promise that resolves with an array of attachments with their final object keys and MIME types.
- * @param {string} questionId - The ID of the question.
- * @param {Array<{ object_key: string; mime: string; alt?: string }>} attachments - The array of attachments to finalize.
- * @returns {Promise<Array<{ object_key: string; mime: string; alt?: string }>>} A promise that resolves with an array of attachments with their final object keys and MIME types.
+ * Finalize staged attachments to questions/<id>/...
+ * Skips missing staging objects gracefully (logs + keeps original key).
+ * If you prefer to fail the request instead, collect `missing[]` and throw a 400.
  */
 export async function finalizeStagedAttachments(
   questionId: string,
@@ -189,38 +137,55 @@ export async function finalizeStagedAttachments(
 ): Promise<
   Array<{ filename: string; object_key: string; mime: string; alt?: string }>
 > {
+  if (!attachments?.length) return [];
+
   const out: Array<{
     filename: string;
     object_key: string;
     mime: string;
     alt?: string;
   }> = [];
+  // const missing: string[] = []; // enable if you want to fail on missing objects
 
   for (const att of attachments) {
     const srcKey = att.object_key;
+
     if (!srcKey.startsWith('staging/')) {
-      // alr a final key (e.g. uploaded under questions/<id>)
+      out.push(att);
+      continue;
+    }
+
+    // Ensure source exists; skip if not found
+    let exists = true;
+    try {
+      await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: srcKey }));
+    } catch (err: unknown) {
+      exists = false;
+      // missing.push(srcKey); // enable to aggregate and throw
+      console.warn(
+        `[attachments] staging object missing, skipping: s3://${S3_BUCKET}/${srcKey}`,
+      );
+    }
+
+    if (!exists) {
+      // Keep original to avoid crashing the create flow
       out.push(att);
       continue;
     }
 
     const baseName = srcKey.split('/').pop() || 'file';
     const destKey = buildObjectKey({
-      adminUserId: 'finalise', // ignored in this path
-      filename: baseName.replace(/^\w+-/, ''), // discard previous ulid
+      adminUserId: 'finalize',
+      filename: baseName.replace(/^\w+-/, ''), // drop old ULID
       contentType: att.mime,
       suggestedPrefix: `questions/${questionId}`,
     });
 
-    // verify if object exists (HeadObject), skip if not found
-    await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: srcKey }));
-
-    // copy then delete
     await s3.send(
       new CopyObjectCommand({
         Bucket: S3_BUCKET,
-        CopySource: `/${S3_BUCKET}/${encodeURIComponent(srcKey)}`,
         Key: destKey,
+        CopySource: `${S3_BUCKET}/${srcKey}`, // no leading slash
         ContentType: att.mime,
         MetadataDirective: 'REPLACE',
       }),
@@ -240,18 +205,16 @@ export async function finalizeStagedAttachments(
     );
   }
 
+  // If you want strict behavior:
+  // if (missing.length) {
+  //   const e = new Error(`Some attachments were not uploaded to staging: ${missing.join(', ')}`);
+  //   (e as any).status = 400;
+  //   throw e;
+  // }
+
   return out;
 }
 
-/**
- * Signs a URL for viewing an attachment.
- * @param {string} objectKey - The S3 object key to sign.
- * @param {SignViewOptions} opts - An object containing the required fields for signing the URL.
- * - `asAttachment` (boolean): If true, the object will be signed as an attachment.
- * - `filename` (string): An optional filename to include in the signed URL's Content-Disposition header.
- * - `contentTypeHint` (string): An optional MIME type to include in the signed URL's Content-Type header.
- * @returns {Promise<SignViewResponse>} A promise that resolves with an object containing the signed view URL, object key, and expiration time of the signed URL.
- */
 export async function signViewUrl(
   objectKey: string,
   opts?: SignViewOptions,
@@ -264,26 +227,21 @@ export async function signViewUrl(
       ? `${dispositionType}; filename="${opts.filename.replace(/"/g, '')}"`
       : dispositionType;
 
-  // Build a properly typed input (no `any`)
   const getParams: GetObjectCommandInput = {
     Bucket: S3_BUCKET,
     Key: objectKey,
     ...(opts?.contentTypeHint
       ? { ResponseContentType: opts.contentTypeHint }
       : {}),
-    // always a string; safe to include unconditionally
     ResponseContentDisposition: contentDisposition,
   };
 
-  const getCmd = new GetObjectCommand(getParams);
-
-  const view_url = await getSignedUrl(s3, getCmd, {
+  const view_url = await getSignedUrl(s3, new GetObjectCommand(getParams), {
     expiresIn: SIGNED_URL_TTL_SECONDS,
   });
 
   const expires_at = new Date(
     Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
   ).toISOString();
-
   return { object_key: objectKey, view_url, expires_at };
 }
