@@ -41,7 +41,12 @@ export class SessionManager {
     this.redis = redis;
     this.db = db;
     this.wss = wss;
-    this.sessions = {};
+    this.sessions = {
+      40: {
+        session: new Session(40, 1, 2, 'two_sum'),
+        matchedId: '123',
+      },
+    };
     this.pgdb = pgdb;
 
     this.wss.on('connection', (ws, req) => {
@@ -145,6 +150,22 @@ export class SessionManager {
       Number(sessionId),
       SessionTerminations.endByUser,
     );
+  }
+
+  public async getSessionState(
+    session_id: string,
+  ): Promise<Record<string, string>> {
+    const matchedId = this.sessions[session_id]?.matchedId;
+    if (!matchedId) {
+      throw new Error(
+        `session cannot be found during state retrieval" ${session_id}`,
+      );
+    }
+    const session_state = await this.redis.getSessionState(matchedId);
+    const toRet = {
+      session_state: session_state ? session_state : 'NOTFOUND',
+    };
+    return toRet;
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {

@@ -4,6 +4,7 @@ import { PostgresPrisma } from './data/postgres/postgres.js';
 import { PostgresqlPersistence } from 'y-postgresql';
 import { error } from 'console';
 import { SessionManager } from './session/session_manager.js';
+import { CollabRedis } from './data/collab_redis.js';
 
 export const app = express();
 const db = PostgresPrisma.getInstance();
@@ -40,6 +41,19 @@ app.get('/sessions/:userId', async (req, res) => {
     res.json(sessions);
   } catch (err) {
     console.error('Error fetching sessions:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/sessions/status/:sessionId', async (req, res) => {
+  try {
+    const sessionId = req.params.sessionId;
+    const sessionManager = SessionManager.getInstance();
+    const session_state = await sessionManager.getSessionState(sessionId);
+    console.log(session_state);
+    res.json(session_state);
+  } catch (err) {
+    console.error('Error getting sessionstate:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
