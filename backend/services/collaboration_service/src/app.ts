@@ -3,6 +3,7 @@ import cors from 'cors';
 import { PostgresPrisma } from './data/postgres/postgres.js';
 import { PostgresqlPersistence } from 'y-postgresql';
 import { error } from 'console';
+import { SessionManager } from './session/session_manager.js';
 
 export const app = express();
 const db = PostgresPrisma.getInstance();
@@ -39,6 +40,19 @@ app.get('/sessions/:userId', async (req, res) => {
     res.json(sessions);
   } catch (err) {
     console.error('Error fetching sessions:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.delete('/sessions/:sessionId/user/:userId', async (req, res) => {
+  try {
+    const sessionManager = SessionManager.getInstance();
+    const sessionId = req.params.sessionId;
+    const userId = req.params.userId;
+    sessionManager.endSession(sessionId, userId);
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error ending session:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -62,7 +62,7 @@ export class Session {
     //TODO
   }
 
-  public end() {
+  public end(userId: string) {
     //TODO
   }
 
