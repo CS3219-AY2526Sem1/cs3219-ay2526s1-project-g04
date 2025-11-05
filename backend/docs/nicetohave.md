@@ -28,7 +28,7 @@ Our team has decided to prioritize the N2H features that provide the most immedi
     * **Logic:** The frontend application will simply iterate over this array (which now contains question details like topic and difficulty) and perform its own calculations (e.g., `totalCompleted = sessions.length`, `easyCompleted = sessions.filter(s => s.question.difficulty === 'Easy').length`) to populate the summary card.
 * **Role Allocation:** Yixin
 
-### Collab Messaging + Drawing & Cursor Highlighting
+### Collab Messaging + Drawing
 
 * **Relevance:** High. These features are the *collaboration* in "PeerPrep." They make the shared coding experience feel live, interactive, and human. `Cursor Highlighting` provides a clear focus point during discussion, and `Collab Messaging` allows communication if users don't want to use voice chat, and `Collab Drawing` allows users to communicate their concepts more clearly, and we think that it is especially important for solving coding problems.
 * **Technical Feasibility:** High. The `Collab Service` will elaborate.
