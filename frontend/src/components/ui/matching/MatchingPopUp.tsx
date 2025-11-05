@@ -5,8 +5,10 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Tooltip } from '@mui/material';
 import { deleteMatchRequest } from '@/services/matchingServiceApi';
 import MatchingForm from './MatchingForm';
-
-const TEST_USERID = 'test-user-id'; // change to apply logic
+import LoadingView from './LoadingView';
+import MatchedView from './MatchedView';
+import { type MatchState, TEST_USERID } from './Types';
+import TimeoutView from './TimeoutView';
 
 interface MatchingPopUpProps {
   setShowMatching: React.Dispatch<React.SetStateAction<boolean>>;
@@ -24,7 +26,11 @@ function CloseFormButton({
   onClick,
   setShowMatching,
 }: CloseButtonProps) {
+  const [loading, setLoading] = React.useState(false);
+
   const handleClick = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
       if (sendCancelReq) {
         const confirmed = confirm(
@@ -32,8 +38,15 @@ function CloseFormButton({
         );
         if (confirmed) {
           const res = await deleteMatchRequest(TEST_USERID);
-          if (res.success) {
-            setShowMatching(false);
+          if (!res.success) {
+            const force = confirm(
+              'Could not reach server to cancel match. Do you want to close anyway?',
+            );
+            if (!force) {
+              return;
+            } else {
+              setShowMatching(false);
+            }
           } else {
             alert(`${res.message}`);
           }
@@ -43,6 +56,8 @@ function CloseFormButton({
       }
     } catch (error) {
       alert(`Error cancelling match request: ${error}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -59,20 +74,45 @@ function CloseFormButton({
 }
 
 export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
-  const [status, setStatus] = React.useState<
-    'requesting' | 'waiting' | 'matched' | 'timeout'
-  >('requesting');
+  const [matchState, setMatchState] = React.useState<MatchState>({
+    status: 'requesting',
+    // matchingId: '123',
+  });
+
+  // prevent window close or reload
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (matchState.status === 'waiting') {
+        e.preventDefault();
+        e.returnValue = '';
+
+        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${TEST_USERID}`;
+
+        navigator.sendBeacon(url);
+      } else if (matchState.status === 'matched') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [matchState.status]);
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/10 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl shadow-violet-400 p-8 w-[70vw] h-[80vh] relative flex flex-col">
+      <div className="bg-white rounded-2xl shadow-xl shadow-violet-400 p-3 w-[70vw] h-[80vh] relative flex flex-col">
         {/* close button */}
-        {status === 'requesting' || status === 'timeout' ? (
+        {matchState.status === 'requesting' ||
+        matchState.status === 'timeout' ? (
           <CloseFormButton
             setShowMatching={setShowMatching}
             onClick={() => setShowMatching(false)}
           />
-        ) : status === 'waiting' ? (
+        ) : matchState.status === 'waiting' ? (
           <CloseFormButton
             sendCancelReq
             setShowMatching={setShowMatching}
@@ -82,7 +122,19 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
 
         {/* Content */}
         <div className="flex-1 flex items-center justify-center">
-          {status === 'requesting' && <MatchingForm />}
+          {matchState.status === 'requesting' && (
+            <MatchingForm setMatchState={setMatchState} />
+          )}
+          {matchState.status === 'waiting' && (
+            <LoadingView setMatchState={setMatchState} />
+          )}
+          {matchState.status === 'matched' && (
+            <MatchedView
+              matchingId={matchState.matchingId}
+              onTimeout={() => setMatchState({ status: 'requesting' })}
+            />
+          )}
+          {matchState.status === 'timeout' && <TimeoutView />}
         </div>
       </div>
     </div>
