@@ -65,13 +65,6 @@ model topics {
   @@index([color_hex], map: "idx_topics_color")
 }
 
-model reservations {
-  matching_id String    @id
-  question_id String
-  expires_at  DateTime  @db.Timestamptz(6)
-  questions   questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
 model question_python_starter {
   question_id  String    @id
   starter_code String
@@ -89,4 +82,11 @@ model question_test_cases {
   questions       questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([question_id, visibility, ordinal], map: "idx_qtc_question")
+}
+
+model reservations {
+  matching_id String    @id
+  question_id String
+  expires_at  DateTime  @db.Timestamptz(6)
+  questions   questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
