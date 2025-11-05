@@ -1,28 +1,5 @@
--- migrations/999_seed_data.sql
--- Question Service: Dummy Data Seed
-
-BEGIN;
-
--- ==============================================================
--- Topics (canonical metadata)
--- ==============================================================
-
-INSERT INTO topics (slug, display, color_hex) VALUES
-  ('strings', 'Strings', '#F4A261'),
-  ('algorithms', 'Algorithms', '#2A9D8F'),
-  ('data-structures', 'Data Structures', '#E76F51'),
-  ('arrays', 'Arrays', '#E9C46A'),
-  ('bit-manipulation', 'Bit Manipulation', '#264653'),
-  ('databases', 'Databases', '#8AB17D'),
-  ('recursion', 'Recursion', '#B56576'),
-  ('brainteaser', 'Brainteaser', '#9D4EDD')
-ON CONFLICT (slug) DO UPDATE
-  SET display = EXCLUDED.display,
-      color_hex = EXCLUDED.color_hex;
-
 -- ==============================================================
 -- Questions (core catalog)
---  body_md will be taken directly from full_markdown
 -- ==============================================================
 
 WITH seed(id, title, difficulty, topics, full_markdown) AS (
@@ -452,7 +429,7 @@ upsert_questions AS (
   SELECT
     s.id,
     s.title,
-    s.full_markdown,         -- raw text goes straight into body_md
+    s.full_markdown,
     s.difficulty,
     s.topics::jsonb,
     '[]'::jsonb,
@@ -487,10 +464,6 @@ ON CONFLICT DO NOTHING;
 -- ==============================================================
 -- Python starter code for each question
 -- ==============================================================
-
--- NOTE:
--- We only seed starter code for a subset of questions that are "coding style".
--- SQL / probability style questions can be left without a starter row.
 
 INSERT INTO question_python_starter (question_id, starter_code) VALUES
   (
@@ -575,9 +548,7 @@ ON CONFLICT (question_id) DO UPDATE
   SET starter_code = EXCLUDED.starter_code;
 
 -- ==============================================================
--- Test cases for each question
---   visibility = 'sample'  -> we can show in UI
---   visibility = 'hidden'  -> NOT shown pre-run
+-- Test cases (ordinals now 1..n)
 -- ==============================================================
 
 -- reverse-a-string
@@ -589,14 +560,14 @@ VALUES
     'sample',
     '["h","e","l","l","o"]',
     '["o","l","l","e","h"]',
-    0
+    1
   ),
   (
     'reverse-a-string',
     'hidden',
     '["H","a","n","n","a","h"]',
     '["h","a","n","n","a","H"]',
-    1
+    2
   )
 ON CONFLICT DO NOTHING;
 
@@ -609,21 +580,21 @@ VALUES
     'sample',
     '{"list":[3,2,0,-4],"pos":1}',
     'true',
-    0
+    1
   ),
   (
     'linked-list-cycle-detection',
     'hidden',
     '{"list":[1,2],"pos":0}',
     'true',
-    1
+    2
   ),
   (
     'linked-list-cycle-detection',
     'hidden',
     '{"list":[1],"pos":-1}',
     'false',
-    2
+    3
   )
 ON CONFLICT DO NOTHING;
 
@@ -636,14 +607,14 @@ VALUES
     'sample',
     '[[1,2,3],[4,5,6],[7,8,9]]',
     '[[7,4,1],[8,5,2],[9,6,3]]',
-    0
+    1
   ),
   (
     'rotate-image',
     'hidden',
     '[[5,1,9,11],[2,4,8,10],[13,3,6,7],[15,14,12,16]]',
     '[[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]]',
-    1
+    2
   )
 ON CONFLICT DO NOTHING;
 
@@ -656,21 +627,21 @@ VALUES
     'sample',
     '{"text1":"abcde","text2":"ace"}',
     '3',
-    0
+    1
   ),
   (
     'longest-common-subsequence',
     'hidden',
     '{"text1":"abc","text2":"abc"}',
     '3',
-    1
+    2
   ),
   (
     'longest-common-subsequence',
     'hidden',
     '{"text1":"abc","text2":"def"}',
     '0',
-    2
+    3
   )
 ON CONFLICT DO NOTHING;
 
@@ -683,14 +654,14 @@ VALUES
     'sample',
     '{"nums":[1,3,-1,-3,5,3,6,7],"k":3}',
     '[3,3,5,5,6,7]',
-    0
+    1
   ),
   (
     'sliding-window-maximum',
     'hidden',
     '{"nums":[9,8,7,6,5,4,3],"k":2}',
     '[9,8,7,6,5,4]',
-    1
+    2
   )
 ON CONFLICT DO NOTHING;
 
@@ -703,14 +674,14 @@ VALUES
     'sample',
     '{"tree":[2,1,3]}',
     'true',
-    0
+    1
   ),
   (
     'validate-binary-search-tree',
     'hidden',
     '{"tree":[5,1,4,null,null,3,6]}',
     'false',
-    1
+    2
   )
 ON CONFLICT DO NOTHING;
 
@@ -723,7 +694,7 @@ VALUES
     'sample',
     '{"ops":["LRUCache","put","put","get","put","get","put","get","get","get"],"args":[[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]}',
     '[null,null,null,1,null,-1,null,-1,3,4]',
-    0
+    1
   )
 ON CONFLICT DO NOTHING;
 
@@ -736,7 +707,7 @@ VALUES
     'sample',
     '{"tree":[1,2,3,null,null,4,5]}',
     '"1,2,3,null,null,4,5"',
-    0
+    1
   )
 ON CONFLICT DO NOTHING;
 
@@ -749,7 +720,7 @@ VALUES
     'sample',
     '{"n":4}',
     '[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]',
-    0
+    1
   )
 ON CONFLICT DO NOTHING;
 

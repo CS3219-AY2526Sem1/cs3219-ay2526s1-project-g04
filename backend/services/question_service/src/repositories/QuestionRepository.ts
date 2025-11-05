@@ -37,26 +37,50 @@ type IncomingTestCase = {
   ordinal?: number;
 };
 
+/** Renumbers to contiguous ascending ordinals (1..n).
+ *  Why: prevents gaps/dupes from client payloads. */
+function sanitizeAndRenumberTestCases(
+  casesInput: IncomingTestCase[],
+): Array<IncomingTestCase & { ordinal: number }> {
+  const decorated = casesInput.map((tc, idx) => {
+    const validInt =
+      typeof tc.ordinal === 'number' &&
+      Number.isFinite(tc.ordinal) &&
+      Math.floor(tc.ordinal) === tc.ordinal &&
+      tc.ordinal > 0;
+    const sortKey = validInt
+      ? (tc.ordinal as number)
+      : Number.POSITIVE_INFINITY;
+    return { tc, idx, sortKey };
+  });
+
+  decorated.sort((a, b) =>
+    a.sortKey !== b.sortKey ? a.sortKey - b.sortKey : a.idx - b.idx,
+  );
+
+  return decorated.map((item, i) => ({ ...item.tc, ordinal: i + 1 }));
+}
+
 async function replaceTestCases(
   questionId: string,
   casesInput: IncomingTestCase[] | undefined,
 ) {
-  if (casesInput === undefined) return; // not provided -> dont edit
+  if (casesInput === undefined) return;
 
-  // when we update test cases: wipe all rows, then bulk insert new list (if any)
   await prisma.question_test_cases.deleteMany({
     where: { question_id: questionId },
   });
-
   if (!casesInput.length) return;
 
+  const normalized = sanitizeAndRenumberTestCases(casesInput);
+
   await prisma.question_test_cases.createMany({
-    data: casesInput.map((tc, idx) => ({
+    data: normalized.map((tc) => ({
       question_id: questionId,
       visibility: tc.visibility,
       input_data: tc.input_data,
       expected_output: tc.expected_output,
-      ordinal: tc.ordinal ?? idx,
+      ordinal: tc.ordinal, // always 1..n
     })),
   });
 }
