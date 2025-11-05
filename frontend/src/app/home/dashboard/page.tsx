@@ -23,7 +23,6 @@ import {
 import { openSans } from '@/styles/fonts';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
-import { WaitingSessionToBeCreatedPopUp } from '@/components/ui/matching/modelwaitiingtoredirect';
 
 // --- Mock Data (Replace with your API data) ---
 const user = {
@@ -382,18 +381,7 @@ export default function DashboardPage() {
         </Box>
       </Container>
 
-      {/* {showMatching && (
-        <MatchingPopUp
-          setSessionId={setSessionId}
-          setShowMatching={setShowMatching}
-        />
-      )} */}
-      {/** show wait for 10mins being matched pop */}
-
-      {/** show you are being matched, wait for session to be ctread*/}
-      {/* {showSessionBeingCreated && sessionId && (
-        <WaitingSessionToBeCreatedPopUp sessionId={sessionId} />
-      )} */}
+      {showMatching && <MatchingPopUp setShowMatching={setShowMatching} />}
     </Box>
   );
 }

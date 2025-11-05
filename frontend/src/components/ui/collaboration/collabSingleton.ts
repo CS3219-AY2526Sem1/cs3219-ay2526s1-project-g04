@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 let yCodeDoc: Y.Doc | null = null;
 let codeProvider: WebsocketProvider | null = null;
 
-export function setCollabProvider(sessionId: string, userId: string) {
+export function getCollabProvider(sessionId: string, userId: string) {
   if (!yCodeDoc && !codeProvider) {
     console.log('called');
     yCodeDoc = new Y.Doc();
@@ -20,22 +20,21 @@ export function setCollabProvider(sessionId: string, userId: string) {
       },
     );
   }
+  if (yCodeDoc && codeProvider) return { yCodeDoc, codeProvider };
 }
 
-export function getCollabProvider() {
+export function getCollabProvider2() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   // Get query parameter
   const userId = searchParams.get('userId'); // "1"
-  console.log(1111, userId);
   // Get dynamic route parameter
   const sid = searchParams.get('sid'); // "1"
-  console.log(1111, userId);
 
   // If your file is pages/collaboration/[sessionId].tsx
   const sessionId = '48';
-  setCollabProvider(sid ?? '0', userId ?? '0');
+  // setCollabProvider(sid ?? '0', userId ?? '0');
   if (yCodeDoc && codeProvider) return { yCodeDoc, codeProvider };
 }
 

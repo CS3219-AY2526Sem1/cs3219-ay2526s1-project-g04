@@ -12,7 +12,6 @@ import TimeoutView from './TimeoutView';
 
 interface MatchingPopUpProps {
   setShowMatching: React.Dispatch<React.SetStateAction<boolean>>;
-  setSessionId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 interface CloseButtonProps {

@@ -5,6 +5,8 @@ import { QuestionCard } from './question';
 import { TestCases } from './tests';
 import { getCollabProvider } from './collabSingleton';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { sessionIsAlive } from '@/services/collaborationServiceApi';
 
 interface CollaborationProps {
   sessionId: string;
@@ -18,16 +20,42 @@ interface NotificationMessage {
 
 export const Collaboration = (p: CollaborationProps) => {
   const { sessionId } = p;
-  const providers = getCollabProvider();
-  if (!providers) {
-    alert('session not ready');
-    return;
+  const userId = '1';
+  const [providers, setProviders] = useState<ReturnType<
+    typeof getCollabProvider
+  > | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const alive = await sessionIsAlive(sessionId);
+      console.log('ping');
+      if (!alive) {
+        setLoading(false);
+        return;
+      }
+
+      const provider = getCollabProvider(sessionId, userId);
+      if (provider) {
+        setProviders(provider);
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  if (loading) {
+    return <h1>Loading session...</h1>;
   }
+
+  if (!providers) {
+    return <h1>Oppsss, start session from home page</h1>;
+  }
+
   const { yCodeDoc, codeProvider } = providers;
   const notifications = yCodeDoc.getMap<NotificationMessage>('notifications');
   const router = useRouter();
 
-  const userId = '1';
   notifications.observe((event) => {
     event.changes.keys.forEach((change, key) => {
       if (change.action === 'add' || change.action === 'update') {
