@@ -618,8 +618,8 @@ export async function getPublicResourcesBundle(questionId: string) {
     test_cases: sampleCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility,
-      input: tc.input_data,
-      expected: tc.expected_output,
+      input_data: tc.input_data,
+      expected_output: tc.expected_output,
       ordinal: tc.ordinal,
     })),
     updated_at: isoOrNow(q.updated_at),
@@ -661,8 +661,8 @@ export async function getInternalResourcesBundle(questionId: string) {
     test_cases: allCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility, // includes 'hidden'
-      input: tc.input_data,
-      expected: tc.expected_output,
+      input_data: tc.input_data,
+      expected_output: tc.expected_output,
       ordinal: tc.ordinal,
     })),
     updated_at: isoOrNow(q.updated_at),

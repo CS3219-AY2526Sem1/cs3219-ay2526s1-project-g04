@@ -12,7 +12,7 @@ info:
       - attachments stored in S3, surfaced through presigned/signed URLs
       - difficulty, topics, version, status
       - execution resources:
-        - starter code (currently python only)
+        - starter code (currently python only, as a string)
         - test cases (sample vs hidden)
 
     - Topics are managed separately via `/admin/topics` and referenced by slug.
@@ -229,10 +229,10 @@ components:
         visibility:
           type: string
           enum: [sample, hidden]
-        input:
+        input_data:
           type: string
           example: '[[1,2],[3,4]]'
-        expected:
+        expected_output:
           type: string
           example: '[[3,1],[4,2]]'
         ordinal:
@@ -240,8 +240,8 @@ components:
           example: 0
       required:
         - visibility
-        - input
-        - expected
+        - input_data
+        - expected_output
         - ordinal
 
     TestCasePublicRead:
@@ -251,31 +251,19 @@ components:
         name:
           type: string
           example: case-0
-        input:
+        input_data:
           type: string
           example: '[[1,2],[3,4]]'
-        expected:
+        expected_output:
           type: string
           example: '[[3,1],[4,2]]'
         ordinal:
           type: integer
           example: 0
       required:
-        - input
-        - expected
+        - input_data
+        - expected_output
         - ordinal
-
-    StarterCodeBundle:
-      type: object
-      description: Starter code snippets keyed by language. Currently python-only.
-      additionalProperties: false
-      properties:
-        python:
-          type: string
-          example: |
-            def solve(nums):
-                # TODO
-                pass
 
     QuestionBase:
       type: object
@@ -479,7 +467,7 @@ components:
             - question metadata
             - sanitized body_html with signed URLs
             - ALL test cases (including hidden)
-            - starter_code
+            - starter_code (string)
           properties:
             body_html:
               type: string
@@ -487,7 +475,7 @@ components:
             starter_code:
               type: string
               nullable: true
-              description: Pulled from `question_python_starter`.
+              description: Pulled from `question_python_starter` (Python string).
             test_cases:
               type: array
               description: All test cases, including `hidden`.
@@ -503,7 +491,7 @@ components:
           description: |
             Safe view for published questions:
             - sanitized `body_html`
-            - starter_code
+            - starter_code (string)
             - ONLY sample (public) test cases
           properties:
             body_html:
@@ -513,7 +501,7 @@ components:
             starter_code:
               type: string
               nullable: true
-              description: Starter code exposed to candidates.
+              description: Starter code exposed to candidates (Python string).
             test_cases:
               type: array
               description: |
@@ -569,17 +557,14 @@ components:
           type: string
           example: rotate-image-in-place
         starter_code:
-          type: object
+          type: string
+          nullable: true
           description: |
-            Map of language -> starter code.
-            Currently { python: string } or {}.
-          additionalProperties:
-            type: string
-          example:
-            python: |
-              def rotate_image(matrix):
-                  # TODO
-                  pass
+            Starter code (Python string). May be null if not provided.
+          example: |
+            def rotate_image(matrix):
+                # TODO
+                pass
         test_cases:
           type: array
           description: SAMPLE test cases only.
@@ -592,10 +577,10 @@ components:
               visibility:
                 type: string
                 enum: [sample]
-              input:
+              input_data:
                 type: string
                 example: '[[1,2],[3,4]]'
-              expected:
+              expected_output:
                 type: string
                 example: '[[3,1],[4,2]]'
               ordinal:
@@ -603,8 +588,8 @@ components:
                 example: 0
             required:
               - visibility
-              - input
-              - expected
+              - input_data
+              - expected_output
               - ordinal
         updated_at:
           type: string
@@ -627,12 +612,9 @@ components:
         status:
           $ref: '#/components/schemas/Status'
         starter_code:
-          type: object
-          description: |
-            Map of language -> starter code.
-            Currently { python: string } or {}.
-          additionalProperties:
-            type: string
+          type: string
+          nullable: true
+          description: Starter code (Python string). May be null if not provided.
         test_cases:
           type: array
           description: |
@@ -646,16 +628,16 @@ components:
               visibility:
                 type: string
                 enum: [sample, hidden]
-              input:
+              input_data:
                 type: string
-              expected:
+              expected_output:
                 type: string
               ordinal:
                 type: integer
             required:
               - visibility
-              - input
-              - expected
+              - input_data
+              - expected_output
               - ordinal
         updated_at:
           type: string
@@ -1097,7 +1079,7 @@ paths:
         - question metadata
         - sanitized `body_html` with signed URLs
         - ALL test cases (including hidden)
-        - starter_code
+        - starter_code (string)
       parameters:
         - name: id
           in: path
@@ -1259,7 +1241,7 @@ paths:
       summary: Get full execution resources for a question (any status)
       description: |
         Returns the internal runtime bundle for a question:
-        - starter code
+        - starter code (string)
         - ALL test cases, including hidden
         - status
 
@@ -1408,7 +1390,7 @@ paths:
         - published question metadata
         - sanitized `body_html` (with signed image URLs)
         - public-safe execution bundle:
-          - `starter_code`
+          - `starter_code` (string)
           - `test_cases` (SAMPLE ONLY; hidden cases are not included)
 
         Returns 404 if the question is not `published`.
@@ -1441,7 +1423,7 @@ paths:
       summary: Get execution resources for a published question
       description: |
         Returns the runtime bundle for a published question:
-        - starter code (per language, currently python)
+        - starter code (string)
         - SAMPLE test cases only (no hidden cases)
 
         If the question does not exist or is not published, returns 404.
