@@ -1,4 +1,5 @@
 // src/services/AttachmentService.ts
+
 import { ulid } from 'ulid';
 import {
   PutObjectCommand,
@@ -10,8 +11,15 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { s3, S3_BUCKET, SIGNED_URL_TTL_SECONDS } from '../utils/s3.js';
+import { log } from '../utils/logger.js';
 
 const SAFE_NAME_RE = /[^\w.-]+/g;
+
+function diffMs(startNs: bigint, endNs: bigint): string {
+  const nsDiff = endNs - startNs;
+  const ms = Number(nsDiff) / 1_000_000;
+  return ms.toFixed(2);
+}
 
 function sanitizeFilename(name: string) {
   return name.replace(SAFE_NAME_RE, '-').slice(0, 150);
@@ -60,6 +68,9 @@ export type SignViewResponse = {
   expires_at: string;
 };
 
+// Optional per-request context, e.g. correlation id from middleware
+type Ctx = { correlation_id?: string };
+
 export function buildObjectKey(args: {
   adminUserId: string;
   filename: string;
@@ -83,12 +94,38 @@ export async function signUploadUrl(
   adminUserId: string,
   body: SignUploadInput,
   sessionUlid?: string,
+  ctx?: Ctx,
 ): Promise<SignUploadResponse> {
+  const started = process.hrtime.bigint();
   const { content_type, filename, suggested_prefix, max_bytes } = body;
-  if (!content_type || !filename)
-    throw new Error('content_type and filename are required');
-  if (!isAllowedContentType(content_type))
-    throw new Error(`unsupported content type: ${content_type}`);
+
+  log.info({
+    msg: 'attachments.sign_upload.begin',
+    admin_user_id: adminUserId,
+    filename,
+    content_type,
+    suggested_prefix: suggested_prefix ?? '',
+    correlation_id: ctx?.correlation_id ?? '',
+  });
+
+  if (!content_type || !filename) {
+    const e = new Error('content_type and filename are required');
+    log.error({
+      msg: 'attachments.sign_upload.error',
+      error: String(e),
+      correlation_id: ctx?.correlation_id ?? '',
+    });
+    throw e;
+  }
+  if (!isAllowedContentType(content_type)) {
+    const e = new Error(`unsupported content type: ${content_type}`);
+    log.error({
+      msg: 'attachments.sign_upload.error',
+      error: String(e),
+      correlation_id: ctx?.correlation_id ?? '',
+    });
+    throw e;
+  }
 
   const objectKey = buildObjectKey({
     adminUserId,
@@ -106,12 +143,36 @@ export async function signUploadUrl(
     ContentType: content_type,
   });
 
-  const upload_url = await getSignedUrl(s3, put, {
-    expiresIn: SIGNED_URL_TTL_SECONDS,
-  });
+  let upload_url: string;
+  try {
+    upload_url = await getSignedUrl(s3, put, {
+      expiresIn: SIGNED_URL_TTL_SECONDS,
+    });
+  } catch (err: unknown) {
+    log.error({
+      msg: 'attachments.sign_upload.error',
+      bucket: S3_BUCKET,
+      key: objectKey,
+      error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      correlation_id: ctx?.correlation_id ?? '',
+    });
+    throw err;
+  }
+
   const expires_at = new Date(
     Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
   ).toISOString();
+
+  log.info({
+    msg: 'attachments.sign_upload.success',
+    bucket: S3_BUCKET,
+    key: objectKey,
+    ttl_seconds: SIGNED_URL_TTL_SECONDS,
+    expires_at,
+    max_bytes: max_bytes ?? 5 * 1024 * 1024,
+    ms: diffMs(started, process.hrtime.bigint()),
+    correlation_id: ctx?.correlation_id ?? '',
+  });
 
   return {
     object_key: objectKey,
@@ -134,9 +195,18 @@ export async function finalizeStagedAttachments(
     mime: string;
     alt?: string;
   }>,
+  ctx?: Ctx,
 ): Promise<
   Array<{ filename: string; object_key: string; mime: string; alt?: string }>
 > {
+  const started = process.hrtime.bigint();
+  log.info({
+    msg: 'attachments.finalize.begin',
+    question_id: questionId,
+    count: attachments?.length ?? 0,
+    correlation_id: ctx?.correlation_id ?? '',
+  });
+
   if (!attachments?.length) return [];
 
   const out: Array<{
@@ -151,6 +221,11 @@ export async function finalizeStagedAttachments(
     const srcKey = att.object_key;
 
     if (!srcKey.startsWith('staging/')) {
+      log.info({
+        msg: 'attachments.finalize.skip_non_staging',
+        key: srcKey,
+        correlation_id: ctx?.correlation_id ?? '',
+      });
       out.push(att);
       continue;
     }
@@ -162,9 +237,14 @@ export async function finalizeStagedAttachments(
     } catch (err: unknown) {
       exists = false;
       // missing.push(srcKey); // enable to aggregate and throw
-      console.warn(
-        `[attachments] staging object missing, skipping: s3://${S3_BUCKET}/${srcKey}`,
-      );
+      log.warn({
+        msg: 'attachments.finalize.head.missing',
+        bucket: S3_BUCKET,
+        key: srcKey,
+        error:
+          err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+        correlation_id: ctx?.correlation_id ?? '',
+      });
     }
 
     if (!exists) {
@@ -181,17 +261,54 @@ export async function finalizeStagedAttachments(
       suggestedPrefix: `questions/${questionId}`,
     });
 
-    await s3.send(
-      new CopyObjectCommand({
-        Bucket: S3_BUCKET,
-        Key: destKey,
-        CopySource: `${S3_BUCKET}/${srcKey}`, // no leading slash
-        ContentType: att.mime,
-        MetadataDirective: 'REPLACE',
-      }),
-    );
+    try {
+      await s3.send(
+        new CopyObjectCommand({
+          Bucket: S3_BUCKET,
+          Key: destKey,
+          CopySource: `${S3_BUCKET}/${srcKey}`, // no leading slash
+          ContentType: att.mime,
+          MetadataDirective: 'REPLACE',
+        }),
+      );
+      log.info({
+        msg: 'attachments.finalize.copy.ok',
+        src: srcKey,
+        dest: destKey,
+        mime: att.mime,
+        correlation_id: ctx?.correlation_id ?? '',
+      });
+    } catch (err: unknown) {
+      log.error({
+        msg: 'attachments.finalize.copy.error',
+        src: srcKey,
+        dest: destKey,
+        error:
+          err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+        correlation_id: ctx?.correlation_id ?? '',
+      });
+      throw err;
+    }
 
-    await s3.send(new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: srcKey }));
+    try {
+      await s3.send(
+        new DeleteObjectCommand({ Bucket: S3_BUCKET, Key: srcKey }),
+      );
+      log.info({
+        msg: 'attachments.finalize.delete.ok',
+        key: srcKey,
+        correlation_id: ctx?.correlation_id ?? '',
+      });
+    } catch (err: unknown) {
+      // non-fatal: object already copied; log and proceed
+      log.warn({
+        msg: 'attachments.finalize.delete.warn',
+        key: srcKey,
+        error:
+          err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+        correlation_id: ctx?.correlation_id ?? '',
+      });
+    }
 
     out.push(
       att.alt !== undefined
@@ -212,14 +329,43 @@ export async function finalizeStagedAttachments(
   //   throw e;
   // }
 
+  log.info({
+    msg: 'attachments.finalize.done',
+    question_id: questionId,
+    finalized_count: out.length,
+    ms: diffMs(started, process.hrtime.bigint()),
+    correlation_id: ctx?.correlation_id ?? '',
+  });
   return out;
 }
 
 export async function signViewUrl(
   objectKey: string,
   opts?: SignViewOptions,
+  ctx?: Ctx,
 ): Promise<SignViewResponse> {
-  await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: objectKey }));
+  const started = process.hrtime.bigint();
+  log.info({
+    msg: 'attachments.sign_view.begin',
+    key: objectKey,
+    as_attachment: !!opts?.asAttachment,
+    filename: opts?.filename ?? '',
+    content_type_hint: opts?.contentTypeHint ?? '',
+    correlation_id: ctx?.correlation_id ?? '',
+  });
+
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: S3_BUCKET, Key: objectKey }));
+  } catch (err: unknown) {
+    log.error({
+      msg: 'attachments.sign_view.head.error',
+      bucket: S3_BUCKET,
+      key: objectKey,
+      error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      correlation_id: ctx?.correlation_id ?? '',
+    });
+    throw err;
+  }
 
   const dispositionType = opts?.asAttachment ? 'attachment' : 'inline';
   const contentDisposition =
@@ -236,12 +382,35 @@ export async function signViewUrl(
     ResponseContentDisposition: contentDisposition,
   };
 
-  const view_url = await getSignedUrl(s3, new GetObjectCommand(getParams), {
-    expiresIn: SIGNED_URL_TTL_SECONDS,
-  });
+  let view_url: string;
+  try {
+    view_url = await getSignedUrl(s3, new GetObjectCommand(getParams), {
+      expiresIn: SIGNED_URL_TTL_SECONDS,
+    });
+  } catch (err: unknown) {
+    log.error({
+      msg: 'attachments.sign_view.error',
+      bucket: S3_BUCKET,
+      key: objectKey,
+      error: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+      correlation_id: ctx?.correlation_id ?? '',
+    });
+    throw err;
+  }
 
   const expires_at = new Date(
     Date.now() + SIGNED_URL_TTL_SECONDS * 1000,
   ).toISOString();
+
+  log.info({
+    msg: 'attachments.sign_view.success',
+    bucket: S3_BUCKET,
+    key: objectKey,
+    ttl_seconds: SIGNED_URL_TTL_SECONDS,
+    expires_at,
+    ms: diffMs(started, process.hrtime.bigint()),
+    correlation_id: ctx?.correlation_id ?? '',
+  });
+
   return { object_key: objectKey, view_url, expires_at };
 }
