@@ -39,7 +39,7 @@ export async function terminateSessionIsSuccess(
     console.log('Response status:', res.status);
     console.log('Response ok:', res.ok);
 
-    if (!res.status) {
+    if (!res.ok) {
       const errorText = await res.text();
       console.log('Error response body:', errorText);
       throw new Error(
@@ -51,6 +51,36 @@ export async function terminateSessionIsSuccess(
     return true;
   } catch (err) {
     console.error('terminateSessionIsSuccess error:', err);
+    return false;
+  }
+}
+
+export async function sessionIsReady(sessId: string): Promise<boolean> {
+  try {
+    const url = `${COLLAB_SERVICE_URL}/sessions/status/${sessId}`;
+    console.log('Get session status URL:', url);
+    console.log('Making request...');
+
+    const res = await fetch(url);
+
+    console.log('Response status:', res.status);
+    console.log('Response ok:', res.ok);
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.log('Error response body:', errorText);
+      throw new Error(
+        `Failed to get sessions state: ${res.status} ${res.statusText}`,
+      );
+    }
+
+    const jsonRes = await res.json();
+
+    console.log('Get session state successfully', jsonRes);
+
+    return jsonRes.sessionState === 'ready';
+  } catch (err) {
+    console.error('getSessionState error:', err);
     return false;
   }
 }

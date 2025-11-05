@@ -10,6 +10,7 @@ const TEST_USERID = 'test-user-id'; // change to apply logic
 
 interface MatchingPopUpProps {
   setShowMatching: React.Dispatch<React.SetStateAction<boolean>>;
+  setSessionId: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 interface CloseButtonProps {

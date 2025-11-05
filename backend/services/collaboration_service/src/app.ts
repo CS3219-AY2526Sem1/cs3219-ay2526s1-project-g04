@@ -51,7 +51,7 @@ app.get('/sessions/status/:sessionId', async (req, res) => {
     const sessionManager = SessionManager.getInstance();
     const session_state = await sessionManager.getSessionState(sessionId);
     console.log(session_state);
-    res.json(session_state);
+    res.json({ sessionState: session_state['session_state'] });
   } catch (err) {
     console.error('Error getting sessionstate:', err);
     res.status(500).json({ error: 'Internal server error' });
