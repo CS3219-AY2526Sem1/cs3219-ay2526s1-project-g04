@@ -1,4 +1,5 @@
 import { PrismaClient } from '../../../generated/prisma/index.js';
+import type { SessionTerminations } from '../../session/session_manager.js';
 
 export class PostgresPrisma {
   private static instance: PostgresPrisma;
@@ -71,5 +72,18 @@ export class PostgresPrisma {
     });
 
     return session?.questionId;
+  }
+
+  public async setTerminationSession(
+    sessionId: number,
+    terminationStatus: SessionTerminations,
+  ): Promise<void> {
+    await this.prismaClient.session.update({
+      where: { id: sessionId },
+      data: {
+        terminationStatus: terminationStatus.valueOf(),
+        endedAt: new Date(),
+      },
+    });
   }
 }

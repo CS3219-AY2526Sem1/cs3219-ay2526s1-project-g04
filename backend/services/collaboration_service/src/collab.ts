@@ -18,7 +18,7 @@ export class Collab {
     const server = this.initServer(app, pgdb);
     const webSocketServer = new WebSocketServer({ server });
 
-    const sessionManager = new SessionManager(
+    const sessionManager = SessionManager.getInstance(
       redis,
       postgresDb,
       webSocketServer,

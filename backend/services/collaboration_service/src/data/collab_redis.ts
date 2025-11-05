@@ -58,4 +58,10 @@ export class CollabRedis {
     matchedRedisData['session_state'] = state.valueOf();
     await this.redis.setDictValueByKey(matchedId, matchedRedisData);
   }
+
+  public async getSessionState(matchedId: string): Promise<string | undefined> {
+    const matchedRedisData: Record<string, string> =
+      await this.redis.getDictValueByKey(matchedId);
+    return matchedRedisData['session_state'];
+  }
 }

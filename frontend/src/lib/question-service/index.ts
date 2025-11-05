@@ -1,11 +1,10 @@
 export interface Topic {
   slug: string;
+  display: string;
   color_hex: string;
 }
 
 export interface TopicList {
-  page: number;
-  page_size: number;
   total: number;
   items: Topic[];
 }
