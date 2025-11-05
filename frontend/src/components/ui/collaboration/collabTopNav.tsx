@@ -23,6 +23,7 @@ import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
 import { useRouter } from 'next/navigation';
+import { removeCollabProvider } from './collabSingleton';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -112,6 +113,7 @@ export default function CollabNavigationBar({
       const userId = '12';
       const terminated = await terminateSessionIsSuccess(sessionId, userId);
       if (terminated) {
+        removeCollabProvider();
         router.push('/home/dashboard');
       }
     } catch (error) {

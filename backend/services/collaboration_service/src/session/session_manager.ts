@@ -178,6 +178,7 @@ export class SessionManager {
     const userId = Number(params.get('userId'));
     const sessionId = Number(urlObj.pathname.slice(1));
     const session = this.getSessionById(sessionId);
+    console.log(fullUrl);
 
     if (!session) {
       console.log(`session id not found in session manager: ${sessionId}`);

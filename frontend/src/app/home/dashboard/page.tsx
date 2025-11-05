@@ -107,7 +107,7 @@ export default function DashboardPage() {
   const [showMatching, setShowMatching] = React.useState(false);
   const [showSessionBeingCreated, setShowSessionBeingCreated] =
     React.useState(true);
-  const [sessionId, setSessionId] = React.useState<string | null>('40');
+  const [sessionId, setSessionId] = React.useState<string | null>('45');
   return (
     <Box
       sx={{
@@ -382,12 +382,12 @@ export default function DashboardPage() {
         </Box>
       </Container>
 
-      {showMatching && (
+      {/* {showMatching && (
         <MatchingPopUp
           setSessionId={setSessionId}
           setShowMatching={setShowMatching}
         />
-      )}
+      )} */}
       {/** show wait for 10mins being matched pop */}
 
       {/** show you are being matched, wait for session to be ctread*/}

@@ -2,8 +2,9 @@
 
 import { sessionIsReady } from '@/services/collaborationServiceApi';
 import { Typography } from '@mui/material';
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
+import { setCollabProvider } from '../collaboration/collabSingleton';
 
 interface props {
   sessionId: string;
@@ -11,6 +12,9 @@ interface props {
 
 export const WaitingSessionToBeCreatedPopUp = (p: props) => {
   const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+
   const { sessionId } = p;
   useEffect(() => {
     // eslint-disable-next-line prefer-const
@@ -28,6 +32,14 @@ export const WaitingSessionToBeCreatedPopUp = (p: props) => {
       }
     };
 
+    // const sessionId = params.sessionId; // "44"
+
+    // adds the user to all the ws
+    const addUserToCollabSession = () => {
+      setCollabProvider(sessionId, '123');
+    };
+
+    addUserToCollabSession();
     // start polling every 0.5 seconds
     intervalId = setInterval(pollStatus, 500);
 
