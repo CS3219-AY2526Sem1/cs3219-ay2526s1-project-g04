@@ -99,11 +99,6 @@ function parseNum(x: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
-function parseStatus(x: unknown): Status | undefined {
-  const s = normalizeStatus(x);
-  return s ?? undefined;
-}
-
 /**
  * Given original markdown and two attachment lists (pre-finalize and post-finalize),
  * rewrite any pp://staging/... refs to pp://questions/<id>/...
