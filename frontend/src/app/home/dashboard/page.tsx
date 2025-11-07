@@ -186,10 +186,6 @@ export default function DashboardPage() {
       let currentUserId: number | null = null;
       // const token = localStorage.getItem('accessToken');
       const token = getAccessToken();
-      if (!token) {
-        router.push('/accounts/login');
-        return;
-      }
       try {
         console.log(token);
         // const decodedToken = jwtDecode<UserJwtPayload>(token);

@@ -213,10 +213,6 @@ export default function PracticeHistoryPage() {
     const loadDashboardData = async () => {
       let currentUserId: number | null = null;
       const token = getAccessToken();
-      if (!token) {
-        router.push('/accounts/login');
-        return;
-      }
       try {
         currentUserId = getUserId();
       } catch (error) {
