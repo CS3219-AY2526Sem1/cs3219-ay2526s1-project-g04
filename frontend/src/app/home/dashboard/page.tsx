@@ -81,6 +81,13 @@ const mockSessionData = [
     createdAt: '2025-09-04T12:00:00Z',
     isSolved: true,
   },
+  {
+    sessionId: 6,
+    questionId: 'q1',
+    userIds: [1, 3],
+    createdAt: '2025-09-04T12:00:00Z',
+    isSolved: true,
+  },
 ];
 const mockQuestionDatabase: Record<string, Question> = {
   q1: {
@@ -93,19 +100,19 @@ const mockQuestionDatabase: Record<string, Question> = {
     id: 'q2',
     title: 'Contains Duplicate',
     difficulty: 'Easy',
-    topics: ['Array'],
+    topics: ['soidfjosijfodjf'],
   },
   q3: {
     id: 'q3',
     title: 'Add Two Numbers',
     difficulty: 'Medium',
-    topics: ['Linked List', 'Math'],
+    topics: ['sdfdfjojdojfodjf List', 'bfibjibjij'],
   },
   q4: {
     id: 'q4',
     title: 'Median of 2 Sorted Arrays',
     difficulty: 'Hard',
-    topics: ['Array', 'Binary Search'],
+    topics: ['dfiosjiofjiodjfoi', 'dkfjdifjidjfidjfidjf Search'],
   },
 };
 const mockUserDatabase: Record<number, MockUser> = {
@@ -169,6 +176,121 @@ export default function DashboardPage() {
   const [showSessionBeingCreated, setShowSessionBeingCreated] =
     React.useState(true);
   const [sessionId, setSessionId] = React.useState<string | null>('40');
+  const [history, setHistory] = useState<EnrichedSession[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+
+  // 1. Data Fetching and Orchestration
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      let currentUserId: number | null = null;
+      // const token = localStorage.getItem('accessToken');
+      const token = getAccessToken();
+      try {
+        console.log(token);
+        // const decodedToken = jwtDecode<UserJwtPayload>(token);
+        // setUser(decodedToken);
+        // currentUserId = decodedToken.userId;
+        currentUserId = getUserId();
+      } catch (error) {
+        console.error('Invalid token:', error);
+        router.push('/accounts/login');
+        return;
+      }
+
+      try {
+        // Simulating: const historyRes = await fetchWithAuth('http://localhost:3002/sessions/me');
+        const rawSessions: RawSession[] = mockSessionData;
+
+        const questionIds = [...new Set(rawSessions.map((s) => s.questionId))];
+        const peerIds = [
+          ...new Set(
+            rawSessions
+              .flatMap((s) => s.userIds)
+              .filter((id) => id !== currentUserId),
+          ),
+        ];
+
+        const [questionData, peerData] = await Promise.all([
+          fakeFetch(mockQuestionDatabase, questionIds),
+          fakeFetch(mockUserDatabase, peerIds),
+        ]);
+
+        const questionMap = new Map(questionData.map((q) => [q.id, q]));
+        const peerMap = new Map(peerData.map((p) => [p.id, p]));
+
+        // --- UPDATED: "Stitch" the data together, including isSolved ---
+        const enrichedSessions = rawSessions.map((session) => {
+          const peerId = session.userIds.find((id) => id !== currentUserId);
+          const peer = peerMap.get(peerId!) || { username: 'Unknown' };
+          const question = questionMap.get(session.questionId) || {
+            title: 'Unknown Question',
+            difficulty: 'Easy',
+            topics: [],
+          };
+          return {
+            id: session.sessionId,
+            createdAt: session.createdAt,
+            isSolved: session.isSolved,
+            question: {
+              title: question.title,
+              difficulty: question.difficulty,
+              topics: question.topics,
+            },
+            peer: { username: peer.username },
+          };
+        });
+        setHistory(enrichedSessions);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadDashboardData();
+  }, [router]);
+
+  // 2. Frontend Analytics Calculation
+  const stats: AnalyticsStats = useMemo(() => {
+    const solvedSessions = history.filter((session) => session.isSolved);
+
+    const totalSolved = solvedSessions.length;
+    let easy = 0;
+    let medium = 0;
+    let hard = 0;
+    const categories: Record<string, number> = {};
+
+    for (const session of solvedSessions) {
+      const difficulty = session.question.difficulty.toLowerCase();
+      if (difficulty === 'easy') easy++;
+      else if (difficulty === 'medium') medium++;
+      else if (difficulty === 'hard') hard++;
+      for (const topic of session.question.topics) {
+        categories[topic] = (categories[topic] || 0) + 1;
+      }
+    }
+
+    console.log('Calculated Solved Categories:', categories);
+
+    return { totalSolved, easy, medium, hard, categories };
+  }, [history]); // Recalculates only when history changes
+
+  // --- 3. Loading State ---
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#F9FAFB',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
   return (
     <Box
       sx={{
@@ -291,7 +413,10 @@ export default function DashboardPage() {
                   >
                     Recent Sessions
                   </Typography>
-                  <Link href="#" sx={{ fontWeight: 600, color: '#4F46E5' }}>
+                  <Link
+                    href="/home/practice-history"
+                    sx={{ fontWeight: 600, color: '#4F46E5' }}
+                  >
                     View all
                   </Link>
                 </Stack>
@@ -318,7 +443,7 @@ export default function DashboardPage() {
                     </TableHead>
                     <TableBody>
                       {/* --- RENDER FROM DYNAMIC HISTORY STATE --- */}
-                      {history.slice(0, 10).map((row) => (
+                      {history.slice(0, 6).map((row) => (
                         <TableRow
                           key={row.id}
                           sx={{
@@ -511,7 +636,7 @@ export default function DashboardPage() {
                   sx={{
                     fontWeight: 700,
                     color: '#374151',
-                    mb: 2,
+                    mb: 0,
                     opacity: 0.8,
                   }}
                 >
@@ -522,7 +647,7 @@ export default function DashboardPage() {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    height: 250,
+                    height: 350,
                     borderRadius: 2,
                   }}
                 >
