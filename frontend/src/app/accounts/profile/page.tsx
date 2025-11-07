@@ -34,7 +34,6 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { ZodError } from 'zod';
-import { fetchWithAuth } from '@/lib/utils/apiClient';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
@@ -104,10 +103,6 @@ export default function Page() {
     setIsLoading(true);
     setError('');
     const token = getAccessToken();
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
 
     try {
       const data = await getMyProfile();
@@ -226,10 +221,6 @@ export default function Page() {
     setEmailChangeSuccess('');
 
     const token = getAccessToken();
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
 
     try {
       const data = await requestEmailChange({
@@ -261,11 +252,6 @@ export default function Page() {
     setEmailChangeSuccess('');
 
     const token = getAccessToken();
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
-
     try {
       const data = await verifyEmailChange({
         newEmail: emailChangeData.newEmail,
@@ -312,11 +298,6 @@ export default function Page() {
     setPasswordChangeSuccess('');
 
     const token = getAccessToken();
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
-
     try {
       const data = await requestPasswordChange({
         oldPassword: passwordChangeData.oldPassword,
@@ -386,10 +367,6 @@ export default function Page() {
     setPasswordChangeSuccess('');
 
     const token = getAccessToken();
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
 
     try {
       const res = await verifyPasswordChange({
