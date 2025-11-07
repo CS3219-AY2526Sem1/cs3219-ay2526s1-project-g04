@@ -1,5 +1,4 @@
 -- migrations/0001_init.sql
-
 -- =========================
 -- Core tables
 -- =========================
@@ -22,7 +21,6 @@ CREATE TABLE IF NOT EXISTS questions (
 );
 
 -- Immutable snapshot of the authored content/metadata per version.
--- (We keep this so "publish" can freeze the markdown, title, etc.)
 CREATE TABLE IF NOT EXISTS question_versions (
   id             text NOT NULL,
   version        int  NOT NULL,
@@ -72,7 +70,7 @@ CREATE TABLE IF NOT EXISTS question_test_cases (
   visibility      text NOT NULL CHECK (visibility IN ('sample','hidden')),
   input_data      text NOT NULL,          -- raw stdin / JSON / args
   expected_output text NOT NULL,          -- raw stdout / JSON
-  ordinal         int NOT NULL DEFAULT 0  -- stable order (UI + runner)
+  ordinal         int NOT NULL DEFAULT 1 CHECK (ordinal >= 1)  -- 1..n ascending
 );
 
 -- Single canonical Python starter template for the editor.
@@ -127,3 +125,7 @@ CREATE INDEX IF NOT EXISTS idx_topics_color
 -- Runtime helpers
 CREATE INDEX IF NOT EXISTS idx_qtc_question
   ON question_test_cases (question_id, visibility, ordinal);
+
+-- Enforce unique ordinal per question (prevents duplicates)
+CREATE UNIQUE INDEX IF NOT EXISTS ux_qtc_question_ordinal
+  ON question_test_cases (question_id, ordinal);

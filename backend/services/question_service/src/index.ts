@@ -25,8 +25,6 @@ async function main() {
       {
         port,
         env: process.env['NODE_ENV'] || 'development',
-        issuer: process.env['JWT_ISSUER'],
-        jwks: process.env['JWKS_URL'],
       },
       'Question Service listening',
     );
