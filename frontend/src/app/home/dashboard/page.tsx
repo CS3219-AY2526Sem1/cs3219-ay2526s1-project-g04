@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
 import {
   Box,
   Button,
