@@ -22,6 +22,7 @@ import {
   signup,
   verifyEmail,
 } from '@/services/userServiceApi';
+import { setTokens } from '@/lib/utils/jwt';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function debounce<T extends (...args: any[]) => unknown>(
@@ -183,8 +184,7 @@ export default function SignUpPage() {
       setResendMessage('');
       try {
         const data = await verifyEmail({ email, otp: submittedOtp });
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        setTokens(data.accessToken, data.refreshToken);
         router.push('/home/dashboard');
       } catch (err) {
         console.error(err);

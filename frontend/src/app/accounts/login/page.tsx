@@ -16,6 +16,7 @@ import {
 import { openSans } from '@/styles/fonts';
 import { VerifyOtpForm } from '@/components/ui/accounts/VerifyOtp';
 import { login, resendOtp, verifyEmail } from '@/services/userServiceApi';
+import { setTokens } from '@/lib/utils/jwt';
 
 const OTP_COOLDOWN_SECONDS = 60;
 
@@ -53,8 +54,9 @@ export default function LoginPage() {
 
     try {
       const data = await login({ email, password });
-      localStorage.setItem('accessToken', data.token);
-      localStorage.setItem('refreshToken', data.refreshToken);
+      // localStorage.setItem('accessToken', data.token);
+      // localStorage.setItem('refreshToken', data.refreshToken);
+      setTokens(data.token, data.refreshToken);
       router.push('/home/dashboard');
     } catch (err) {
       console.log(err);
@@ -72,8 +74,9 @@ export default function LoginPage() {
 
       try {
         const data = await verifyEmail({ email, otp: submittedOtp });
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
+        // localStorage.setItem('accessToken', data.accessToken);
+        // localStorage.setItem('refreshToken', data.refreshToken);
+        setTokens(data.accessToken, data.refreshToken);
         router.push('/home/dashboard');
       } catch (err) {
         console.log(err);

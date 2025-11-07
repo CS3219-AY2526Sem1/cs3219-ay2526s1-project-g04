@@ -31,6 +31,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For "Attempted" status
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
 import { WaitingSessionToBeCreatedPopUp } from '@/components/ui/matching/modelwaitiingtoredirect';
+import { getAccessToken, getUserId } from '@/lib/utils/jwt';
 
 // --- Mock Data (Replace with your API data) ---
 interface Question {
@@ -192,16 +193,18 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadDashboardData = async () => {
       let currentUserId: number | null = null;
-      const token = localStorage.getItem('accessToken');
+      // const token = localStorage.getItem('accessToken');
+      const token = getAccessToken();
       if (!token) {
         router.push('/accounts/login');
         return;
       }
       try {
         console.log(token);
-        const decodedToken = jwtDecode<UserJwtPayload>(token);
-        setUser(decodedToken);
-        currentUserId = decodedToken.userId;
+        // const decodedToken = jwtDecode<UserJwtPayload>(token);
+        // setUser(decodedToken);
+        // currentUserId = decodedToken.userId;
+        currentUserId = getUserId();
       } catch (error) {
         console.error('Invalid token:', error);
         router.push('/accounts/login');
