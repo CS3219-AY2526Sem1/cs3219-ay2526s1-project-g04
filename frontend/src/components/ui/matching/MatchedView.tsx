@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { sessionIsReady } from '@/services/collaborationServiceApi';
 import { getCollabProvider } from '../collaboration/collabSingleton';
+import { getUserId } from '@/getUserId';
 
 interface MatchedViewProps {
   matchingId: string;
@@ -28,7 +29,7 @@ export default function MatchedView({
         const { sessionId, created, ready } = await sessionIsReady(matchingId);
         console.log(sessionId, created, createProcessIsDone);
         if (created && sessionId && !createProcessIsDone) {
-          getCollabProvider(sessionId, '1');
+          getCollabProvider(sessionId, getUserId().toString());
           setCreateProcessIsDone(true);
         }
         if (ready && sessionId) {

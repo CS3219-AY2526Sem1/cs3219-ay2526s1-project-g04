@@ -29,7 +29,7 @@ export class Collab {
     await listener.start();
 
     this.test_send_msg_to_collab('123');
-    this.test_send_msg_to_collab('124');
+    // this.test_send_msg_to_collab('124');
   }
 
   private async initDatabases() {

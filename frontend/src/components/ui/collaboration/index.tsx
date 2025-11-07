@@ -3,31 +3,44 @@ import CollabMonaco from './CollabMonaco';
 import { Communication } from './communication';
 import { QuestionCard } from './question';
 import { TestCases } from './tests';
-import { getCollabProvider } from './collabSingleton';
+import { getCollabProvider, ProviderIsUndefined } from './collabSingleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { sessionIsAlive } from '@/services/collaborationServiceApi';
+import { getUserId } from '@/getUserId';
+import { useCodeContext } from './CodeContext';
 
 interface CollaborationProps {
   sessionId: string;
 }
 
 interface NotificationMessage {
-  type: 'user-left';
-  userId: string;
+  senderId: 'user-left';
+  message: string;
   timestamp?: number;
 }
 
 export const Collaboration = (p: CollaborationProps) => {
   const { sessionId } = p;
-  const userId = '1';
+  const userId = getUserId().toString();
+
+  const { setSessionId } = useCodeContext();
   const [providers, setProviders] = useState<ReturnType<
     typeof getCollabProvider
   > | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  useEffect(() => {
+    setSessionId(sessionId);
+  }, [sessionId, setSessionId]);
 
   useEffect(() => {
     (async () => {
+      if (!ProviderIsUndefined) {
+        setProviders(getCollabProvider(sessionId, userId));
+        return;
+      }
       setLoading(true);
       const alive = await sessionIsAlive(sessionId);
       console.log('ping');
@@ -53,25 +66,23 @@ export const Collaboration = (p: CollaborationProps) => {
   }
 
   const { yCodeDoc, codeProvider } = providers;
+
   const notifications = yCodeDoc.getMap<NotificationMessage>('notifications');
-  const router = useRouter();
 
-  notifications.observe((event) => {
-    event.changes.keys.forEach((change, key) => {
-      if (change.action === 'add' || change.action === 'update') {
-        const message = notifications.get(key);
-        console.log(message);
-        if (message && message.userId === userId) return;
-
-        if (message && message.type === 'user-left') {
-          alert(
-            `User ${message.userId} left the session, you will be redirected to the home page`,
-          );
+  const observer = (event: any) => {
+    event.keys.forEach((change: any, key: any) => {
+      if (change.action === 'add') {
+        const value = notifications.get(key);
+        if (value && value.senderId.toString() !== getUserId().toString()) {
+          alert(value.message);
           router.push('/home/dashboard');
         }
+
+        notifications.delete(key);
       }
     });
-  });
+  };
+  notifications.observe(observer);
 
   return (
     <Stack spacing={2} direction="row" className="h-full w-full">

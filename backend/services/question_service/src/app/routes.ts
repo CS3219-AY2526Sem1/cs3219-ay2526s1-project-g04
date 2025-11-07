@@ -37,8 +37,8 @@ r.get('/topics', TopicController.list);
 // Service-to-service (selection) — lock to 'service'
 r.post(
   '/select',
-  requireAuth(),
-  requireRole('service'),
+  // requireAuth(),
+  // requireRole('service'),
   QuestionController.select,
 );
 

@@ -9,6 +9,7 @@ import { TEST_TOPICS } from '@/lib/test-data/TestTopics';
 import { MatchCriteria, MatchRequestBody } from '@/lib/matching-service';
 import { postMatchRequest } from '@/services/matchingServiceApi';
 import { type MatchState, TEST_USERID } from './Types';
+import { getUserId } from '@/getUserId';
 
 interface FormProps {
   setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
@@ -157,7 +158,7 @@ export default function MatchingForm({ setMatchState }: FormProps) {
     };
 
     const reqPayload: MatchRequestBody = {
-      userId: TEST_USERID,
+      userId: getUserId().toString(),
       criteria: reqCriteria,
     };
 

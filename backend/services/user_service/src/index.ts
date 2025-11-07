@@ -786,6 +786,10 @@ app.get('/user/utility/list', async (req, res) => {
   }
 });
 
+app.get('/healthz', async (req, res) => {
+  res.status(200).send('alive');
+});
+
 /**
  * port
  */

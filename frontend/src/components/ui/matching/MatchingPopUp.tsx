@@ -9,6 +9,7 @@ import LoadingView from './LoadingView';
 import MatchedView from './MatchedView';
 import { type MatchState, TEST_USERID } from './Types';
 import TimeoutView from './TimeoutView';
+import { getUserId } from '@/getUserId';
 
 interface MatchingPopUpProps {
   setShowMatching: React.Dispatch<React.SetStateAction<boolean>>;
@@ -36,7 +37,7 @@ function CloseFormButton({
           'Are you sure you want to cancel your match request?',
         );
         if (confirmed) {
-          const res = await deleteMatchRequest(TEST_USERID);
+          const res = await deleteMatchRequest(getUserId().toString());
           if (!res.success) {
             const force = confirm(
               'Could not reach server to cancel match. Do you want to close anyway?',

@@ -24,6 +24,7 @@ import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
 import { useRouter } from 'next/navigation';
 import { removeCollabProvider } from './collabSingleton';
+import { getUserId } from '@/getUserId';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -35,7 +36,7 @@ export default function CollabNavigationBar({
 }: TopNavigationBarProps) {
   const appBarRef = useRef<HTMLDivElement>(null);
 
-  const { code, language, testCases, setResults } = useCodeContext();
+  const { code, language, testCases, setResults, sessionId } = useCodeContext();
 
   const router = useRouter();
 
@@ -109,9 +110,14 @@ export default function CollabNavigationBar({
 
   const handleEndSession = async () => {
     try {
-      const sessionId = '26';
-      const userId = '12';
-      const terminated = await terminateSessionIsSuccess(sessionId, userId);
+      if (!sessionId) {
+        alert('session id missing');
+        return;
+      }
+      const terminated = await terminateSessionIsSuccess(
+        sessionId,
+        getUserId().toString(),
+      );
       if (terminated) {
         removeCollabProvider();
         router.push('/home/dashboard');

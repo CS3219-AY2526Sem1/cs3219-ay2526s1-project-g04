@@ -1,0 +1,19 @@
+services:
+  matching_service:
+    build:
+      context: ../../
+      dockerfile: services/matching_service/Dockerfile
+
+    restart: always
+    ports:
+      - "3007:3007"
+    networks:
+      - peerprep-network
+
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - RABBITMQ_URL=amqp://admin:rabbitmq123@rabbitmq:5672
+
+networks:
+  peerprep-network:
+    external: true
