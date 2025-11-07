@@ -47,6 +47,7 @@
     "express-jwt": "^8.5.1",
     "helmet": "^8.1.0",
     "jose": "^6.1.0",
+    "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.2.0",
     "marked": "^16.4.0",
     "morgan": "^1.10.1",
@@ -56,10 +57,11 @@
     "uuid": "^13.0.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.37.0",
+    "@eslint/js": "^9.39.1",
     "@tsconfig/node22": "^22.0.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.7.0",
     "@types/sanitize-html": "^2.16.0",
     "eslint": "^9.37.0",
