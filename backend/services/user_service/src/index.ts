@@ -39,8 +39,14 @@ const upload = multer({
   },
 });
 
-const privateKey = fs.readFileSync('./private.pem', 'utf8');
+const privateKey = process.env.PRIVATE_KEY;
 const publicKey = fs.readFileSync('./public.pem', 'utf8');
+
+if (!privateKey) {
+  throw new Error(
+    'FATAL ERROR: PRIVATE_KEY is not defined in environment variables.',
+  );
+}
 
 app.use(cors());
 app.use(express.json());

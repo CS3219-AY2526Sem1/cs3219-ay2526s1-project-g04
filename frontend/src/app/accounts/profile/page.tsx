@@ -47,6 +47,7 @@ import {
   verifyEmailChange,
   verifyPasswordChange,
 } from '@/services/userServiceApi';
+import { getAccessToken } from '@/lib/utils/jwt';
 
 interface UserProfile {
   username: string;
@@ -102,7 +103,7 @@ export default function Page() {
   const fetchProfile = useCallback(async () => {
     setIsLoading(true);
     setError('');
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       router.push('/accounts/login');
       return;
@@ -149,7 +150,7 @@ export default function Page() {
     setIsSaving(true);
     setError('');
     setSuccessMessage('');
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
 
     if (!token) {
       setError('Authentication error. Please log in again.');
@@ -224,7 +225,7 @@ export default function Page() {
     setEmailChangeError('');
     setEmailChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       router.push('/accounts/login');
       return;
@@ -259,7 +260,7 @@ export default function Page() {
     setEmailChangeError('');
     setEmailChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       router.push('/accounts/login');
       return;
@@ -310,7 +311,7 @@ export default function Page() {
     setPasswordChangeError('');
     setPasswordChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       router.push('/accounts/login');
       return;
@@ -384,7 +385,7 @@ export default function Page() {
     setPasswordChangeError('');
     setPasswordChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
     if (!token) {
       router.push('/accounts/login');
       return;
