@@ -28,8 +28,16 @@ export const QuestionCard = (p: questionProps) => {
     const fetchQuestion = async () => {
       const questionId: string | null = await getQuestionIdBySessId(sessionId);
       console.log(1, questionId);
+
       if (!questionId) return;
-      const question: Question | null = await getQuestionById(questionId);
+
+      const res = await getQuestionById(questionId);
+      if (!res.success) {
+        alert(`⚠️ Error fetching question: ${res.message}`);
+        return;
+      }
+
+      const question: Question = res.data;
       console.log(question);
       setQuestionMd(question?.body_md ?? '');
       setQuestionTitle(question?.title ?? '');
