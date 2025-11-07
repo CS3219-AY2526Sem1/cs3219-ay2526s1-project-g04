@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { jwtDecode } from 'jwt-decode';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
 import {
   Box,
@@ -31,6 +30,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For "Attempted" status
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
 import { WaitingSessionToBeCreatedPopUp } from '@/components/ui/matching/modelwaitiingtoredirect';
+import { getAccessToken, getUserId, getUsername } from '@/lib/utils/jwt';
 
 // --- Mock Data (Replace with your API data) ---
 interface Question {
@@ -136,13 +136,6 @@ const fakeFetch = <T,>(
 };
 
 // Type definitions
-interface UserJwtPayload {
-  userId: number;
-  username: string;
-  role: 'USER' | 'ADMIN';
-  iat: number;
-  exp: number;
-}
 interface RawSession {
   sessionId: number;
   questionId: string;
@@ -183,7 +176,6 @@ export default function DashboardPage() {
   const [showSessionBeingCreated, setShowSessionBeingCreated] =
     React.useState(true);
   const [sessionId, setSessionId] = React.useState<string | null>('40');
-  const [user, setUser] = useState<UserJwtPayload | null>(null);
   const [history, setHistory] = useState<EnrichedSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -192,16 +184,14 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadDashboardData = async () => {
       let currentUserId: number | null = null;
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/accounts/login');
-        return;
-      }
+      // const token = localStorage.getItem('accessToken');
+      const token = getAccessToken();
       try {
         console.log(token);
-        const decodedToken = jwtDecode<UserJwtPayload>(token);
-        setUser(decodedToken);
-        currentUserId = decodedToken.userId;
+        // const decodedToken = jwtDecode<UserJwtPayload>(token);
+        // setUser(decodedToken);
+        // currentUserId = decodedToken.userId;
+        currentUserId = getUserId();
       } catch (error) {
         console.error('Invalid token:', error);
         router.push('/accounts/login');
@@ -322,7 +312,7 @@ export default function DashboardPage() {
             opacity: 0.8,
           }}
         >
-          Welcome back, {user?.username}!
+          Welcome back, {getUsername()}!
         </Typography>
 
         <Box

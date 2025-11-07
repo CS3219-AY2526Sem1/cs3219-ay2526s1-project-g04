@@ -34,7 +34,6 @@ import {
   VisibilityOff as VisibilityOffIcon,
 } from '@mui/icons-material';
 import { ZodError } from 'zod';
-import { fetchWithAuth } from '@/lib/utils/apiClient';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
@@ -47,6 +46,7 @@ import {
   verifyEmailChange,
   verifyPasswordChange,
 } from '@/services/userServiceApi';
+import { getAccessToken } from '@/lib/utils/jwt';
 
 interface UserProfile {
   username: string;
@@ -102,11 +102,7 @@ export default function Page() {
   const fetchProfile = useCallback(async () => {
     setIsLoading(true);
     setError('');
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
+    const token = getAccessToken();
 
     try {
       const data = await getMyProfile();
@@ -149,7 +145,7 @@ export default function Page() {
     setIsSaving(true);
     setError('');
     setSuccessMessage('');
-    const token = localStorage.getItem('accessToken');
+    const token = getAccessToken();
 
     if (!token) {
       setError('Authentication error. Please log in again.');
@@ -224,11 +220,7 @@ export default function Page() {
     setEmailChangeError('');
     setEmailChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
+    const token = getAccessToken();
 
     try {
       const data = await requestEmailChange({
@@ -259,12 +251,7 @@ export default function Page() {
     setEmailChangeError('');
     setEmailChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
-
+    const token = getAccessToken();
     try {
       const data = await verifyEmailChange({
         newEmail: emailChangeData.newEmail,
@@ -310,12 +297,7 @@ export default function Page() {
     setPasswordChangeError('');
     setPasswordChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
-
+    const token = getAccessToken();
     try {
       const data = await requestPasswordChange({
         oldPassword: passwordChangeData.oldPassword,
@@ -384,11 +366,7 @@ export default function Page() {
     setPasswordChangeError('');
     setPasswordChangeSuccess('');
 
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      router.push('/accounts/login');
-      return;
-    }
+    const token = getAccessToken();
 
     try {
       const res = await verifyPasswordChange({
