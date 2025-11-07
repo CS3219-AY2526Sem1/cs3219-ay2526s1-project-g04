@@ -50,10 +50,10 @@ export const getUserId = (): number | null => {
   return decoded ? decoded.userId || (decoded as any).id : null;
 };
 
-export const getUsername = () : string | null => {
+export const getUsername = (): string | null => {
   const decoded = getDecodedToken();
   return decoded ? decoded.username : null;
-}
+};
 
 export const isTokenExpired = (): boolean => {
   const decoded = getDecodedToken();
