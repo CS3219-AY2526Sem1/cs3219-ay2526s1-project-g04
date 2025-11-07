@@ -24,7 +24,7 @@ import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
 import { useRouter } from 'next/navigation';
 import { removeCollabProvider } from './collabSingleton';
-import { getUserId } from '@/getUserId';
+import { getUserId } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -116,7 +116,7 @@ export default function CollabNavigationBar({
       }
       const terminated = await terminateSessionIsSuccess(
         sessionId,
-        getUserId().toString(),
+        getUserId()!.toString(),
       );
       if (terminated) {
         removeCollabProvider();

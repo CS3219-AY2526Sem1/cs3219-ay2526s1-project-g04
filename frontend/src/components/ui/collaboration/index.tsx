@@ -7,7 +7,7 @@ import { getCollabProvider, ProviderIsUndefined } from './collabSingleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { sessionIsAlive } from '@/services/collaborationServiceApi';
-import { getUserId } from '@/getUserId';
+import { getUserId } from '@/lib/utils/jwt';
 import { useCodeContext } from './CodeContext';
 
 interface CollaborationProps {
@@ -22,7 +22,7 @@ interface NotificationMessage {
 
 export const Collaboration = (p: CollaborationProps) => {
   const { sessionId } = p;
-  const userId = getUserId().toString();
+  const userId = getUserId()!.toString();
 
   const { setSessionId } = useCodeContext();
   const [providers, setProviders] = useState<ReturnType<
@@ -73,7 +73,7 @@ export const Collaboration = (p: CollaborationProps) => {
     event.keys.forEach((change: any, key: any) => {
       if (change.action === 'add') {
         const value = notifications.get(key);
-        if (value && value.senderId.toString() !== getUserId().toString()) {
+        if (value && value.senderId.toString() !== getUserId()!.toString()) {
           alert(value.message);
           router.push('/home/dashboard');
         }

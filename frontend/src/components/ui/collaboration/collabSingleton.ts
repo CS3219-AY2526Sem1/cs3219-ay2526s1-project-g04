@@ -1,7 +1,7 @@
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getUserId } from '@/getUserId';
+import { getUserId } from '@/lib/utils/jwt';
 
 let yCodeDoc: Y.Doc | null = null;
 let codeProvider: WebsocketProvider | null = null;

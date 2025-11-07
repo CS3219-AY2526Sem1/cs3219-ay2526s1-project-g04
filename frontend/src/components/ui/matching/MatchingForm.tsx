@@ -9,7 +9,7 @@ import { TEST_TOPICS } from '@/lib/test-data/TestTopics';
 import { MatchCriteria, MatchRequestBody } from '@/lib/matching-service';
 import { postMatchRequest } from '@/services/matchingServiceApi';
 import { type MatchState, TEST_USERID } from './Types';
-import { getUserId } from '@/getUserId';
+import { getUserId } from '@/lib/utils/jwt';
 
 interface FormProps {
   setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
@@ -125,6 +125,11 @@ export default function MatchingForm({ setMatchState }: FormProps) {
 
   // get topic list from question service
   const [topicList, setTopicList] = React.useState<Topic[]>([]);
+  const userId = getUserId();
+  if (!userId) {
+    console.error('user id not found');
+  }
+
   React.useEffect(() => {
     setTopics([]);
 
@@ -158,7 +163,7 @@ export default function MatchingForm({ setMatchState }: FormProps) {
     };
 
     const reqPayload: MatchRequestBody = {
-      userId: getUserId().toString(),
+      userId: getUserId()!.toString(),
       criteria: reqCriteria,
     };
 

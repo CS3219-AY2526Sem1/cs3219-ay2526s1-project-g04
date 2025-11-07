@@ -47,6 +47,9 @@ export const getDecodedToken = (): DecodedToken | null => {
 
 export const getUserId = (): number | null => {
   const decoded = getDecodedToken();
+  if (!decoded?.userId) {
+    console.error('user id cannot be extracted from token');
+  }
   return decoded ? decoded.userId : null;
 };
 
