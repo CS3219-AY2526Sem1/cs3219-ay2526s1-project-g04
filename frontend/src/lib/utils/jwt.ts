@@ -47,7 +47,7 @@ export const getDecodedToken = (): DecodedToken | null => {
 
 export const getUserId = (): number | null => {
   const decoded = getDecodedToken();
-  return decoded ? decoded.userId || (decoded as any).id : null;
+  return decoded ? decoded.userId : null;
 };
 
 export const getUsername = (): string | null => {
