@@ -26,6 +26,37 @@ spec:
                 secretKeyRef:
                   name: qs-secret
                   key: DATABASE_URL
+            - name: ALLOW_ANONYMOUS_READS
+              valueFrom:
+                secretKeyRef:
+                  name: qs-secret
+                  key: ALLOW_ANONYMOUS_READS
+            - name: SIGNED_URL_TTL_SECONDS
+              valueFrom:
+                secretKeyRef:
+                  name: qs-secret
+                  key: SIGNED_URL_TTL_SECONDS
+            - name: S3_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: qs-secret
+                  key: S3_BUCKET
+            - name: ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qs-secret
+                  key: ACCESS_KEY
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qs-secret
+                  key: SECRET_KEY
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: qs-secret
+                  key: AWS_REGION
+
           readinessProbe:
             httpGet:
               path: /healthz
