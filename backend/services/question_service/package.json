@@ -21,6 +21,7 @@
   },
   "scripts": {
     "dev": "tsx --watch src/index.ts",
+    "dev_rs": "npm run db:reset && npm run dev",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/index.js",
     "prisma:gen": "prisma generate",

@@ -9,6 +9,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "dotenv -e .env -- ts-node-dev --respawn --transpile-only src/index.ts",
+    "dev_rs": "npx prismas db push && npm run dev",
     "build": "tsc",
     "format": "prettier --write \"src/*.ts\"",
     "start": "node dist/index.js"

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --watch src/main.ts",
+    "dev_rs": "npm run dev",
     "start": "node dist/services/collaboration_service/src/main.js",
     "build": "prisma generate && tsc && tsc-alias",
     "type-check": "tsc --noEmit",
