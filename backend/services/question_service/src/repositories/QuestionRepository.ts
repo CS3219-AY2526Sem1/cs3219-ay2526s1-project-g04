@@ -85,59 +85,40 @@ async function replaceTestCases(
   });
 }
 
-export async function getPublishedById(id: string) {
-  return prisma.questions.findFirst({
-    where: { id, status: 'published' },
+const commonSelect = {
+  id: true,
+  title: true,
+  body_md: true,
+  difficulty: true,
+  status: true,
+  version: true,
+  attachments: true,
+  created_at: true,
+  updated_at: true,
+  question_topics: {
     select: {
-      id: true,
-      title: true,
-      body_md: true,
-      difficulty: true,
-      status: true,
-      version: true,
-      attachments: true,
-      created_at: true,
-      updated_at: true,
-      question_topics: {
+      topics: {
         select: {
-          topics: {
-            select: {
-              slug: true,
-              display: true,
-              color_hex: true,
-            },
-          },
+          slug: true,
+          display: true,
+          color_hex: true,
         },
       },
     },
+  },
+};
+
+export async function getPublishedById(id: string) {
+  return prisma.questions.findFirst({
+    where: { id, status: 'published' },
+    select: commonSelect,
   });
 }
 
 export async function getQuestionById(id: string) {
   return prisma.questions.findFirst({
     where: { id },
-    select: {
-      id: true,
-      title: true,
-      body_md: true,
-      difficulty: true,
-      status: true,
-      version: true,
-      attachments: true,
-      created_at: true,
-      updated_at: true,
-      question_topics: {
-        select: {
-          topics: {
-            select: {
-              slug: true,
-              display: true,
-              color_hex: true,
-            },
-          },
-        },
-      },
-    },
+    select: commonSelect,
   });
 }
 
@@ -154,37 +135,22 @@ export async function listPublished(opts: {
 
   // ============== Fast path: no FTS needed ==============
   if (!opts.q && !opts.topics?.length) {
-    return prisma.questions.findMany({
-      where: {
-        status: 'published',
-        ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
-      },
-      orderBy: { updated_at: 'desc' },
-      skip: offset,
-      take: page_size,
-      select: {
-        id: true,
-        title: true,
-        body_md: true,
-        difficulty: true,
-        status: true,
-        version: true,
-        attachments: true,
-        created_at: true,
-        updated_at: true,
-        question_topics: {
-          select: {
-            topics: {
-              select: {
-                slug: true,
-                display: true,
-                color_hex: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const where = {
+      status: 'published' as const,
+      ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
+    };
+
+    const [total, rows] = await Promise.all([
+      prisma.questions.count({ where }),
+      prisma.questions.findMany({
+        where,
+        orderBy: { updated_at: 'desc' },
+        skip: offset,
+        take: page_size,
+        select: commonSelect,
+      }),
+    ]);
+    return { rows, total };
   }
 
   //  Full-Text Search path (q present)
@@ -226,7 +192,19 @@ export async function listPublished(opts: {
       params.push(opts.topics);
     }
 
-    // Pagination params
+    // COUNT(*) with same WHERE (no LIMIT/OFFSET)
+    const countSql = `
+      SELECT COUNT(*)::int AS cnt
+      FROM questions q
+      WHERE ${whereClauses.join(' AND ')}
+    `;
+    const countResult = await prisma.$queryRawUnsafe<Array<{ cnt: number }>>(
+      countSql,
+      ...params,
+    );
+    const total = countResult[0]?.cnt ?? 0;
+
+    // Paged SELECT
     const limitIdx = paramIdx++;
     const offsetIdx = paramIdx++;
     params.push(page_size, offset);
@@ -274,49 +252,30 @@ export async function listPublished(opts: {
     `;
 
     const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
-    return rows;
+    return { rows, total };
   }
 
   // topics-only filter
-  return prisma.questions.findMany({
-    where: {
-      status: 'published',
-      ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
-      ...(opts.topics?.length
-        ? {
-            question_topics: {
-              some: {
-                topic_slug: { in: opts.topics },
-              },
-            },
-          }
-        : {}),
-    },
-    orderBy: { updated_at: 'desc' },
-    skip: offset,
-    take: page_size,
-    select: {
-      id: true,
-      title: true,
-      body_md: true,
-      difficulty: true,
-      status: true,
-      version: true,
-      attachments: true,
-      created_at: true,
-      updated_at: true,
-      question_topics: {
-        select: {
-          topics: {
-            select: {
-              slug: true,
-              color_hex: true,
-            },
-          },
-        },
-      },
-    },
-  });
+  const whereTopicsOnly: Prisma.questionsWhereInput = {
+    status: 'published',
+    ...(opts.difficulty ? { difficulty: opts.difficulty } : {}),
+    ...(opts.topics?.length
+      ? { question_topics: { some: { topic_slug: { in: opts.topics } } } }
+      : {}),
+  };
+
+  const [total, rows] = await Promise.all([
+    prisma.questions.count({ where: whereTopicsOnly }),
+    prisma.questions.findMany({
+      where: whereTopicsOnly,
+      orderBy: { updated_at: 'desc' },
+      skip: offset,
+      take: page_size,
+      select: commonSelect,
+    }),
+  ]);
+
+  return { rows, total };
 }
 
 export async function listAll(opts: {
@@ -367,6 +326,17 @@ export async function listAll(opts: {
       i += 1;
     }
 
+    const countSql = `
+      SELECT COUNT(*)::int AS cnt
+      FROM questions q
+      WHERE ${whereClauses.join(' AND ')}
+    `;
+    const countResult = await prisma.$queryRawUnsafe<Array<{ cnt: number }>>(
+      countSql,
+      ...params,
+    );
+    const total = countResult[0]?.cnt ?? 0;
+
     const limitIdx = i++;
     const offsetIdx = i++;
     params.push(page_size, offset);
@@ -414,7 +384,7 @@ export async function listAll(opts: {
     `;
 
     const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
-    return rows;
+    return { rows, total };
   }
 
   // ========= No q: keep Prisma path (topics/difficulty filters only) =========
@@ -431,34 +401,18 @@ export async function listAll(opts: {
       : {}),
   };
 
-  return prisma.questions.findMany({
-    where,
-    orderBy: { updated_at: 'desc' },
-    skip: offset,
-    take: page_size,
-    select: {
-      id: true,
-      title: true,
-      body_md: true,
-      difficulty: true,
-      status: true,
-      version: true,
-      attachments: true,
-      created_at: true,
-      updated_at: true,
-      question_topics: {
-        select: {
-          topics: {
-            select: {
-              slug: true,
-              display: true,
-              color_hex: true,
-            },
-          },
-        },
-      },
-    },
-  });
+  const [total, rows] = await Promise.all([
+    prisma.questions.count({ where }),
+    prisma.questions.findMany({
+      where,
+      orderBy: { updated_at: 'desc' },
+      skip: offset,
+      take: page_size,
+      select: commonSelect,
+    }),
+  ]);
+
+  return { rows, total };
 }
 
 export async function createDraft(q: {
@@ -889,27 +843,7 @@ export async function getPublishedManyById(ids: string[]) {
       id: { in: ids },
       status: 'published',
     },
-    select: {
-      id: true,
-      title: true,
-      body_md: true,
-      difficulty: true,
-      status: true,
-      version: true,
-      attachments: true,
-      created_at: true,
-      updated_at: true,
-      question_topics: {
-        select: {
-          topics: {
-            select: {
-              slug: true,
-              color_hex: true,
-            },
-          },
-        },
-      },
-    },
+    select: commonSelect,
   });
 
   return rows;
