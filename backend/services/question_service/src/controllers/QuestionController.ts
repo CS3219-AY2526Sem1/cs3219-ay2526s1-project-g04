@@ -274,3 +274,59 @@ export async function select(req: Request, res: Response) {
     return res.status(500).json({ error: 'internal_error' });
   }
 }
+
+/**
+ * GET /questions/batch?ids=q1,q2,q3
+ *
+ * Returns an array of published questions (sanitized public view).
+ * - Only returns questions with status='published'
+ * - Keeps the same order as requested ids
+ * - Skips ids that don't exist / aren't published
+ *
+ * Error cases:
+ * - missing/empty ids => 400
+ * - too many ids ( > 50 ) => 400 (to stop people from nuking us)
+ */
+export async function getBatchById(req: Request, res: Response) {
+  const raw = (req.query['ids'] as string | undefined)?.trim() ?? '';
+  if (!raw) {
+    return res.status(400).json({
+      error: 'missing_ids',
+      message: 'query param ?ids=... is required',
+    });
+  }
+
+  // split, trim, dedupe, drop empties
+  const ids = Array.from(
+    new Set(
+      raw
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  if (!ids.length) {
+    return res
+      .status(400)
+      .json({ error: 'no_valid_ids', message: 'no usable ids found' });
+  }
+
+  if (ids.length > 50) {
+    return res.status(400).json({
+      error: 'too_many_ids',
+      message: 'limit 50 ids per request',
+    });
+  }
+
+  try {
+    const questions = await Service.getPublishedBatch(ids);
+    return res.json({
+      items: questions,
+      count: questions.length,
+    });
+  } catch (err) {
+    log.error('error in getBatchByIds', err);
+    return res.status(500).json({ error: 'internal_error' });
+  }
+}

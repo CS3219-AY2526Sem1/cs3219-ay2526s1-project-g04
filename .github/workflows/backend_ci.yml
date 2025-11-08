@@ -9,61 +9,123 @@ defaults:
     working-directory: backend
 
 jobs:
-  lint-services:
+  
+  lint-collab-service:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
-      - name: Install lint
-        run: npm i
-      - name: lint collab service
-        run: npm run lint -- services/collaboration_service/src
-      - name: lint user service
-        run: npm run lint -- services/user_service/src
-      - name: lint question service
-        run: npm run lint -- services/question_service/src
-      - name: lint matching service
-        run: npm run lint -- services/matching_service/src
+      - run: npm i
+      - run: npm run lint -- services/collaboration_service/src
 
-  build-services:
-    needs: lint-services
+  lint-user-service:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
-      - name: install messager
-        run: cd shared/messaging && npm i
-      - name: install redis
-        run: cd shared/redis && npm i
-      - name: build collab service
-        run: cd services/collaboration_service && npm i && npm run build
-      - name: build question service
-        run: cd services/question_service && npm i && npm run build
-      - name: build matching service
-        run: cd services/matching_service && npm i && npm run build
-      - name: build user service
-        run: cd services/user_service && npm i && npm run build
+      - run: npm i
+      - run: npm run lint -- services/user_service/src
 
-  build-and-push-docker-image:
-    needs: build-services
+  lint-question-service:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: npm i
+      - run: npm run lint -- services/question_service/src
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+  lint-matching-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: npm i
+      - run: npm run lint -- services/matching_service/src
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+
+  node-build-collab-service:
+    needs: [lint-collab-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: cd shared/messaging && npm i
+      - run: cd shared/redis && npm i
+      - run: cd services/collaboration_service && npm i && npm run build
+
+  node-build-user-service:
+    needs: [lint-user-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: cd services/user_service && npm i && npm run build
+
+  node-build-question-service:
+    needs: [lint-question-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: cd services/question_service && npm i && npm run build
+
+  node-build-matching-service:
+    needs: [lint-matching-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: cd shared/messaging && npm i
+      - run: cd shared/redis && npm i
+      - run: cd services/matching_service && npm i && npm run build
+
+  docker-build-push-collab-service:
+    needs: [node-build-collab-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/services/collaboration_service/Dockerfile
+          push: true
+          tags: peerprep4/peerprep4:collaboration_service
+          platforms: linux/amd64,linux/arm64
 
-      - name: Build and push question image
-        uses: docker/build-push-action@v6
+  docker-build-push-user-service:
+    needs: [node-build-user-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend/services/user_service
+          file: ./backend/services/user_service/Dockerfile
+          push: true
+          tags: peerprep4/peerprep4:user_service
+          platforms: linux/amd64,linux/arm64
+
+  docker-build-push-question-service:
+    needs: [node-build-question-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/build-push-action@v6
         with:
           context: ./backend/services/question_service
           file: ./backend/services/question_service/Dockerfile
@@ -71,11 +133,20 @@ jobs:
           tags: peerprep4/peerprep4:question_service
           platforms: linux/amd64,linux/arm64
 
-      - name: Build and push collab image
-        uses: docker/build-push-action@v6
+  docker-build-push-matching-service:
+    needs: [node-build-matching-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/build-push-action@v6
         with:
           context: ./backend
-          file: ./backend/services/collaboration_service/Dockerfile
+          file: ./backend/services/matching_service/Dockerfile
           push: true
-          tags: peerprep4/peerprep4:collaboration_service
+          tags: peerprep4/peerprep4:matching_service
           platforms: linux/amd64,linux/arm64

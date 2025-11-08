@@ -4,8 +4,8 @@ import { PostgresPrisma } from './data/postgres/postgres.js';
 import { CollabRedis } from './data/collab_redis.js';
 import { MessageListener } from './listener.js';
 import { SessionManager } from './session/session_manager.js';
-import { MessagePublisher } from '@shared/messaging/src/publisher.js';
-import { MESSAGE_TYPES } from '@shared/messaging/src/constants.js';
+import { MessagePublisher } from '../../../shared/messaging/src/publisher.js';
+import { MESSAGE_TYPES } from '../../../shared/messaging/src/constants.js';
 import { app } from './app.js';
 import type { Express } from 'express';
 import { PostgresqlPersistence } from 'y-postgresql';
@@ -18,7 +18,7 @@ export class Collab {
     const server = this.initServer(app, pgdb);
     const webSocketServer = new WebSocketServer({ server });
 
-    const sessionManager = new SessionManager(
+    const sessionManager = SessionManager.getInstance(
       redis,
       postgresDb,
       webSocketServer,
@@ -94,7 +94,7 @@ export class Collab {
       MESSAGE_TYPES.CollaborationService,
       JSON.stringify({
         type: 'matched',
-        matchedId: '123',
+        matchedId: '124',
       }),
     );
   }

@@ -16,6 +16,13 @@ import {
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 import { VerifyOtpForm } from '@/components/ui/accounts/VerifyOtp';
+import {
+  checkUsername,
+  resendOtp,
+  signup,
+  verifyEmail,
+} from '@/services/userServiceApi';
+import { setTokens } from '@/lib/utils/jwt';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function debounce<T extends (...args: any[]) => unknown>(
@@ -112,13 +119,7 @@ export default function SignUpPage() {
       setIsCheckingUsername(true);
       setUsernameError('');
       try {
-        const response = await fetch(
-          `http://localhost:3001/user/check-username?username=${encodeURIComponent(uname)}`,
-        );
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
+        const data = await checkUsername(uname);
         setIsUsernameAvailable(data.isAvailable);
         if (!data.isAvailable) {
           setUsernameError('Username is already taken.');
@@ -159,18 +160,11 @@ export default function SignUpPage() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/user/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, username, password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
+      const data = await signup({ email, username, password });
+      if (data) {
         setFormStep('verifyOtp');
       } else {
-        setError(data.message || 'An unknown error occurred.');
+        setError(data || 'An unknown error occurred.');
         setCooldownSeconds(0);
       }
     } catch (err) {
@@ -189,25 +183,9 @@ export default function SignUpPage() {
       setError('');
       setResendMessage('');
       try {
-        const response = await fetch(
-          'http://localhost:3001/user/auth/verify-email',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp: submittedOtp }),
-          },
-        );
-
-        const data = await response.json();
-
-        if (response.ok) {
-          // save tokens + redirect to dashboard
-          localStorage.setItem('accessToken', data.accessToken);
-          localStorage.setItem('refreshToken', data.refreshToken);
-          router.push('/home/dashboard');
-        } else {
-          setError(data.message || 'An unknown error occurred.');
-        }
+        const data = await verifyEmail({ email, otp: submittedOtp });
+        setTokens(data.accessToken, data.refreshToken);
+        router.push('/home/dashboard');
       } catch (err) {
         console.error(err);
         setError('Failed to connect to the server. Please try again.');
@@ -224,27 +202,8 @@ export default function SignUpPage() {
     setResendMessage('');
     setCooldownSeconds(OTP_COOLDOWN_SECONDS);
     try {
-      const response = await fetch(
-        'http://localhost:3001/user/auth/resend-otp',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setResendMessage('A new OTP has been sent.');
-      } else {
-        if (response.status === 429) {
-          setError(data.message || `Please wait before requesting again.`);
-        } else {
-          setError(data.message || 'Failed to resend OTP.');
-          setCooldownSeconds(0);
-        }
-      }
+      const data = await resendOtp(email);
+      setResendMessage('A new OTP has been sent.');
     } catch (err) {
       console.error(err);
       setError('Failed to connect to the server. Please try again.');

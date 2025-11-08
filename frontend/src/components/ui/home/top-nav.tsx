@@ -22,6 +22,8 @@ import {
   NotificationsOutlined,
   AccountCircleOutlined,
 } from '@mui/icons-material';
+import { logout } from '@/services/userServiceApi';
+import { getAccessToken, removeTokens } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -39,7 +41,19 @@ export default function TopNavigationBar({
 
   const [openDialog, setOpenDialog] = useState(false);
 
-  useEffect(() => {}, [onHeightChange]);
+  useEffect(() => {
+    if (appBarRef.current && onHeightChange) {
+      // Set initial height
+      onHeightChange(appBarRef.current.offsetHeight);
+
+      // Update height dynamically when window resizes
+      const resizeHandler = () =>
+        onHeightChange(appBarRef.current!.offsetHeight);
+      window.addEventListener('resize', resizeHandler);
+
+      return () => window.removeEventListener('resize', resizeHandler);
+    }
+  }, [onHeightChange]);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -70,33 +84,21 @@ export default function TopNavigationBar({
 
   const handleConfirmLogout = async () => {
     console.log('Logging out...');
-    const accessToken = localStorage.getItem('accessToken');
+    const accessToken = getAccessToken();
     if (!accessToken) {
       console.error('Logout failed: Access token not found.');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      removeTokens();
       router.push('/accounts/login');
       handleCloseDialog();
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:3001/user/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      if (!response.ok) {
-        console.error('Backend logout failed:', await response.json());
-      }
+      const data = await logout();
     } catch (error) {
       console.error('Error during logout API call:', error);
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      removeTokens();
       router.push('/accounts/login');
       handleCloseDialog();
     }

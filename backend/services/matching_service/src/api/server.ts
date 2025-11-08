@@ -6,7 +6,7 @@ import type { Request, Response } from 'express';
 
 export async function initServer(redis: MatchingServiceRedis) {
   const app = express();
-  const port: number = 3003;
+  const port: number = Number(process.env['PORT']);
 
   app.use(express.json());
 

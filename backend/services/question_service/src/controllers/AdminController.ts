@@ -5,9 +5,11 @@ import { slugify } from '../utils/slug.js';
 import { finalizeStagedAttachments } from '../services/AttachmentService.js';
 import type { AttachmentInput } from '../types/attachments.js';
 import { log } from '../utils/logger.js';
+import { prisma } from '../repositories/prisma.js'; // for topic existence checks
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
+type Status = 'draft' | 'published' | 'archived';
 
 type IncomingTestCase = {
   visibility: 'sample' | 'hidden';
@@ -23,6 +25,14 @@ function normalizeDifficulty(d: unknown): Difficulty | null {
   if (v === 'easy') return 'Easy';
   if (v === 'medium') return 'Medium';
   if (v === 'hard') return 'Hard';
+  return null;
+}
+
+function normalizeStatus(s: unknown): Status | null {
+  if (typeof s !== 'string') return null;
+  const v = s.toLowerCase();
+  if (v === 'draft' || v === 'published' || v === 'archived') return v;
+
   return null;
 }
 
@@ -115,6 +125,22 @@ function rewriteMarkdownAttachmentPointers(
   return out;
 }
 
+/** Load existing topic slugs for a provided list */
+async function fetchExistingTopicSlugs(slugs: string[]): Promise<Set<string>> {
+  if (!slugs.length) return new Set();
+  const rows = await prisma.topics.findMany({
+    where: { slug: { in: slugs } },
+    select: { slug: true },
+  });
+  return new Set(rows.map((r) => r.slug));
+}
+
+/** Compute which of the requested topic slugs are missing */
+async function findMissingTopics(slugs: string[]): Promise<string[]> {
+  const have = await fetchExistingTopicSlugs(slugs);
+  return slugs.filter((s) => !have.has(s));
+}
+
 /**
  * POST /admin/questions
  *
@@ -155,13 +181,24 @@ export async function create(req: Request, res: Response) {
 
     const diff = normalizeDifficulty(difficulty);
     if (!diff) {
-      return res.status(400).json({
-        error: 'difficulty must be: Easy, Medium, Hard',
-      });
+      return res
+        .status(400)
+        .json({ error: 'difficulty must be: Easy, Medium, Hard' });
     }
 
-    // topics validation
+    // topics validation + existence pre-check
     const topicList = isStringArray(topics) ? topics : [];
+    if (topicList.length) {
+      const missing = await findMissingTopics(topicList);
+      if (missing.length) {
+        return res.status(400).json({
+          error: 'topics_not_found',
+          missing,
+          message:
+            'Create missing topics first via POST /admin/topics { display, color_hex }',
+        });
+      }
+    }
 
     // attachments validation (may include staging)
     const incomingAtts: AttachmentInput[] = isAttachmentArray(attachments)
@@ -196,10 +233,9 @@ export async function create(req: Request, res: Response) {
     });
 
     // finalize staged attachments now that we know draft.id
-    const finalizedAtts = await finalizeStagedAttachments(
-      draft.id,
-      incomingAtts,
-    );
+    const finalizedAtts = incomingAtts.length
+      ? await finalizeStagedAttachments(draft.id, incomingAtts)
+      : [];
 
     // rewrite body_md if images referenced staging/... keys
     const rewrittenMd = rewriteMarkdownAttachmentPointers(
@@ -217,16 +253,14 @@ export async function create(req: Request, res: Response) {
       attachments?: AttachmentInput[];
       starter_code?: string;
       test_cases?: IncomingTestCase[];
-    } = {};
+    } = {
+      title,
+      body_md: rewrittenMd,
+      difficulty: diff,
+      topics: topicList,
+      attachments: finalizedAtts,
+    };
 
-    // required stuff we always know:
-    patchForCreate.title = title;
-    patchForCreate.body_md = rewrittenMd;
-    patchForCreate.difficulty = diff;
-    patchForCreate.topics = topicList;
-    patchForCreate.attachments = finalizedAtts;
-
-    // only include optional extras if caller actually sent them
     if (starterCodeStr !== undefined) {
       patchForCreate.starter_code = starterCodeStr;
     }
@@ -234,7 +268,7 @@ export async function create(req: Request, res: Response) {
       patchForCreate.test_cases = testCasesList;
     }
 
-    const saved = await Repo.updateDraftWithResources(draft.id, patchForCreate);
+    const saved = await Repo.updateWithResources(draft.id, patchForCreate);
     if (!saved) {
       log.error(
         'updateDraftWithResources unexpectedly returned undefined for',
@@ -243,8 +277,19 @@ export async function create(req: Request, res: Response) {
       return res.status(500).json({ error: 'internal_error' });
     }
 
-    // 5) respond
-    return res.status(201).location(`/admin/questions/${saved.id}`).json(saved);
+    const bundle = await Repo.getInternalResourcesBundle(saved.id);
+    const starter_code_out = bundle?.starter_code?.python ?? '';
+    const test_cases_out = bundle?.test_cases ?? [];
+
+    // respond
+    return res
+      .status(201)
+      .location(`/admin/questions/${saved.id}`)
+      .json({
+        ...saved,
+        starter_code: starter_code_out,
+        test_cases: test_cases_out,
+      });
   } catch (err) {
     log.error('AdminController.create failed:', err);
     return res.status(500).json({ error: 'internal_error' });
@@ -262,11 +307,6 @@ export async function create(req: Request, res: Response) {
  * - attachments              (full array; can include staging/* keys)
  * - starter_code
  * - test_cases               (full replace [] or omit to keep same)
- *
- * Behavior:
- *  - If attachments includes staging/... keys, we finalize them into questions/<id>/...
- *    and rewrite body_md accordingly.
- *  - Then we hand EVERYTHING to Repo.updateDraftWithResources(...).
  */
 export async function update(req: Request, res: Response) {
   try {
@@ -285,16 +325,36 @@ export async function update(req: Request, res: Response) {
       const diff = normalizeDifficulty(req.body.difficulty);
       if (!diff) {
         return res.status(400).json({
-          error: 'difficulty must be one of: easy, medium, hard',
+          error: 'difficulty must be one of: Easy, Medium, Hard',
         });
       }
       newDifficulty = diff;
+    }
+
+    let newStatus: Status | undefined;
+    if (req.body?.status !== undefined) {
+      const stat = normalizeStatus(req.body.status);
+      if (!stat) {
+        return res.status(400).json({
+          error: 'difficulty must be one of: draft, published, archived',
+        });
+      }
+      newStatus = stat;
     }
 
     let newTopics: string[] | undefined;
     if (req.body?.topics !== undefined) {
       if (!isStringArray(req.body.topics)) {
         return res.status(400).json({ error: 'topics must be string[]' });
+      }
+      // pre-validate topics exist
+      const missing = await findMissingTopics(req.body.topics);
+      if (missing.length) {
+        return res.status(400).json({
+          error: 'topics_not_found',
+          missing,
+          hint: 'Create missing topics first via POST /admin/topics { display, color_hex }',
+        });
       }
       newTopics = req.body.topics;
     }
@@ -310,7 +370,9 @@ export async function update(req: Request, res: Response) {
       }
 
       const incomingAtts = req.body.attachments;
-      finalizedAtts = await finalizeStagedAttachments(id, incomingAtts);
+      finalizedAtts = incomingAtts.length
+        ? await finalizeStagedAttachments(id, incomingAtts)
+        : [];
 
       // if caller ALSO sent body_md, rewrite it now -> final keys
       if (typeof req.body?.body_md === 'string') {
@@ -345,6 +407,7 @@ export async function update(req: Request, res: Response) {
       title?: string;
       body_md?: string;
       difficulty?: Difficulty;
+      status?: Status;
       topics?: string[];
       attachments?: AttachmentInput[];
       starter_code?: string;
@@ -355,16 +418,26 @@ export async function update(req: Request, res: Response) {
       patchForUpdate.title = req.body.title;
     if (newBodyMd !== undefined) patchForUpdate.body_md = newBodyMd;
     if (newDifficulty !== undefined) patchForUpdate.difficulty = newDifficulty;
+    if (newStatus !== undefined) patchForUpdate.status = newStatus;
     if (newTopics !== undefined) patchForUpdate.topics = newTopics;
     if (finalizedAtts !== undefined) patchForUpdate.attachments = finalizedAtts;
     if (starterCodeStr !== undefined)
       patchForUpdate.starter_code = starterCodeStr;
     if (newTestCases !== undefined) patchForUpdate.test_cases = newTestCases;
 
-    const updated = await Repo.updateDraftWithResources(id, patchForUpdate);
+    const updated = await Repo.updateWithResources(id, patchForUpdate);
 
     if (!updated) return res.status(404).json({ error: 'not_found' });
-    return res.json(updated);
+
+    const bundle = await Repo.getInternalResourcesBundle(id);
+    const starter_code_out = bundle?.starter_code?.python ?? '';
+    const test_cases_out = bundle?.test_cases ?? [];
+
+    return res.json({
+      ...updated,
+      starter_code: starter_code_out,
+      test_cases: test_cases_out,
+    });
   } catch (err) {
     log.error('AdminController.update failed:', err);
     return res.status(500).json({ error: 'internal_error' });
@@ -380,12 +453,18 @@ export async function publish(req: Request, res: Response) {
     const { id } = req.params;
     if (!id) return res.status(400).json({ error: 'id param required' });
 
-    const q = await Repo.publish(id);
-    if (!q) return res.status(404).json({ error: 'not_found' });
-    res.json(q);
+    const published = await Repo.publish(id);
+    if (!published) return res.status(404).json({ error: 'not_found' });
+
+    // Include execution resources in publish response
+    const bundle = await Repo.getInternalResourcesBundle(id);
+    const starter_code = bundle?.starter_code?.python ?? '';
+    const test_cases = bundle?.test_cases ?? [];
+
+    return res.json({ ...published, starter_code, test_cases });
   } catch (err) {
     log.error('AdminController.publish failed:', err);
-    res.status(500).json({ error: 'internal_error' });
+    return res.status(500).json({ error: 'internal_error' });
   }
 }
 

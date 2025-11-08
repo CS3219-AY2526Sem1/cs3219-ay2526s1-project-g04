@@ -9,7 +9,7 @@ export default function SubmitButton() {
       <Button
         type="submit"
         variant="outlined"
-        className="rounded-full text-lg text-blue-600 normal-case border-blue-600"
+        className="rounded-full text-lg text-blue-600 normal-case border-blue-600 hover:gg-blue-100"
       >
         Submit
       </Button>
