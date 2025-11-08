@@ -30,25 +30,9 @@ export function ProviderIsUndefined() {
   return yCodeDoc === undefined || codeProvider || undefined;
 }
 
-export function getCollabProvider2() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  // Get query parameter
-  const userId = searchParams.get('userId'); // "1"
-  // Get dynamic route parameter
-  const sid = searchParams.get('sid'); // "1"
-
-  // If your file is pages/collaboration/[sessionId].tsx
-  const sessionId = '48';
-  // setCollabProvider(sid ?? '0', userId ?? '0');
-  if (yCodeDoc && codeProvider) return { yCodeDoc, codeProvider };
-}
-
 export function removeCollabProvider() {
   if (!yCodeDoc) return;
 
-  const userId = getUserId();
   const yNotifications = yCodeDoc.getMap('notifications');
   const messagePayload = {
     senderId: getUserId(),

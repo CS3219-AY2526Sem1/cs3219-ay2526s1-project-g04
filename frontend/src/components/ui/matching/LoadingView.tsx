@@ -58,7 +58,6 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     fetchStatus();
 

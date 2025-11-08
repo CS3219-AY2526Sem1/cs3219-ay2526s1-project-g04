@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { sessionIsAlive } from '@/services/collaborationServiceApi';
 import { getUserId } from '@/lib/utils/jwt';
 import { useCodeContext } from './CodeContext';
+import { YMapEvent } from 'yjs';
 
 interface CollaborationProps {
   sessionId: string;
@@ -69,8 +70,8 @@ export const Collaboration = (p: CollaborationProps) => {
 
   const notifications = yCodeDoc.getMap<NotificationMessage>('notifications');
 
-  const observer = (event: any) => {
-    event.keys.forEach((change: any, key: any) => {
+  const observer = (event: YMapEvent<NotificationMessage>) => {
+    event.keys.forEach((change, key: string) => {
       if (change.action === 'add') {
         const value = notifications.get(key);
         if (value && value.senderId.toString() !== getUserId()!.toString()) {
