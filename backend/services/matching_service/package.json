@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "tsx --watch src/main.ts",
+    "dev_rs": "npm run dev",
     "start": "node dist/services/matching_service/src/main.js",
     "build": "tsc && tsc-alias",
     "type-check": "tsc --noEmit",
