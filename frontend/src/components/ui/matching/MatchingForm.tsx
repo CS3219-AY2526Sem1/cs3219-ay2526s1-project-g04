@@ -5,7 +5,7 @@ import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import { getTopicsByDifficulty } from '@/services/questionServiceApi';
 import { Topic } from '@/lib/question-service/index';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
-import { MatchCriteria, MatchRequestBody } from '@/lib/matching-service';
+import { MatchCriteria } from '@/lib/matching-service';
 import { postMatchRequest } from '@/services/matchingServiceApi';
 import { getUserId } from '@/lib/utils/jwt';
 import { type MatchState } from '@/lib/constants/MatchTypes';
