@@ -4,8 +4,8 @@ import { PostgresPrisma } from './data/postgres/postgres.js';
 import { CollabRedis } from './data/collab_redis.js';
 import { MessageListener } from './listener.js';
 import { SessionManager } from './session/session_manager.js';
-import { MessagePublisher } from '../../../shared/messaging/src/publisher.js';
-import { MESSAGE_TYPES } from '../../../shared/messaging/src/constants.js';
+// import { MessagePublisher } from '../../../shared/messaging/src/publisher.js';
+// import { MESSAGE_TYPES } from '../../../shared/messaging/src/constants.js';
 import { app } from './app.js';
 import type { Express } from 'express';
 import { PostgresqlPersistence } from 'y-postgresql';
@@ -28,8 +28,7 @@ export class Collab {
     const listener = new MessageListener(sessionManager);
     await listener.start();
 
-    this.test_send_msg_to_collab('123');
-    // this.test_send_msg_to_collab('124');
+    // this.test_send_msg_to_collab();
   }
 
   private async initDatabases() {
@@ -86,17 +85,17 @@ export class Collab {
   /**
    * Temporary test message publisher
    */
-  private async test_send_msg_to_collab(str: string) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  // private async test_send_msg_to_collab(str: string) {
+  //   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const publisher = new MessagePublisher('mock');
-    await publisher.connect();
-    publisher.publishMessageWithType(
-      MESSAGE_TYPES.CollaborationService,
-      JSON.stringify({
-        type: 'matched',
-        matchedId: str,
-      }),
-    );
-  }
+  //   const publisher = new MessagePublisher('mock');
+  //   await publisher.connect();
+  //   publisher.publishMessageWithType(
+  //     MESSAGE_TYPES.CollaborationService,
+  //     JSON.stringify({
+  //       type: 'matched',
+  //       matchedId: str,
+  //     }),
+  //   );
+  // }
 }

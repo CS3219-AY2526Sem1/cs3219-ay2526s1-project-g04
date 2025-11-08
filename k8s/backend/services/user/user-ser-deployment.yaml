@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: user-service
+          image: peerprep4/peerprep4:user_service
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3005
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: DATABASE_URL
+            - name: PORT
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: PORT
+            - name: EMAIL_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: EMAIL_HOST
+            - name: EMAIL_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: EMAIL_PORT
+            - name: EMAIL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: EMAIL_USER
+            - name: EMAIL_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: EMAIL_PASS
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_S3_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: AWS_S3_BUCKET_NAME
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: AWS_REGION
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: PRIVATE_KEY
+
+          # readinessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: 3009
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: 3009
