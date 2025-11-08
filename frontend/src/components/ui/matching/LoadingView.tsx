@@ -3,8 +3,8 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { getMatchStatus } from '@/services/matchingServiceApi';
-import { type MatchState, TEST_USERID, TOTAL_MATCH_TIME } from './Types';
 import { getUserId } from '@/lib/utils/jwt';
+import { type MatchState, TOTAL_MATCH_TIME } from '@/lib/constants/MatchTypes';
 
 interface LoadingViewProps {
   setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
@@ -58,6 +58,7 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     fetchStatus();
 

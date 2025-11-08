@@ -7,7 +7,7 @@ import { deleteMatchRequest } from '@/services/matchingServiceApi';
 import MatchingForm from './MatchingForm';
 import LoadingView from './LoadingView';
 import MatchedView from './MatchedView';
-import { type MatchState, TEST_USERID } from './Types';
+import { type MatchState } from '@/lib/constants/MatchTypes';
 import TimeoutView from './TimeoutView';
 import { getUserId } from '@/lib/utils/jwt';
 
@@ -91,7 +91,7 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
         e.preventDefault();
         e.returnValue = '';
 
-        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${TEST_USERID}`;
+        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${TEST_USER.userId}`;
 
         navigator.sendBeacon(url);
       } else if (matchState.status === 'matched') {
