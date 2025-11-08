@@ -28,7 +28,8 @@ export class Collab {
     const listener = new MessageListener(sessionManager);
     await listener.start();
 
-    this.test_send_msg_to_collab();
+    this.test_send_msg_to_collab('123');
+    // this.test_send_msg_to_collab('124');
   }
 
   private async initDatabases() {
@@ -85,7 +86,7 @@ export class Collab {
   /**
    * Temporary test message publisher
    */
-  private async test_send_msg_to_collab() {
+  private async test_send_msg_to_collab(str: string) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const publisher = new MessagePublisher('mock');
@@ -94,7 +95,7 @@ export class Collab {
       MESSAGE_TYPES.CollaborationService,
       JSON.stringify({
         type: 'matched',
-        matchedId: '124',
+        matchedId: str,
       }),
     );
   }
