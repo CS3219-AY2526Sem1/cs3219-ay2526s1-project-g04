@@ -33,7 +33,7 @@ services:
       - peerprep-network
 
     environment:
-      - DATABASE_URL=${DATABASE_URL_DOCKER}
+      - DATABASE_URL=${DATABASE_URL}
 
       - JWT_SECRET=${JWT_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
