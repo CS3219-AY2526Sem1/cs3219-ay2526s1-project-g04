@@ -1,7 +1,7 @@
 import { Box, Card, Stack } from '@mui/material';
 import '@/styles/globals.css';
-import { MessageBoard } from './messaging';
-import { DrawingBoard } from './drawing';
+// import { MessageBoard } from './messaging';
+// import { DrawingBoard } from './drawing';
 
 export const Communication = () => {
   return (
