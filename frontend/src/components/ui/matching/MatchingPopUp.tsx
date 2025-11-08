@@ -9,6 +9,7 @@ import LoadingView from './LoadingView';
 import MatchedView from './MatchedView';
 import { type MatchState } from '@/lib/constants/MatchTypes';
 import TimeoutView from './TimeoutView';
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 import { getUserId } from '@/lib/utils/jwt';
 
 interface MatchingPopUpProps {
@@ -37,7 +38,7 @@ function CloseFormButton({
           'Are you sure you want to cancel your match request?',
         );
         if (confirmed) {
-          const res = await deleteMatchRequest(getUserId()!.toString());
+          const res = await deleteMatchRequest();
           if (!res.success) {
             const force = confirm(
               'Could not reach server to cancel match. Do you want to close anyway?',
@@ -90,7 +91,7 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
         e.preventDefault();
         e.returnValue = '';
 
-        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${userId}`;
+        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel`;
 
         navigator.sendBeacon(url);
       } else if (matchState.status === 'matched') {
