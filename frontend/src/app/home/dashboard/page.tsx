@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
 import {
   Box,
   Button,
@@ -29,7 +29,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // For "Solved" s
 import CancelIcon from '@mui/icons-material/Cancel';
 import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For "Attempted" status
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
-import { WaitingSessionToBeCreatedPopUp } from '@/components/ui/matching/modelwaitiingtoredirect';
 import { getAccessToken, getUserId, getUsername } from '@/lib/utils/jwt';
 
 // --- Mock Data (Replace with your API data) ---
@@ -175,7 +174,6 @@ export default function DashboardPage() {
   const [showMatching, setShowMatching] = React.useState(false);
   const [showSessionBeingCreated, setShowSessionBeingCreated] =
     React.useState(true);
-  const [sessionId, setSessionId] = React.useState<string | null>('40');
   const [history, setHistory] = useState<EnrichedSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -294,6 +292,7 @@ export default function DashboardPage() {
   return (
     <Box
       sx={{
+        pt: 0,
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100vh',
@@ -658,18 +657,7 @@ export default function DashboardPage() {
         </Box>
       </Container>
 
-      {showMatching && (
-        <MatchingPopUp
-          setSessionId={setSessionId}
-          setShowMatching={setShowMatching}
-        />
-      )}
-      {/** show wait for 10mins being matched pop */}
-
-      {/** show you are being matched, wait for session to be ctread*/}
-      {/* {showSessionBeingCreated && sessionId && (
-        <WaitingSessionToBeCreatedPopUp sessionId={sessionId} />
-      )} */}
+      {showMatching && <MatchingPopUp setShowMatching={setShowMatching} />}
     </Box>
   );
 }

@@ -26,7 +26,7 @@ export default function TopicFilterBar({
       {topics.map((topic) => (
         <TopicFilterButton
           key={topic.slug}
-          buttonText={topic.slug}
+          buttonText={topic.display}
           customColor={topic.color_hex}
           active={topicFilter === topic.slug}
           onClick={() => setTopicFilter(topic.slug)}

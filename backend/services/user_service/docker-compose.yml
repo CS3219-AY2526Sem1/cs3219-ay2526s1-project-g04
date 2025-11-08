@@ -1,0 +1,58 @@
+services:
+  us-postgres:
+    image: postgres
+    restart: always
+    # set shared memory limit when using docker compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5435:5432"
+    networks:
+      - peerprep-network
+    volumes:
+      - user_postgres_data:/user_data
+
+  user_service:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+
+    restart: always
+    depends_on:
+      - us-postgres
+    ports:
+      - "3005:3005"
+    networks:
+      - peerprep-network
+
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+
+      - JWT_SECRET=${JWT_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+
+      - PRIVATE_KEY=${PRIVATE_KEY}
+
+volumes:
+  user_postgres_data:
+
+networks:
+  peerprep-network:
+    external: true

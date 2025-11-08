@@ -33,4 +33,50 @@ body {
     @apply text-4xl font-bold;
     color: var(--heading1-color);
   }
+  h2 {
+    @apply text-xl font-bold mt-4 mb-2;
+    color: var(--foreground);
+  }
+  h3 {
+    @apply text-lg font-semibold mt-3 mb-1;
+  }
+  ul,
+  ol {
+    @apply list-disc list-inside pl-5 mb-3;
+  }
+  pre {
+    @apply bg-gray-100 rounded-md p-5 mb-3 overflow-x-auto text-sm;
+  }
+  code {
+    @apply bg-gray-200 rounded px-1 py-0.5 text-sm font-mono;
+  }
+}
+
+@layer utilities {
+  .scrollbar-auto {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(100, 100, 100, 0) transparent;
+    padding: 1.5rem;
+  }
+
+  .scrollbar-auto:hover {
+    scrollbar-color: rgba(100, 100, 100, 0.3) transparent;
+  }
+
+  .scrollbar-auto::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-auto::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-auto::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 100, 100, 0);
+    border-radius: 9999px;
+    transition: background-color 0.3s;
+  }
+
+  .scrollbar-auto:hover::-webkit-scrollbar-thumb,
+  .scrollbar-auto:active::-webkit-scrollbar-thumb {
+    background-color: rgba(100, 100, 100, 0.3);
+  }
 }

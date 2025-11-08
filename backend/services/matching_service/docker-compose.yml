@@ -1,0 +1,19 @@
+services:
+  matching_service:
+    build:
+      context: ../../
+      dockerfile: services/matching_service/Dockerfile
+
+    restart: always
+    ports:
+      - "3007:3007"
+    networks:
+      - peerprep-network
+
+    environment:
+      - REDIS_URL=${REDIS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+
+networks:
+  peerprep-network:
+    external: true

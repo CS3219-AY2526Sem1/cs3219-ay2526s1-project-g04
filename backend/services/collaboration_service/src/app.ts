@@ -44,13 +44,32 @@ app.get('/sessions/:userId', async (req, res) => {
   }
 });
 
-app.get('/sessions/status/:sessionId', async (req, res) => {
+app.get('/sessions/status/matched/:matchedId', async (req, res) => {
   try {
-    const sessionId = req.params.sessionId;
+    const matchedId = req.params.matchedId;
     const sessionManager = SessionManager.getInstance();
-    const session_state = await sessionManager.getSessionState(sessionId);
-    console.log(session_state);
-    res.json({ sessionState: session_state['session_state'] });
+    const sessionData =
+      await sessionManager.getSessionStateByMatchedId(matchedId);
+    console.log(sessionData);
+    res.json({
+      sessionState: sessionData['session_state'],
+      sessionId: sessionData['session_id'],
+    });
+  } catch (err) {
+    console.error('Error getting sessionstate:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.get('/sessions/status/session/:sessionId', async (req, res) => {
+  try {
+    const matchedId = req.params.sessionId;
+    const sessionManager = SessionManager.getInstance();
+    const sessionData = await sessionManager.getSessionState(matchedId);
+    console.log(sessionData);
+    res.json({
+      sessionState: sessionData['session_state'],
+    });
   } catch (err) {
     console.error('Error getting sessionstate:', err);
     res.status(500).json({ error: 'Internal server error' });

@@ -1,2 +1,5 @@
 include:
+  - ./user_service/docker-compose.yml
+  - ./question_service/docker-compose.yml
+  - ./matching_service/docker-compose.yml
   - ./collaboration_service/docker-compose.yml

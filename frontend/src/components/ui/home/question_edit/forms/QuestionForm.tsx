@@ -1,19 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  getTopics,
-  patchQuestion,
-  postQuestion,
+  patchAdminQuestions,
+  postAdminQuestions,
 } from '@/services/questionServiceApi';
-import { Attachment, Topic, Question } from '@/lib/question-service/index';
+import {
+  Attachment,
+  Question,
+  TestCase,
+  postAdminQuestionsRequest,
+} from '@/lib/question-service/index';
 import QuestionTitleInput from '../QuestionTitleInput';
 import DifficultySelect from '../DifficultySelect';
 import AttachmentsSection from '../file-attachment-components/AttachmentsSection';
 import TopicAutocomplete from '../topic-select-component/TopicAutocomplete';
 import QuestionBodyInput from '../QuestionBodyInput';
 import SubmitButton from '../SubmitButton';
+import StarterCodeInput from '../StarterCodeInput';
+// import { TEST_QUESTION_VIEW } from '@/lib/test-data/TestQuestionView';
+import TestCasesInput from '../test-case-component/TestCasesInput';
 
 interface QuestionFormProps {
   mode: 'create' | 'edit';
@@ -22,6 +29,8 @@ interface QuestionFormProps {
 
 export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
   const router = useRouter();
+
+  // initialData = TEST_QUESTION_VIEW; // for test
 
   // form responses
   const [title, setTitle] = useState(initialData?.title || '');
@@ -35,25 +44,12 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
     initialData?.attachments || [],
   );
   const [body, setBody] = useState(initialData?.body_md || '');
-
-  // get the topic list and colours
-  const [topicList, setTopicList] = useState<Topic[]>([]);
-  useEffect(() => {
-    getTopics()
-      .then((data) => {
-        const { items } = data;
-        if (!items) return;
-
-        // sort
-        const sortedItems = items.sort((a: Topic, b: Topic) =>
-          a.slug.toLowerCase().localeCompare(b.slug.toLowerCase()),
-        );
-
-        console.log('Items:', sortedItems); // log for test
-        setTopicList(sortedItems);
-      })
-      .catch((err) => console.error(err));
-  }, []);
+  const [starterCode, setStarterCode] = useState(
+    initialData?.starter_code || '',
+  );
+  const [testCases, setTestCases] = useState<TestCase[]>(
+    initialData?.test_cases || [],
+  );
 
   // submit form logic
   const handleSubmit = (e: React.FormEvent) => {
@@ -76,14 +72,16 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
       return alert('Question body cannot be empty.');
     }
 
-    const newData = {
+    const newData: postAdminQuestionsRequest = {
       title: title,
       body_md: body,
       difficulty: difficulty,
       topics: topics,
       attachments: attachments,
+      starter_code: starterCode,
+      test_cases: testCases,
     };
-    console.log(`Submission contents: ${newData}`);
+    // console.log(`Submission contents: ${newData}`);
 
     if (mode === 'edit' && initialData) {
       const payload = Object.entries(newData).reduce<Record<string, unknown>>(
@@ -115,9 +113,12 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
       // PATCH
       (async () => {
         try {
-          const res = await patchQuestion(initialData.id, payload);
-          console.log('Question updated: ', res);
-
+          const res = await patchAdminQuestions(initialData.id, payload);
+          if (!res.success) {
+            alert(res.message);
+            return;
+          }
+          // console.log('Question updated: ', res);
           alert('Question updated successfully!');
 
           router.push('/home/question-bank');
@@ -132,11 +133,14 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
     // CREATE
     (async () => {
       try {
-        const res = await postQuestion(newData);
-        console.log('Question submitted: ', res);
+        const res = await postAdminQuestions(newData);
+        if (!res.success) {
+          alert(res.message);
+          return;
+        }
+        // console.log('Question submitted: ', res);
 
         alert('Question successfully submitted!');
-
         router.push('/home/question-bank');
       } catch (err) {
         console.error('Failed to submit question: ', err);
@@ -159,11 +163,7 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
           />
 
           {/* Topics */}
-          <TopicAutocomplete
-            topics={topics}
-            setTopics={setTopics}
-            topicList={topicList}
-          />
+          <TopicAutocomplete topics={topics} setTopics={setTopics} />
         </div>
 
         <AttachmentsSection
@@ -174,6 +174,11 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
 
         {/* Question Body */}
         <QuestionBodyInput body={body} setBody={setBody} />
+        <StarterCodeInput
+          starterCode={starterCode}
+          setStarterCode={setStarterCode}
+        />
+        <TestCasesInput testCases={testCases} setTestCases={setTestCases} />
         <SubmitButton />
       </div>
     </form>

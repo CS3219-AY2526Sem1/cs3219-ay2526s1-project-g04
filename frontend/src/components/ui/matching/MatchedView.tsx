@@ -2,6 +2,11 @@
 
 import * as React from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { sessionIsReady } from '@/services/collaborationServiceApi';
+import { getCollabProvider } from '../collaboration/collabSingleton';
+import { getUserId } from '@/lib/utils/jwt';
 
 interface MatchedViewProps {
   matchingId: string;
@@ -12,6 +17,38 @@ export default function MatchedView({
   matchingId,
   onTimeout,
 }: MatchedViewProps) {
+  const router = useRouter();
+  const [createProcessIsDone, setCreateProcessIsDone] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line prefer-const
+    let intervalId: NodeJS.Timeout;
+
+    const pollStatus = async () => {
+      try {
+        const { sessionId, created, ready } = await sessionIsReady(matchingId);
+        console.log(sessionId, created, createProcessIsDone);
+        if (created && sessionId && !createProcessIsDone) {
+          getCollabProvider(sessionId, getUserId()!.toString());
+          setCreateProcessIsDone(true);
+        }
+        if (ready && sessionId) {
+          clearInterval(intervalId);
+          router.push(`/collaboration/${sessionId}`);
+        }
+      } catch {
+        clearInterval(intervalId);
+      }
+    };
+
+    // start polling every 0.5 seconds
+    intervalId = setInterval(pollStatus, 500);
+
+    pollStatus();
+
+    return () => clearInterval(intervalId);
+  }, [router]);
+
   // timeout for redirecting
   React.useEffect(() => {
     const timeoutId = setTimeout(() => {
