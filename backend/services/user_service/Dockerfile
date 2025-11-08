@@ -12,10 +12,7 @@ COPY package*.json ./
 # Install packages needed for compilation (g++, make, python3).
 # Then run npm install to compile native modules.
 # Finally, remove the build-time dependencies (g++, make, python3) to minimize image size.
-RUN apk add --no-cache python3 make g++ && \
-    npm install && \
-    npm prune --omit=dev && \
-    apk del python3 make g++
+RUN apk add --no-cache python3 make g++
 
 COPY . .
 
@@ -27,4 +24,4 @@ RUN npm run build
 
 EXPOSE 3005
 
-CMD ["npm", "start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]

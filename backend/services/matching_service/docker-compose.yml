@@ -11,8 +11,8 @@ services:
       - peerprep-network
 
     environment:
-      - REDIS_URL=redis://redis:6379
-      - RABBITMQ_URL=amqp://admin:rabbitmq123@rabbitmq:5672
+      - REDIS_URL=${REDIS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
 
 networks:
   peerprep-network:

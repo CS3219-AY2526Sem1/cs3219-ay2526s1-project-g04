@@ -16,8 +16,8 @@ services:
       - "5439:5432"
     networks:
       - peerprep-network
-    # volumes:
-    #   - collab_postgres_data:/collab_data
+    volumes:
+      - collab_postgres_data:/collab_data
 
   adminer:
     image: adminer
@@ -28,25 +28,31 @@ services:
     networks:
       - peerprep-network
 
-  # collaboration_service:
-  #   build:
-  #     context: ../../
-  #     dockerfile: services/collaboration_service/Dockerfile
+  collaboration_service:
+    build:
+      context: ../../
+      dockerfile: services/collaboration_service/Dockerfile
 
-  #   restart: always
-  #   depends_on:
-  #     - postgres
-  #     # - redis
-  #     # - rabbitmq
-  #   ports:
-  #     - "3009:3000"
-  #   networks:
-  #     - peerprep-network
+    restart: always
+    depends_on:
+      - cs-postgres
+      # - redis
+      # - rabbitmq
+    ports:
+      - "3009:3009"
+    networks:
+      - peerprep-network
 
-  #   environment:
-  #     - DATABASE_URL=postgres://postgres:example@postgres:5432/postgres
-  #     - REDIS_URL=redis://redis:6379
-  #     - RABBITMQ_URL=amqp://admin:rabbitmq123@rabbitmq:5672
+    environment:
+      - REDIS_URL=${REDIS_URL}
+      - RABBITMQ_URL=${RABBITMQ_URL}
+      - PG_HOST=${PG_HOST}
+      - PG_PORT=${PG_PORT}
+      - PG_DATABASE=${PG_DATABASE}
+      - PG_USER=${PG_USER}
+      - PG_PASSWORD=${PG_PASSWORD}
+
+      - DATABASE_URL=${DATABASE_URL}
 
 volumes:
   collab_postgres_data:
