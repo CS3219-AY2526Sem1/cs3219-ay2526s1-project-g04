@@ -3,5 +3,3 @@ export type MatchState =
   | { status: 'matched'; matchingId: string };
 
 export const TOTAL_MATCH_TIME = 10 * 60; // 10 minutes in seconds
-
-export const TEST_USERID = 'test-user-id2'; // change to apply logic

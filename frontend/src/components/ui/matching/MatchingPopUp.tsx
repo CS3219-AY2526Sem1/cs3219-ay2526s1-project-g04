@@ -7,8 +7,9 @@ import { deleteMatchRequest } from '@/services/matchingServiceApi';
 import MatchingForm from './MatchingForm';
 import LoadingView from './LoadingView';
 import MatchedView from './MatchedView';
-import { type MatchState, TEST_USERID } from './Types';
+import { type MatchState } from '@/lib/constants/MatchTypes';
 import TimeoutView from './TimeoutView';
+import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 
 interface MatchingPopUpProps {
   setShowMatching: React.Dispatch<React.SetStateAction<boolean>>;
@@ -37,7 +38,7 @@ function CloseFormButton({
           'Are you sure you want to cancel your match request?',
         );
         if (confirmed) {
-          const res = await deleteMatchRequest(TEST_USERID);
+          const res = await deleteMatchRequest(TEST_USER.userId);
           if (!res.success) {
             const force = confirm(
               'Could not reach server to cancel match. Do you want to close anyway?',
@@ -86,7 +87,7 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
         e.preventDefault();
         e.returnValue = '';
 
-        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${TEST_USERID}`;
+        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${TEST_USER.userId}`;
 
         navigator.sendBeacon(url);
       } else if (matchState.status === 'matched') {

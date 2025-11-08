@@ -3,10 +3,10 @@
 import { useRef, useState } from 'react';
 import { DocumentPlusIcon } from '@heroicons/react/24/outline';
 import { Tooltip } from '@mui/material';
-import { uploadAttachments } from '@/services/questionServiceApi';
+import { postAdminAttachmentsSignUpload } from '@/services/questionServiceApi';
 import {
   Attachment,
-  AttachmentUploadPayload,
+  postAttachmentSignUploadRequest,
   isValidS3SignResponse,
 } from '@/lib/question-service';
 
@@ -46,21 +46,28 @@ export default function FileUploadButton({ id, setAttachments }: props) {
     setUploadingFileName(file.name);
     try {
       // get signed URL from the question service
-      const payload: AttachmentUploadPayload = {
+      const payload: postAttachmentSignUploadRequest = {
         content_type: file.type,
         filename: file.name,
       };
       if (id) {
         payload.suggested_prefix = `/questions/${id}`;
       }
-      const signRes = await uploadAttachments(payload);
+      const signRes = await postAdminAttachmentsSignUpload(payload);
 
-      if (!signRes || !isValidS3SignResponse(signRes)) {
+      if (!signRes.success) {
+        alert(signRes.message);
+        return;
+      }
+
+      const res = signRes.data;
+
+      if (!res || !isValidS3SignResponse(res)) {
         throw new Error('Invalid sign-upload response.');
       }
 
       // upload to s3
-      const s3Res = await fetch(signRes.upload_url, {
+      const s3Res = await fetch(res.upload_url, {
         method: 'PUT',
         headers: {
           'Content-Type': file.type,
@@ -76,9 +83,9 @@ export default function FileUploadButton({ id, setAttachments }: props) {
 
       // Add uploaded file as new attachment
       const newAttachment: Attachment = {
-        object_key: signRes?.object_key,
-        mime: file.type,
         filename: file.name,
+        object_key: res?.object_key,
+        mime: file.type,
       };
       setAttachments((prev) => [...prev, newAttachment]);
     } catch (err) {

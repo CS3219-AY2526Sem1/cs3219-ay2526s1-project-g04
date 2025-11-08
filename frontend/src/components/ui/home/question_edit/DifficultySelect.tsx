@@ -1,7 +1,7 @@
 'use client';
 
 import { FormControl, MenuItem, Select } from '@mui/material';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
 
 interface DifficultySelectProps {
   difficulty: string;
