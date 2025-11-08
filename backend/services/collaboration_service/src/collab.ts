@@ -85,17 +85,17 @@ export class Collab {
   /**
    * Temporary test message publisher
    */
-  private async test_send_msg_to_collab(str: string) {
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  // private async test_send_msg_to_collab(str: string) {
+  //   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-    const publisher = new MessagePublisher('mock');
-    await publisher.connect();
-    publisher.publishMessageWithType(
-      MESSAGE_TYPES.CollaborationService,
-      JSON.stringify({
-        type: 'matched',
-        matchedId: str,
-      }),
-    );
-  }
+  //   const publisher = new MessagePublisher('mock');
+  //   await publisher.connect();
+  //   publisher.publishMessageWithType(
+  //     MESSAGE_TYPES.CollaborationService,
+  //     JSON.stringify({
+  //       type: 'matched',
+  //       matchedId: str,
+  //     }),
+  //   );
+  // }
 }
