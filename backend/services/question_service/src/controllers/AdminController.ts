@@ -492,8 +492,13 @@ export async function list(req: Request, res: Response) {
   if (p !== undefined) args.page = p;
   if (s !== undefined) args.page_size = s;
 
-  const data = await Repo.listAll(args);
-  return res.json({ items: data });
+  const { rows, total } = await Repo.listAll(args);
+  return res.json({
+    items: rows,
+    total,
+    page: args.page ?? 1,
+    page_size: args.page_size ?? 20,
+  });
 }
 
 /**

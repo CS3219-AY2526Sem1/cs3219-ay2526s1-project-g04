@@ -21,6 +21,8 @@ interface CodeContextType {
   testCases: TestCase[];
   results: ExecutionResult[];
   setResults: React.Dispatch<React.SetStateAction<ExecutionResult[]>>;
+  sessionId: string | undefined;
+  setSessionId: React.Dispatch<React.SetStateAction<string | undefined>>;
 }
 
 const CodeContext = createContext<CodeContextType | undefined>(undefined);
@@ -31,7 +33,7 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
   );
   const [language, setLanguage] = React.useState<string>('python');
   const [results, setResults] = React.useState<ExecutionResult[]>([]);
-
+  const [sessionId, setSessionId] = React.useState<string>();
   const testCases: TestCase[] = [
     { input: [[2, 7, 11, 15], 9], expectedOutput: '[0, 1]' },
     { input: [[3, 2, 4], 6], expectedOutput: '[1, 2]' },
@@ -50,6 +52,8 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
         testCases,
         results,
         setResults,
+        sessionId,
+        setSessionId,
       }}
     >
       {children}

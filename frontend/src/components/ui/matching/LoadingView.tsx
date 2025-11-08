@@ -3,8 +3,8 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { getMatchStatus } from '@/services/matchingServiceApi';
+import { getUserId } from '@/lib/utils/jwt';
 import { type MatchState, TOTAL_MATCH_TIME } from '@/lib/constants/MatchTypes';
-import { TEST_USER } from '@/lib/test-data/TestUser'; // for testing
 
 interface LoadingViewProps {
   setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
@@ -31,7 +31,7 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
   // poll match status every 1 second
   const fetchStatus = async () => {
     try {
-      const res = await getMatchStatus(TEST_USER.userId);
+      const res = await getMatchStatus(getUserId()!.toString());
       if (!res.success) return;
 
       const status = res.data?.status;
@@ -58,7 +58,6 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     fetchStatus();
 

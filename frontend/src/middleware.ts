@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // 1. Define your protected and public routes
-const protectedRoutes = ['/home/dashboard', '/home/practice-history'];
+// const protectedRoutes = ['/home/dashboard', '/home/practice-history'];
+const protectedRoutes: string[] = [];
 const publicRoutes = ['/accounts/login', '/accounts/signup', '/'];
 
 export function middleware(request: NextRequest) {

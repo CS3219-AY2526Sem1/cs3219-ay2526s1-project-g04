@@ -14,17 +14,17 @@ export class MessageListener {
     this.messageHandler = this.messageHandler.bind(this);
   }
 
-  private handleStartSession(matchedId: string) {
-    this.sessionManager.createSession(matchedId);
+  private async handleStartSession(matchedId: string) {
+    await this.sessionManager.createSession(matchedId);
   }
 
-  private messageHandler(msgType: MESSAGE_TYPES, msg: string) {
+  private async messageHandler(msgType: MESSAGE_TYPES, msg: string) {
     switch (msgType) {
       case MESSAGE_TYPES.CollaborationService: {
         const msgJson = JSON.parse(msg);
         if (msgJson['type'] === 'matched') {
           console.log(msgJson['matchedId']);
-          this.handleStartSession(msgJson['matchedId']);
+          await this.handleStartSession(msgJson['matchedId']);
         }
         break;
       }

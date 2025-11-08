@@ -32,12 +32,12 @@ export async function listPublished(opts: {
   page?: number;
   page_size?: number;
 }) {
-  const rows = await Repo.listPublished(opts);
+  const { rows, total } = await Repo.listPublished(opts);
 
   // rows (plural) needs to ALSO come back in the same select shape from Repo.listPublished
   // i.e. listPublished in the repo should mirror getPublishedById's select,
   // including question_topics/topics.slug/color_hex etc.
-  return Promise.all(
+  const items = await Promise.all(
     rows.map(async (row) => {
       const attachments = (row.attachments ?? []) as AttachmentLike[];
       const body_html = await renderQuestionMarkdown(row.body_md, attachments);
@@ -48,6 +48,8 @@ export async function listPublished(opts: {
       });
     }),
   );
+
+  return { items, total };
 }
 
 export async function getPublishedBatch(ids: string[]) {

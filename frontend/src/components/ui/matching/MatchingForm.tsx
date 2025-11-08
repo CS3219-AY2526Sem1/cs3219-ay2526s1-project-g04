@@ -7,8 +7,8 @@ import { Topic } from '@/lib/question-service/index';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
 import { MatchCriteria, MatchRequestBody } from '@/lib/matching-service';
 import { postMatchRequest } from '@/services/matchingServiceApi';
+import { getUserId } from '@/lib/utils/jwt';
 import { type MatchState } from '@/lib/constants/MatchTypes';
-import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 // import { TEST_TOPICS } from '@/lib/test-data/TestTopics'; // for test
 
 interface FormProps {
@@ -125,6 +125,11 @@ export default function MatchingForm({ setMatchState }: FormProps) {
 
   // get topic list from question service
   const [topicList, setTopicList] = React.useState<Topic[]>([]);
+  const userId = getUserId();
+  if (!userId) {
+    console.error('user id not found');
+  }
+
   React.useEffect(() => {
     setTopics([]);
 
@@ -163,7 +168,7 @@ export default function MatchingForm({ setMatchState }: FormProps) {
     };
 
     const reqPayload: MatchRequestBody = {
-      userId: TEST_USER.userId,
+      userId: getUserId()!.toString(),
       criteria: reqCriteria,
     };
 

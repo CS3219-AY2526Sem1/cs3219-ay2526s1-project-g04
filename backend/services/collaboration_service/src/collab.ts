@@ -85,7 +85,7 @@ export class Collab {
   /**
    * Temporary test message publisher
    */
-  private async test_send_msg_to_collab() {
+  private async test_send_msg_to_collab(str: string) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     const publisher = new MessagePublisher('mock');
@@ -94,7 +94,7 @@ export class Collab {
       MESSAGE_TYPES.CollaborationService,
       JSON.stringify({
         type: 'matched',
-        matchedId: '124',
+        matchedId: str,
       }),
     );
   }
