@@ -61,16 +61,21 @@ spec:
                 secretKeyRef:
                   name: us-secret
                   key: AWS_SECRET_ACCESS_KEY
-            - name: AWS_ACCESS_KEY_ID
+            - name: AWS_S3_BUCKET_NAME
               valueFrom:
                 secretKeyRef:
                   name: us-secret
-                  key: AWS_ACCESS_KEY_ID
-            - name: AWS_SECRET_ACCESS_KEY
+                  key: AWS_S3_BUCKET_NAME
+            - name: AWS_REGION
               valueFrom:
                 secretKeyRef:
                   name: us-secret
-                  key: AWS_SECRET_ACCESS_KEY
+                  key: AWS_REGION
+            - name: PRIVATE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: PRIVATE_KEY
 
           # readinessProbe:
           #   httpGet:
