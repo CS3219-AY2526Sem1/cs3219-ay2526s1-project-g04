@@ -28,11 +28,6 @@ function CloseFormButton({
 }: CloseButtonProps) {
   const [loading, setLoading] = React.useState(false);
 
-  const userId = getUserId();
-  if (!userId) {
-    console.error('User id not found');
-  }
-
   const handleClick = async () => {
     if (loading) return;
     setLoading(true);
@@ -80,9 +75,13 @@ function CloseFormButton({
 
 export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
   const [matchState, setMatchState] = React.useState<MatchState>({
-    status: 'requesting',
-    // matchingId: '123',
+    status: 'matched',
+    matchingId: '123',
   });
+  const userId = getUserId();
+  if (!userId) {
+    console.error('User id not found');
+  }
 
   // prevent window close or reload
   React.useEffect(() => {
@@ -91,7 +90,7 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
         e.preventDefault();
         e.returnValue = '';
 
-        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${TEST_USER.userId}`;
+        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel/${userId}`;
 
         navigator.sendBeacon(url);
       } else if (matchState.status === 'matched') {
