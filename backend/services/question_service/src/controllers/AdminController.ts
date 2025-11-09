@@ -506,7 +506,7 @@ export async function list(req: Request, res: Response) {
   });
 
   try {
-    const { items, total } = await Service.listPublished(args);
+    const { items, total } = await Service.listAll(args);
 
     log.info('[GET /questions] success', {
       returned: items.length,
