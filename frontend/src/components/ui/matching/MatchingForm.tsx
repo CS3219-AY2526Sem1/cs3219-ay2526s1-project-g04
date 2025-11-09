@@ -2,13 +2,15 @@
 
 import * as React from 'react';
 import { ChevronRightIcon } from '@heroicons/react/24/outline';
-import { getTopicbyDifficulty } from '@/services/questionServiceApi';
+import { getTopicsByDifficulty } from '@/services/questionServiceApi';
 import { Topic } from '@/lib/question-service/index';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
-import { TEST_TOPICS } from '@/lib/test-data/TestTopics';
-import { MatchCriteria, MatchRequestBody } from '@/lib/matching-service';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
+import { MatchCriteria } from '@/lib/matching-service';
 import { postMatchRequest } from '@/services/matchingServiceApi';
-import { type MatchState, TEST_USERID } from './Types';
+import { getUserId } from '@/lib/utils/jwt';
+import { type MatchState } from '@/lib/constants/MatchTypes';
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
+// import { TEST_TOPICS } from '@/lib/test-data/TestTopics'; // for test
 
 interface FormProps {
   setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
@@ -124,12 +126,22 @@ export default function MatchingForm({ setMatchState }: FormProps) {
 
   // get topic list from question service
   const [topicList, setTopicList] = React.useState<Topic[]>([]);
+  const userId = getUserId();
+  if (!userId) {
+    console.error('user id not found');
+  }
+
   React.useEffect(() => {
     setTopics([]);
 
-    getTopicbyDifficulty(difficulty)
-      .then((data) => {
-        const { items } = data;
+    getTopicsByDifficulty(difficulty)
+      .then((res) => {
+        if (!res.success) {
+          alert(res.message);
+          return;
+        }
+
+        const { items } = res.data;
         if (!items) return;
 
         // sort
@@ -156,13 +168,8 @@ export default function MatchingForm({ setMatchState }: FormProps) {
       topics,
     };
 
-    const reqPayload: MatchRequestBody = {
-      userId: TEST_USERID,
-      criteria: reqCriteria,
-    };
-
     try {
-      const res = await postMatchRequest(reqPayload);
+      const res = await postMatchRequest(reqCriteria);
       if (!res.success) {
         return alert(res.message);
       } else {
@@ -188,8 +195,8 @@ export default function MatchingForm({ setMatchState }: FormProps) {
       <TopicSelect
         topics={topics}
         setTopics={setTopics}
-        // topicList={topicList}
-        topicList={TEST_TOPICS} // for testing
+        topicList={topicList}
+        // topicList={TEST_TOPICS} // for testing
       />
 
       <button

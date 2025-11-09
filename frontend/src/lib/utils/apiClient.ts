@@ -2,6 +2,12 @@
 
 import { jwtDecode } from 'jwt-decode';
 import { refreshExpiredToken } from '@/services/userServiceApi';
+import {
+  getAccessToken,
+  getRefreshToken,
+  removeTokens,
+  setAccessToken,
+} from '@/lib/utils/jwt';
 
 interface DecodedAccessToken {
   userId: number;
@@ -12,7 +18,7 @@ interface DecodedAccessToken {
 }
 
 async function getNewAccessToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem('refreshToken');
+  const refreshToken = getRefreshToken();
   if (!refreshToken) {
     console.log('No refresh token found.');
     return null;
@@ -20,7 +26,7 @@ async function getNewAccessToken(): Promise<string | null> {
 
   try {
     const data = await refreshExpiredToken(refreshToken);
-    localStorage.setItem('accessToken', data.token);
+    setAccessToken(data.token);
     return data.token;
   } catch (error) {
     console.error('Error refreshing token:', error);
@@ -29,7 +35,7 @@ async function getNewAccessToken(): Promise<string | null> {
 }
 
 export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  let token = localStorage.getItem('accessToken');
+  let token = getAccessToken();
 
   // 1. Check if token exists and is expired
   if (token) {
@@ -48,8 +54,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
 
   // 2. If no token after all checks, log out
   if (!token) {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    removeTokens();
     window.location.href = '/accounts/login';
     throw new Error('Session expired. Please log in again.');
   }
@@ -79,8 +84,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
         headers: headers,
       });
     } else {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      removeTokens();
       window.location.href = '/accounts/login';
       throw new Error('Session expired. Please log in again.');
     }

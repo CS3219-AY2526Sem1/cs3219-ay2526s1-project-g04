@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import type { MatchingServiceRedis } from '../clients/redis/redis_client.js';
 import { logger } from '../logger/logger.js';
 import { registerMatchRoutes } from './routes.js';
@@ -10,6 +11,7 @@ export async function initServer(redis: MatchingServiceRedis) {
 
   app.use(express.json());
 
+  app.use(cors({ origin: 'http://localhost:3000' }));
   app.get('/', (req: Request, res: Response) => {
     res.send('Hello World!');
   });

@@ -3,7 +3,6 @@
 import dynamic from 'next/dynamic';
 import React, { useEffect, useRef } from 'react';
 import { useCodeContext } from './CodeContext';
-import { useCollab } from './CollabProvider';
 import * as Y from 'yjs';
 import { OnMount } from '@monaco-editor/react';
 import {
@@ -18,12 +17,19 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import type { MonacoBinding } from 'y-monaco';
+import { Doc } from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+
+interface props {
+  yCodeDoc: Doc;
+  codeProvider: WebsocketProvider;
+}
 
 const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
-export default function CollabMonaco() {
+export default function CollabMonaco(p: props) {
   const { code, setCode } = useCodeContext();
-  const { ydoc, provider } = useCollab();
+  const { yCodeDoc, codeProvider } = p;
   const yTextRef = useRef<Y.Text | null>(null);
   const bindingRef = useRef<MonacoBinding | null>(null);
 
@@ -40,9 +46,9 @@ export default function CollabMonaco() {
   };
 
   useEffect(() => {
-    if (!ydoc || !provider) return;
+    if (!yCodeDoc || !codeProvider) return;
 
-    const yText = ydoc.getText('monaco');
+    const yText = yCodeDoc.getText('monaco');
     yTextRef.current = yText;
 
     const observer = (event: Y.YTextEvent) => setCode(yText.toString());
@@ -53,23 +59,23 @@ export default function CollabMonaco() {
       bindingRef.current?.destroy?.();
       bindingRef.current = null;
     };
-  }, [ydoc, provider]);
+  }, [yCodeDoc, codeProvider]);
 
   const handleEditorDidMount: OnMount = async (editor, monaco) => {
-    if (!ydoc || !provider) return;
+    if (!yCodeDoc || !codeProvider) return;
     const model = editor.getModel();
     if (!model) return;
 
     const mod = await import('y-monaco');
     const MonacoBinding = mod.MonacoBinding;
 
-    const yText = ydoc.getText('monaco');
+    const yText = yCodeDoc.getText('monaco');
     yTextRef.current = yText;
     bindingRef.current = new MonacoBinding(
       yText,
       model,
       new Set([editor]),
-      provider.awareness,
+      codeProvider.awareness,
     );
 
     monaco.editor.defineTheme('peerprep-dark', {

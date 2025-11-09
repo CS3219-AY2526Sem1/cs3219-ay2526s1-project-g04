@@ -23,6 +23,7 @@ import {
   AccountCircleOutlined,
 } from '@mui/icons-material';
 import { logout } from '@/services/userServiceApi';
+import { getAccessToken, removeTokens } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -83,11 +84,10 @@ export default function TopNavigationBar({
 
   const handleConfirmLogout = async () => {
     console.log('Logging out...');
-    const accessToken = localStorage.getItem('accessToken');
+    const accessToken = getAccessToken();
     if (!accessToken) {
       console.error('Logout failed: Access token not found.');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      removeTokens();
       router.push('/accounts/login');
       handleCloseDialog();
       return;
@@ -98,8 +98,7 @@ export default function TopNavigationBar({
     } catch (error) {
       console.error('Error during logout API call:', error);
     } finally {
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      removeTokens();
       router.push('/accounts/login');
       handleCloseDialog();
     }

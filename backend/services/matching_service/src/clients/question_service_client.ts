@@ -23,7 +23,11 @@ export async function getQuestionId(
 
     if (res.status === 200) {
       const results = (await res.json()) as QuestionSelectResponse;
-      return results.id;
+      logger.info(
+        `[getQuestionId] Success! Data retrieved: ${JSON.stringify(results)}`,
+      );
+
+      return results.question_id;
     } else if (res.status === 409) {
       // no eligible question
       logger.warn(

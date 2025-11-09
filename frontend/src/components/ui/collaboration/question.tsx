@@ -7,7 +7,6 @@ import {
   Typography,
 } from '@mui/material';
 import '@/styles/globals.css';
-import ReactMarkdown from 'react-markdown';
 import { getQuestionById } from '@/services/questionServiceApi';
 import { useEffect, useState } from 'react';
 import { getQuestionIdBySessId } from '@/services/collaborationServiceApi';
@@ -28,10 +27,18 @@ export const QuestionCard = (p: questionProps) => {
     const fetchQuestion = async () => {
       const questionId: string | null = await getQuestionIdBySessId(sessionId);
       console.log(1, questionId);
+
       if (!questionId) return;
-      const question: Question | null = await getQuestionById(questionId);
+
+      const res = await getQuestionById(questionId);
+      if (!res.success) {
+        alert(`⚠️ Error fetching question: ${res.message}`);
+        return;
+      }
+
+      const question: Question = res.data;
       console.log(question);
-      setQuestionMd(question?.body_md ?? '');
+      setQuestionMd(question?.body_html ?? '');
       setQuestionTitle(question?.title ?? '');
       setQuestionTopics(question?.topics ?? []);
     };
@@ -63,108 +70,29 @@ export const QuestionCard = (p: questionProps) => {
                 label={topic.slug}
                 variant="outlined"
                 size="medium"
-                className="border border-blue-500 text-blue-500 min-w-10"
+                className={`border min-w-10`}
+                sx={{
+                  borderColor: topic.color_hex,
+                  color: topic.color_hex,
+                }}
               />
             ))}
           </Stack>
         }
+        className="h-1/5"
       />
-      <CardContent>
-        <Stack>
-          <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-            <ReactMarkdown>{questionMd}</ReactMarkdown>
-          </Typography>
-          <Card
-            variant="outlined"
-            sx={{
-              backgroundColor: '#f9fafb',
-              borderRadius: 2,
-              p: 2,
-              boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'Roboto Mono, monospace',
-              }}
-              dangerouslySetInnerHTML={{
-                __html: `<strong>Input</strong>: nums = [2,7,11,15], target = 9
-<strong>Output</strong>: [0,1]
-<strong>Explanation</strong>: Because nums[0] + nums[1] == 9, we return [0, 1].`,
-              }}
-            />
-          </Card>
-
-          {/* Example 2 */}
-          <Typography fontWeight="bold" sx={{ mt: 1 }}>
-            Example 2
-          </Typography>
-          <Card
-            variant="outlined"
-            sx={{
-              backgroundColor: '#f9fafb',
-              borderRadius: 2,
-              p: 2,
-              boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'Roboto Mono, monospace',
-              }}
-              dangerouslySetInnerHTML={{
-                __html: `<strong>Input</strong>: nums = [3,2,4], target = 6
-<strong>Output</strong>: [1,2]`,
-              }}
-            />
-          </Card>
-
-          {/* Example 3 */}
-          <Typography fontWeight="bold" sx={{ mt: 1 }}>
-            Example 3
-          </Typography>
-          <Card
-            variant="outlined"
-            sx={{
-              backgroundColor: '#f9fafb',
-              borderRadius: 2,
-              p: 2,
-              boxShadow: '0px 3px 6px rgba(0, 0, 0, 0.3)',
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                whiteSpace: 'pre-wrap',
-                fontFamily: 'Roboto Mono, monospace',
-              }}
-              dangerouslySetInnerHTML={{
-                __html: `<strong>Input</strong>: nums = [3,3], target = 6
-<strong>Output</strong>: [0,1]`,
-              }}
-            />
-          </Card>
-
-          {/* Constraints */}
-          <Typography fontWeight="bold">Constraints</Typography>
-
+      <CardContent className="h-4/5">
+        <Stack className="h-full">
           <Typography
-            variant="body2"
-            sx={{
-              whiteSpace: 'pre-wrap',
-              fontFamily: 'Roboto Mono, monospace',
-            }}
-            dangerouslySetInnerHTML={{
-              __html: `<b>1</b> ≤ <b>nums.length</b> ≤ 10<sup>4</sup>
-−10<sup>9</sup> ≤ <b>nums[i]</b> ≤ 10<sup>9</sup>
-−10<sup>9</sup> ≤ <b>target</b> ≤ 10<sup>9</sup><br/>
-Only one valid answer exists.
-    `,
-            }}
+            variant="body1"
+            component="div"
+            className="
+              h-full
+              overflow-y-auto 
+              whitespace-pre-wrap   
+                          
+            "
+            dangerouslySetInnerHTML={{ __html: questionMd }}
           />
         </Stack>
       </CardContent>

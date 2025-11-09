@@ -5,73 +5,124 @@ import { useParams } from 'next/navigation';
 import {
   getAdminQuestionById,
   getQuestionById,
+  getAdminQuestionsResources,
+  getQuestionsResources,
 } from '@/services/questionServiceApi';
-import TagComponent from '@/components/ui/home/question-view/TagComponent';
-import { Question } from '@/lib/question-service';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
-
-const USER_ROLE = 'admin'; // implement logic to read form context
+import { Question, TestCase } from '@/lib/question-service';
+import QuestionViewBox from '@/components/ui/home/question-view/QuestionViewBox';
+import TestCaseBox from '@/components/ui/home/question-view/TestCaseBox';
+import { getRole } from '@/lib/utils/jwt';
+// import { TEST_QUESTION_VIEW } from '@/lib/test-data/TestQuestionView'; // for test
+// import { TEST_TEST_CASES } from '@/lib/test-data/TestTestCases'; // for test
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 
 export default function QuestionViewPage() {
   const params = useParams();
   const questionId = params.id;
   const [questionData, setQuestionData] = useState<Question | null>(null);
+  const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // get the role of user
+  useEffect(() => {
+    const role = getRole();
+    setUserRole(role);
+  }, []);
 
   // get question details
   useEffect(() => {
     if (!questionId) return;
 
     setLoading(true);
-    if (USER_ROLE === 'admin') {
+    if (userRole === 'ADMIN') {
       getAdminQuestionById(questionId.toString())
-        .then((data) => setQuestionData(data))
+        .then((res) => {
+          if (!res.success) {
+            alert(`⚠️ Error: ${res.message}`);
+            return;
+          }
+
+          setQuestionData(res.data);
+        })
         .catch((err) => console.error(err))
         .finally(() => setLoading(false));
-    } else if (USER_ROLE === 'user') {
+    } else if (userRole === 'USER') {
       getQuestionById(questionId.toString())
-        .then((data) => setQuestionData(data))
+        .then((res) => {
+          if (!res.success) {
+            alert(`⚠️ Error: ${res.message}`);
+            return;
+          }
+
+          console.log(`got question successfully: ${JSON.stringify(res.data)}`);
+          setQuestionData(res.data);
+        })
         .catch((err) => console.error(err))
         .finally(() => setLoading(false));
     }
-  }, [questionId]);
+  }, [questionId, userRole]);
 
-  // get colours for tag componenents\
-  const difficulty_colorhex =
-    DIFFICULTY_LEVELS.find((d) => d.name === questionData?.difficulty)
-      ?.color_hex || '#6B7280';
+  // get test cases
+  useEffect(() => {
+    if (!questionId) return;
+
+    setLoading(true);
+    if (userRole === 'ADMIN') {
+      getAdminQuestionsResources(questionId.toString())
+        .then((res) => {
+          if (!res.success) {
+            alert(`⚠️ Error: ${res.message}`);
+            return;
+          }
+
+          setTestCases(res.data.test_cases ?? []);
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false));
+    } else if (userRole === 'USER') {
+      getQuestionsResources(questionId.toString())
+        .then((res) => {
+          if (!res.success) {
+            alert(`⚠️ Error: ${res.message}`);
+            return;
+          }
+          setTestCases(res.data.test_cases ?? []);
+        })
+        .catch((err) => console.error(err))
+        .finally(() => setLoading(false));
+    }
+  }, [questionId, userRole]);
+
+  // const questionData = TEST_QUESTION_VIEW; // for test
+  // const testCases = TEST_TEST_CASES; // for test
+
+  if (!userRole) {
+    return (
+      <div className="flex justify-center items-center h-full w-full">
+        <p className="text-gray-500">
+          You must be logged in to view this page.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-y-6">
+    <div>
       {questionData ? (
-        <h1>{questionData.title}</h1>
-      ) : (
-        <h1>Question View Page</h1>
-      )}
-
-      {loading ? (
-        <p>Loading...</p>
-      ) : questionData ? (
-        <>
-          <div className="flex flex-row gap-2">
-            <TagComponent
-              tagText={questionData.difficulty}
-              color_hex={difficulty_colorhex}
-            />
-            {questionData.topics.map((topic) => (
-              <TagComponent
-                key={topic.slug}
-                tagText={topic.slug}
-                color_hex={topic.color_hex}
-              />
-            ))}
+        loading ? (
+          <p>Loading...</p>
+        ) : (
+          <div className="flex flex-col flex-1 gap-6">
+            <QuestionViewBox questionData={questionData} userRole={userRole} />
+            <TestCaseBox testCases={testCases} />
           </div>
-          <div
-            dangerouslySetInnerHTML={{ __html: questionData?.body_html || '' }}
-          />
-        </>
+        )
       ) : (
-        <p>No question found.</p>
+        <div className="flex flex-col gap-y-6">
+          <h1>Question View Page</h1>
+          <p>No question found.</p>
+        </div>
       )}
     </div>
   );

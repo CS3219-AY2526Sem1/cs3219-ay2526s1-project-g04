@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { jwtDecode } from 'jwt-decode';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
 import {
   Box,
   Button,
@@ -26,6 +26,7 @@ import {
 import { openSans } from '@/styles/fonts';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import { getAccessToken, getUserId } from '@/lib/utils/jwt';
 
 // --- MOCK DATABASES (Expanded for pagination) ---
 interface Question {
@@ -166,13 +167,7 @@ const fakeFetch = <T,>(
 };
 
 // Type definitions
-interface UserJwtPayload {
-  userId: number;
-  username: string;
-  role: 'USER' | 'ADMIN';
-  iat: number;
-  exp: number;
-}
+
 interface RawSession {
   sessionId: number;
   questionId: string;
@@ -205,7 +200,6 @@ const getDifficultyHex = (difficultyName: string) => {
 const ITEMS_PER_PAGE = 10; // Define how many items to show per page
 
 export default function PracticeHistoryPage() {
-  const [user, setUser] = useState<UserJwtPayload | null>(null);
   const [history, setHistory] = useState<EnrichedSession[]>([]); // Will hold ALL sessions
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -218,15 +212,9 @@ export default function PracticeHistoryPage() {
   useEffect(() => {
     const loadDashboardData = async () => {
       let currentUserId: number | null = null;
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        router.push('/accounts/login');
-        return;
-      }
+      const token = getAccessToken();
       try {
-        const decodedToken = jwtDecode<UserJwtPayload>(token);
-        setUser(decodedToken);
-        currentUserId = decodedToken.userId;
+        currentUserId = getUserId();
       } catch (error) {
         console.error('Invalid token:', error);
         router.push('/accounts/login');
