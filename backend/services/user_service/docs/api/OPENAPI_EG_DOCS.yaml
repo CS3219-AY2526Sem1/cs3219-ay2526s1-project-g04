@@ -1,209 +1,432 @@
-openapi: 3.1.0
+openapi: 3.0.3
 info:
-  title: User Service API
+  title: PeerPrep User Service
+  description: API for managing users, authentication, profiles, and admin tasks for the PeerPrep platform.
   version: 1.0.0
-  description: API for user authentication and management, including signup, login, profile updates, and email verification.
 servers:
-  - url: http://localhost:3001
-    description: Development server
+  - url: http://localhost:3005
+    description: Local Development Server
 
+# 1. Define all the endpoint groups
 tags:
-  - name: Auth
-    description: Endpoints for user authentication, session management, and verification.
-  - name: Users
-    description: Endpoints for managing user profiles and data.
+  - name: Authentication
+    description: User signup, login, logout, and token management.
+  - name: Profile
+    description: Operations related to the logged-in user's profile (get/update).
+  - name: Password Management
+    description: Endpoints for changing and resetting passwords.
+  - name: Email Management
+    description: Endpoints for changing a user's email address.
+  - name: User
+    description: General operations for fetching user data.
+  - name: Admin
+    description: Admin-only operations.
   - name: Utility
-    description: Internal utility endpoints for development and debugging.
+    description: Health checks and utility endpoints.
 
+# 2. Define reusable components (schemas and security)
+components:
+  # 2a. Define the Bearer Token security scheme
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # 2b. Define all the reusable data models (schemas)
+  schemas:
+    # --- Request Schemas ---
+    SignupRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          description: Min 8 chars, 1 upper, 1 lower, 1 num, 1 special.
+        username:
+          type: string
+          description: 3-30 chars, lowercase letters, numbers, and underscores.
+      required: [email, password, username]
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required: [email, password]
+    RefreshTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+    VerifyEmailRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+      required: [email, otp]
+    ResendOtpRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: 3-30 chars, lowercase letters, numbers, and underscores.
+        bio:
+          type: string
+          maxLength: 150
+          nullable: true
+        profilePictureUrl:
+          type: string
+          format: url
+          nullable: true
+    UpdateEmailRequest:
+      type: object
+      properties:
+        newEmail:
+          type: string
+          format: email
+        password:
+          type: string
+          description: The user's current password.
+      required: [newEmail, password]
+    UpdatePasswordRequest:
+      type: object
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+          description: Min 8 chars, 1 upper, 1 lower, 1 num, 1 special.
+      required: [oldPassword, newPassword]
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
+    ResetPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+        newPassword:
+          type: string
+          description: Min 8 chars, 1 upper, 1 lower, 1 num, 1 special.
+      required: [email, otp, newPassword]
+    RequestEmailChangeOtpRequest:
+      type: object
+      properties:
+        newEmail:
+          type: string
+          format: email
+        password:
+          type: string
+          description: The user's current password.
+      required: [newEmail, password]
+    VerifyEmailChangeRequest:
+      type: object
+      properties:
+        newEmail:
+          type: string
+          format: email
+        password:
+          type: string
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+      required: [newEmail, password, otp]
+    RequestPasswordChangeOtpRequest:
+      type: object
+      properties:
+        oldPassword:
+          type: string
+      required: [oldPassword]
+    VerifyPasswordChangeRequest:
+      type: object
+      properties:
+        oldPassword:
+          type: string
+        newPassword:
+          type: string
+          description: Min 8 chars, 1 upper, 1 lower, 1 num, 1 special.
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+      required: [oldPassword, newPassword, otp]
+
+    # --- Response Schemas ---
+    AuthResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        token:
+          type: string
+          description: Access Token (JWT)
+        refreshToken:
+          type: string
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+    UserProfileResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        role:
+          type: string
+          enum: [USER, ADMIN]
+        createdAt:
+          type: string
+          format: date-time
+        bio:
+          type: string
+          nullable: true
+        profilePictureUrl:
+          type: string
+          format: url
+          nullable: true
+    PublicProfileResponse:
+      type: object
+      properties:
+        username:
+          type: string
+        bio:
+          type: string
+          nullable: true
+        profilePictureUrl:
+          type: string
+          format: url
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    UserListResponse:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: integer
+          username:
+            type: string
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: object
+
+# 3. Define all the API paths (endpoints)
 paths:
-  /api/auth/signup:
+  # --- Authentication ---
+  /user/auth/signup:
     post:
       tags:
-        - Auth
+        - Authentication
       summary: Register a new user
-      description: Creates a new user account and sends a verification OTP to their email. If an unverified account with the email already exists, it resends the OTP.
+      description: Creates a new user account and sends a verification OTP. The first user to sign up becomes an ADMIN.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Signup'
+              $ref: '#/components/schemas/SignupRequest'
       responses:
         '201':
-          description: User created successfully. An OTP has been sent.
+          description: User created successfully.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: User created successfully. Please check your email for the OTP to verify your account.
-                  user:
-                    type: object
-                    properties:
-                      email:
-                        type: string
-                        format: email
-                      username:
-                        type: string
-        '200':
-          description: Account already exists but is unverified. A new OTP has been sent.
+                $ref: '#/components/schemas/MessageResponse'
         '400':
-          description: Invalid request body.
+          description: Invalid input (Zod validation error).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: An account with this email or username is already verified.
-
-  /api/auth/verify-email:
-    post:
-      tags:
-        - Auth
-      summary: Verify a user's email
-      description: Verifies a user's account using the OTP sent to their email.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/VerifyEmail'
-      responses:
-        '200':
-          description: Email verified successfully.
-        '400':
-          description: Invalid or expired OTP.
+          description: Email or username already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
         '500':
           description: Internal server error.
 
-  /api/auth/resend-otp:
+  /user/auth/login:
     post:
       tags:
-        - Auth
-      summary: Resend verification OTP
-      description: Sends a new OTP to the user's email if their account is not yet verified.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResendOtp'
-      responses:
-        '200':
-          description: A new OTP has been sent.
-        '400':
-          description: Invalid request, or the account is already verified.
-
-  /api/auth/login:
-    post:
-      tags:
-        - Auth
+        - Authentication
       summary: Log in a user
-      description: Authenticates a user and returns a JWT access token and a refresh token.
+      description: Authenticates a user and returns an access token and a refresh token.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Login'
+              $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
           description: Login successful.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: Login successful.
-                  token:
-                    type: string
-                    description: JWT access token, expires in 15 minutes.
-                  refreshToken:
-                    type: string
-                    description: Refresh token, expires in 7 days.
-        '400':
-          description: Invalid request body.
+                $ref: '#/components/schemas/AuthResponse'
         '401':
           description: Invalid email or password.
         '403':
-          description: Account is not verified.
+          description: Account not verified.
 
-  /api/auth/refresh:
+  /user/auth/refresh:
     post:
       tags:
-        - Auth
-      summary: Refresh access token
-      description: Generates a new JWT access token using a valid refresh token.
+        - Authentication
+      summary: Refresh an access token
+      description: Uses a valid refresh token to get a new access token.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RefreshToken'
+              $ref: '#/components/schemas/RefreshTokenRequest'
       responses:
         '200':
           description: Access token refreshed.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  accessToken:
-                    type: string
+                $ref: '#/components/schemas/RefreshResponse'
         '401':
-          description: Refresh token not provided.
+          description: No refresh token provided.
         '403':
           description: Invalid or expired refresh token.
 
-  /api/auth/logout:
+  /user/auth/logout:
     post:
       tags:
-        - Auth
+        - Authentication
       summary: Log out a user
-      description: Logs the user out by invalidating their refresh token on the server.
+      description: Invalidates the user's refresh token on the server.
       security:
         - bearerAuth: []
       responses:
         '200':
           description: Logged out successfully.
         '401':
-          description: Unauthorized, token not provided.
-        '403':
-          description: Forbidden, token is invalid.
+          description: Unauthorized.
         '500':
           description: Logout failed.
 
-  /api/users/{id}:
-    get:
+  /user/auth/verify-email:
+    post:
       tags:
-        - Users
-      summary: Get public user profile
-      description: Retrieves public information for a specific user by their ID.
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: The ID of the user to retrieve.
+        - Authentication
+      summary: Verify a new user's email
+      description: Verifies a user's email using the provided OTP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
       responses:
         '200':
-          description: User found.
+          description: Email verified successfully. Returns new tokens.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PublicUserProfile'
-        '404':
-          description: User not found.
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid or expired OTP.
         '500':
           description: Internal server error.
 
-  /api/users/me/profile:
+  /user/auth/resend-otp:
+    post:
+      tags:
+        - Authentication
+      summary: Resend verification OTP
+      description: Sends a new OTP to a user's email if they are not verified.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendOtpRequest'
+      responses:
+        '200':
+          description: A new OTP has been sent.
+        '400':
+          description: Account already verified.
+        '429':
+          description: Cooldown active. Please wait.
+
+  # --- Profile ---
+  /user/me/profile:
+    get:
+      tags:
+        - Profile
+      summary: Get current user's profile
+      description: Retrieves the full profile for the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Unauthorized.
+        '404':
+          description: User profile not found.
     put:
       tags:
-        - Users
+        - Profile
       summary: Update current user's profile
-      description: Updates the username, bio, or profile picture URL for the authenticated user.
+      description: Updates the username or bio for the authenticated user.
       security:
         - bearerAuth: []
       requestBody:
@@ -211,25 +434,72 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateProfile'
+              $ref: '#/components/schemas/UpdateProfileRequest'
       responses:
         '200':
           description: Profile updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  accessToken:
+                    type: string
+                    description: A new token, if the username was changed.
         '400':
-          description: Invalid input or no fields to update provided.
+          description: Invalid input or no fields to update.
         '401':
           description: Unauthorized.
         '409':
           description: Username is already taken.
+
+  /user/me/profile-picture:
+    post:
+      tags:
+        - Profile
+      summary: Upload a profile picture
+      description: Uploads a profile picture (JPEG or PNG, max 5MB) to S3.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profilePicture:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Profile picture updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  profilePictureUrl:
+                    type: string
+                    format: url
+        '400':
+          description: No file uploaded or invalid file type.
+        '401':
+          description: Unauthorized.
         '500':
           description: Internal server error.
 
-  /api/users/me/email:
+  # --- Email Management ---
+  /user/me/email:
     put:
       tags:
-        - Users
-      summary: Update current user's email
-      description: Updates the email address for the authenticated user after verifying their current password.
+        - Email Management
+      summary: (DEPRECATED) Update user email
+      description: Directly updates the user's email. Use the OTP flow instead.
       security:
         - bearerAuth: []
       requestBody:
@@ -237,7 +507,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateEmail'
+              $ref: '#/components/schemas/UpdateEmailRequest'
       responses:
         '200':
           description: Email updated successfully.
@@ -246,16 +516,14 @@ paths:
         '401':
           description: Incorrect password.
         '409':
-          description: The new email address is already in use.
-        '500':
-          description: Internal server error.
+          description: Email already in use.
 
-  /api/users/me/password:
-    put:
+  /user/me/email/request-otp:
+    post:
       tags:
-        - Users
-      summary: Update current user's password
-      description: Updates the password for the authenticated user after verifying their old password.
+        - Email Management
+      summary: Request OTP to change email
+      description: Verifies current password and sends an OTP to the new email.
       security:
         - bearerAuth: []
       requestBody:
@@ -263,173 +531,290 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdatePassword'
+              $ref: '#/components/schemas/RequestEmailChangeOtpRequest'
+      responses:
+        '200':
+          description: OTP sent to new email.
+        '400':
+          description: Invalid password or email already in use.
+        '401':
+          description: Unauthorized.
+        '429':
+          description: Cooldown active. Please wait.
+
+  /user/me/email/verify-otp:
+    post:
+      tags:
+        - Email Management
+      summary: Verify OTP to change email
+      description: Verifies password, OTP, and updates the user's email.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailChangeRequest'
+      responses:
+        '200':
+          description: Email updated successfully.
+        '400':
+          description: Invalid password, invalid/expired OTP, or email in use.
+        '401':
+          description: Unauthorized.
+
+  # --- Password Management ---
+  /user/me/password:
+    put:
+      tags:
+        - Password Management
+      summary: (DEPRECATED) Update user password
+      description: Directly updates the user's password. Use the OTP flow instead.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePasswordRequest'
       responses:
         '200':
           description: Password updated successfully.
         '400':
-          description: Invalid input for the new password.
+          description: Invalid input.
         '401':
           description: Incorrect old password.
+
+  /user/me/password/request-otp:
+    post:
+      tags:
+        - Password Management
+      summary: Request OTP to change password
+      description: Verifies current password and sends an OTP to the user's email.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequestPasswordChangeOtpRequest'
+      responses:
+        '200':
+          description: OTP sent to your email.
+        '400':
+          description: Invalid current password.
+        '401':
+          description: Unauthorized.
+        '429':
+          description: Cooldown active. Please wait.
+
+  /user/me/password/verify-otp:
+    post:
+      tags:
+        - Password Management
+      summary: Verify OTP to change password
+      description: Verifies old password, OTP, and updates to the new password.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyPasswordChangeRequest'
+      responses:
+        '200':
+          description: Password updated successfully.
+        '400':
+          description: Invalid password or invalid/expired OTP.
+        '401':
+          description: Unauthorized.
+
+  /user/auth/forgot-password:
+    post:
+      tags:
+        - Password Management
+      summary: Request password reset OTP
+      description: Sends a password reset OTP to the user's email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+      responses:
+        '200':
+          description: If an account exists, an email will be sent.
+        '400':
+          description: Account is not verified.
+        '429':
+          description: Cooldown active. Please wait.
+
+  /user/auth/reset-password:
+    post:
+      tags:
+        - Password Management
+      summary: Reset password with OTP
+      description: Resets the user's password using the email, OTP, and new password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset successfully.
+        '400':
+          description: Invalid or expired reset code.
         '500':
           description: Internal server error.
 
-  /api/auth/list:
-    post:
+  # --- User ---
+  /user/check-username:
+    get:
       tags:
-        - Utility
-      summary: '[INTERNAL] List all users'
-      description: A temporary utility endpoint to list all users in the database. Not for production use.
+        - User
+      summary: Check username availability
+      description: Checks if a username is already taken.
+      parameters:
+        - in: query
+          name: username
+          required: true
+          schema:
+            type: string
       responses:
         '200':
-          description: A list of all user objects.
+          description: Returns availability status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isAvailable:
+                    type: boolean
         '400':
-          description: Invalid request.
+          description: Username query parameter is required.
 
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+  /user:
+    get:
+      tags:
+        - User
+      summary: Get users by IDs
+      description: Retrieves a list of public user profiles by their IDs.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: ids
+          required: true
+          schema:
+            type: string
+          example: 1,2,3
+          description: A comma-separated list of user IDs.
+      responses:
+        '200':
+          description: A list of users.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '400':
+          description: User IDs are required or invalid.
+        '401':
+          description: Unauthorized.
 
-  schemas:
-    PasswordPolicy:
-      type: string
-      description: Password must be at least 8 characters long, contain one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&).
-      pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$'
-      example: 'Str0ngP@ssword!'
+  /user/{id}:
+    get:
+      tags:
+        - User
+      summary: Get public profile by ID
+      description: Retrieves a single user's public profile by their ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the user to retrieve.
+      responses:
+        '200':
+          description: Public user profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicProfileResponse'
+        '400':
+          description: Invalid user ID format.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: User not found.
 
-    UsernamePolicy:
-      type: string
-      description: Username must be at least 3 characters long and can only contain lowercase letters, numbers, and underscores (_).
-      pattern: '^[a-z0-9_]{3,}$'
-      example: 'new_user_123'
+  # --- Admin ---
+  /user/{id}/promote:
+    patch:
+      tags:
+        - Admin
+      summary: Promote a user to Admin
+      description: Promotes a regular user to an ADMIN. This endpoint is restricted to Admins.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: The ID of the user to promote.
+      responses:
+        '200':
+          description: User successfully promoted or was already an admin.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          description: Invalid user ID or admin trying to promote themselves.
+        '401':
+          description: Authentication required.
+        '403':
+          description: Forbidden. Admin privileges required.
+        '404':
+          description: User not found.
 
-    Signup:
-      type: object
-      required:
-        - email
-        - password
-        - username
-      properties:
-        email:
-          type: string
-          format: email
-          example: 'user@example.com'
-        password:
-          $ref: '#/components/schemas/PasswordPolicy'
-        username:
-          $ref: '#/components/schemas/UsernamePolicy'
+  # --- Utility ---
+  /user/utility/list:
+    get:
+      tags:
+        - Utility
+      summary: (DEBUG) List all users
+      description: A temporary utility endpoint to list all users. DO NOT USE IN PRODUCTION.
+      responses:
+        '200':
+          description: List of all users in the database.
 
-    Login:
-      type: object
-      required:
-        - email
-        - password
-      properties:
-        email:
-          type: string
-          format: email
-          example: 'user@example.com'
-        password:
-          type: string
-          example: 'Str0ngP@ssword!'
-
-    RefreshToken:
-      type: object
-      required:
-        - token
-      properties:
-        token:
-          type: string
-          description: The refresh token received during login.
-
-    VerifyEmail:
-      type: object
-      required:
-        - email
-        - otp
-      properties:
-        email:
-          type: string
-          format: email
-        otp:
-          type: string
-          description: The 6-digit code sent to the user's email.
-          example: '123456'
-          minLength: 6
-          maxLength: 6
-
-    ResendOtp:
-      type: object
-      required:
-        - email
-      properties:
-        email:
-          type: string
-          format: email
-
-    UpdateProfile:
-      type: object
-      properties:
-        username:
-          type: string
-          minLength: 3
-          maxLength: 30
-          pattern: '^[a-z0-9_]+$'
-          example: 'my_updated_username'
-        bio:
-          type: string
-          maxLength: 150
-          nullable: true
-          example: 'This is my new bio.'
-        profilePictureUrl:
-          type: string
-          format: uri
-          nullable: true
-          example: 'https://example.com/new_avatar.png'
-
-    UpdateEmail:
-      type: object
-      required:
-        - newEmail
-        - password
-      properties:
-        newEmail:
-          type: string
-          format: email
-          example: 'new.email@example.com'
-        password:
-          type: string
-          description: The user's current password for verification.
-          example: 'Str0ngP@ssword!'
-
-    UpdatePassword:
-      type: object
-      required:
-        - oldPassword
-        - newPassword
-      properties:
-        oldPassword:
-          type: string
-          description: The user's current password.
-          example: 'Str0ngP@ssword!'
-        newPassword:
-          $ref: '#/components/schemas/PasswordPolicy'
-
-    PublicUserProfile:
-      type: object
-      properties:
-        username:
-          type: string
-        bio:
-          type: string
-          nullable: true
-        profilePictureUrl:
-          type: string
-          format: uri
-          nullable: true
-        createdAt:
-          type: string
-          format: date-time
+  /healthz:
+    get:
+      tags:
+        - Utility
+      summary: Health check
+      description: A simple health check endpoint.
+      responses:
+        '200':
+          description: Service is alive.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: alive
