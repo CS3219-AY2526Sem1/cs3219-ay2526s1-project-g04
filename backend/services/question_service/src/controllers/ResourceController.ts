@@ -1,5 +1,4 @@
-// src/controllers/ResourcesController.ts
-
+// src/controllers/ResourceController.ts
 import type { Response } from 'express';
 import { log } from '../utils/logger.js';
 import {
@@ -9,6 +8,26 @@ import {
 import type { AuthRequest } from '../middleware/auth.js';
 import { Role } from '../middleware/auth.js';
 
+// --- helpers (no `any`) ---
+type StringMap = Record<string, unknown>;
+function isObjectRecord(x: unknown): x is StringMap {
+  return typeof x === 'object' && x !== null && !Array.isArray(x);
+}
+function readIdParam(req: AuthRequest): string {
+  const params = req.params as Partial<Record<'id', string>> | undefined;
+  return typeof params?.id === 'string' ? params.id.trim() : '';
+}
+function starterMeta(starter: unknown) {
+  const hasString = typeof starter === 'string' && starter.length > 0;
+  const hasMap = isObjectRecord(starter) && Object.keys(starter).length > 0;
+  const len = hasString
+    ? (starter as string).length
+    : hasMap
+      ? Object.keys(starter as StringMap).length
+      : 0;
+  return { has: hasString || hasMap, len };
+}
+
 /**
  * GET /questions/:id/resources
  * Public: no auth required. Only returns resources for PUBLISHED questions.
@@ -17,7 +36,7 @@ export async function getPublicQuestionResources(
   req: AuthRequest,
   res: Response,
 ) {
-  const id = String(req.params['id'] ?? '').trim();
+  const id = readIdParam(req);
   const role = req.user?.role;
   const userId = req.user?.userId;
 
@@ -56,15 +75,14 @@ export async function getPublicQuestionResources(
       ? payload.test_cases.length
       : 0;
 
+    const { has, len } = starterMeta(
+      (payload as { starter_code?: unknown }).starter_code,
+    );
+
     log.info('[GET /questions/:id/resources] success', {
       id,
-      has_starter_code:
-        typeof payload.starter_code === 'string' &&
-        payload.starter_code.length > 0,
-      starter_code_len:
-        typeof payload.starter_code === 'string'
-          ? payload.starter_code.length
-          : 0,
+      has_starter_code: has,
+      starter_code_len: len,
       sampleCount,
     });
 
@@ -89,7 +107,7 @@ export async function getAdminQuestionResources(
   req: AuthRequest,
   res: Response,
 ) {
-  const id = String(req.params['id'] ?? '').trim();
+  const id = readIdParam(req);
   const role = req.user?.role;
   const userId = req.user?.userId;
 
@@ -146,6 +164,10 @@ export async function getAdminQuestionResources(
     }
     const totalCases = hiddenCount + sampleCount;
 
+    const { has, len } = starterMeta(
+      (payload as { starter_code?: unknown }).starter_code,
+    );
+
     log.info('[GET /admin/questions/:id/resources] success', {
       id,
       role,
@@ -153,13 +175,8 @@ export async function getAdminQuestionResources(
       totalCases,
       sampleCount,
       hiddenCount,
-      has_starter_code:
-        typeof payload.starter_code === 'string' &&
-        payload.starter_code.length > 0,
-      starter_code_len:
-        typeof payload.starter_code === 'string'
-          ? payload.starter_code.length
-          : 0,
+      has_starter_code: has,
+      starter_code_len: len,
     });
 
     return res.json(payload);
