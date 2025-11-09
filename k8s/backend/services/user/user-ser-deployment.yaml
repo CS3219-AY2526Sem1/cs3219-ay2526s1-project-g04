@@ -71,11 +71,11 @@ spec:
                 secretKeyRef:
                   name: us-secret
                   key: AWS_REGION
-            - name: PRIVATE_KEY
+            - name: PRIVATE_KEY_BASE_64
               valueFrom:
                 secretKeyRef:
                   name: us-secret
-                  key: PRIVATE_KEY
+                  key: PRIVATE_KEY_BASE_64
 
           # readinessProbe:
           #   httpGet:
