@@ -1,7 +1,6 @@
 import * as Types from '@/lib/question-service';
 
-// const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_API_QUESTION_SERVICE!;
-const QUESTION_SERVICE_URL = 'http://localhost:3008';
+const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_API_QUESTION_SERVICE!;
 
 /** ========================================================================
  * ADMIN

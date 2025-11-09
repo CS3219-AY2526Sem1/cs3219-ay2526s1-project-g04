@@ -779,6 +779,7 @@ app.post('/user/auth/verify-email', async (req, res) => {
       refreshToken,
     });
   } catch (error) {
+    console.log('error at verify', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 });
