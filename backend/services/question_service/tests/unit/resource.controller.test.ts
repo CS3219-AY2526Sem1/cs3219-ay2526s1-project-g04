@@ -1,10 +1,8 @@
-// tests/unit/resource.controller.test.ts
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import type { Response } from 'express';
 import type { AuthRequest } from '../../src/middleware/auth.js';
-import { Role } from '../../src/middleware/auth.js';
+import { Role, type JwtPayload } from '../../src/middleware/auth.js';
 
-// 1) Mock ESM deps before importing the SUT
 jest.unstable_mockModule(
   '../../src/repositories/QuestionRepository.js',
   () => ({
@@ -21,7 +19,6 @@ jest.unstable_mockModule('../../src/utils/logger.js', () => ({
   },
 }));
 
-// 2) Now import the mocked modules and SUT with top-level await
 const QuestionRepository = await import(
   '../../src/repositories/QuestionRepository.js'
 );
@@ -30,28 +27,69 @@ const { getPublicQuestionResources, getAdminQuestionResources } = await import(
   '../../src/controllers/ResourceController.js'
 );
 
+type TestCase = {
+  input: string;
+  expected: string;
+  visibility: 'sample' | 'hidden';
+};
+type ResourcesPayload = {
+  starter_code: Record<string, string>;
+  test_cases: TestCase[];
+};
+
+// Cast mocked functions so `mockResolvedValue(...)` does NOT infer `never`
+const mockGetPublic =
+  QuestionRepository.getPublicResourcesBundle as unknown as jest.MockedFunction<
+    (id: string) => Promise<ResourcesPayload | null>
+  >;
+
+const mockGetInternal =
+  QuestionRepository.getInternalResourcesBundle as unknown as jest.MockedFunction<
+    (id: string) => Promise<ResourcesPayload | null>
+  >;
+
+/** Helper to make a valid JwtPayload for AuthRequest.user */
+const makeJwt = (overrides: Partial<JwtPayload> = {}): JwtPayload => ({
+  userId: 'user-000',
+  username: 'tester',
+  role: Role.USER,
+  iat: Math.floor(Date.now() / 1000),
+  exp: Math.floor(Date.now() / 1000) + 300,
+  ...overrides,
+});
+
 describe('ResourcesController - Unit Tests', () => {
   let mockRequest: Partial<AuthRequest>;
-  let mockResponse: Partial<Response>;
+  let mockResponse: Response;
+
+  // Keep separate references if you assert on them a lot
   let mockJson: jest.Mock;
   let mockStatus: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
+    // ---- Properly typed Express Response mock ----
     mockJson = jest.fn();
     mockStatus = jest.fn().mockReturnThis();
 
-    mockResponse = {
-      json: mockJson,
-      status: mockStatus,
-    };
+    // Cast each method to the exact Express signature so TS is happy
+    const json = mockJson as unknown as Response['json'];
+    const status = mockStatus as unknown as Response['status'];
+    mockResponse = { json, status } as unknown as Response;
+
+    // ---- Request mock ----
+    // Express `req.get` has overloads; implement a real function instead of jest.fn()
+    const getHeader = ((name: string) => {
+      if (name.toLowerCase() === 'user-agent') return 'test-user-agent';
+      if (name.toLowerCase() === 'set-cookie') return undefined as any; // matches specific overload
+      return undefined;
+    }) as AuthRequest['get'];
 
     mockRequest = {
       params: {},
       ip: '127.0.0.1',
-      get: jest.fn().mockReturnValue('test-user-agent'),
-      user: undefined,
+      get: getHeader,
     };
   });
 
@@ -62,7 +100,7 @@ describe('ResourcesController - Unit Tests', () => {
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(400);
@@ -75,7 +113,7 @@ describe('ResourcesController - Unit Tests', () => {
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(400);
@@ -87,7 +125,7 @@ describe('ResourcesController - Unit Tests', () => {
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(400);
@@ -96,27 +134,26 @@ describe('ResourcesController - Unit Tests', () => {
 
       it('trims whitespace from id parameter', async () => {
         mockRequest.params = { id: '  test-id  ' };
-        const mockPayload = { starter_code: {}, test_cases: [] };
+        const mockPayload: ResourcesPayload = {
+          starter_code: {},
+          test_cases: [],
+        };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockResolvedValue(mockPayload);
+        mockGetPublic.mockResolvedValue(mockPayload);
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
-        expect(
-          QuestionRepository.getPublicResourcesBundle,
-        ).toHaveBeenCalledWith('test-id');
+        expect(mockGetPublic).toHaveBeenCalledWith('test-id');
       });
     });
 
     describe('successful responses', () => {
       it('returns resources for published question', async () => {
         mockRequest.params = { id: 'question-123' };
-        const mockPayload = {
+        const mockPayload: ResourcesPayload = {
           starter_code: {
             python: 'def solution():',
             javascript: 'function solution() {}',
@@ -124,18 +161,14 @@ describe('ResourcesController - Unit Tests', () => {
           test_cases: [{ input: '[1,2]', expected: '3', visibility: 'sample' }],
         };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockResolvedValue(mockPayload);
+        mockGetPublic.mockResolvedValue(mockPayload);
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
-        expect(
-          QuestionRepository.getPublicResourcesBundle,
-        ).toHaveBeenCalledWith('question-123');
+        expect(mockGetPublic).toHaveBeenCalledWith('question-123');
         expect(mockJson).toHaveBeenCalledWith(mockPayload);
         expect(mockStatus).not.toHaveBeenCalled();
         expect(log.info).toHaveBeenCalled();
@@ -143,15 +176,16 @@ describe('ResourcesController - Unit Tests', () => {
 
       it('returns resources with empty starter_code', async () => {
         mockRequest.params = { id: 'question-456' };
-        const mockPayload = { starter_code: {}, test_cases: [] };
+        const mockPayload: ResourcesPayload = {
+          starter_code: {},
+          test_cases: [],
+        };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockResolvedValue(mockPayload);
+        mockGetPublic.mockResolvedValue(mockPayload);
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockJson).toHaveBeenCalledWith(mockPayload);
@@ -159,16 +193,17 @@ describe('ResourcesController - Unit Tests', () => {
 
       it('logs user info when authenticated', async () => {
         mockRequest.params = { id: 'question-789' };
-        mockRequest.user = { userId: 'user-123', role: Role.USER };
-        const mockPayload = { starter_code: {}, test_cases: [] };
+        mockRequest.user = makeJwt({ userId: 'user-123', role: Role.USER });
+        const mockPayload: ResourcesPayload = {
+          starter_code: {},
+          test_cases: [],
+        };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockResolvedValue(mockPayload);
+        mockGetPublic.mockResolvedValue(mockPayload);
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(log.info).toHaveBeenCalledWith(
@@ -182,13 +217,11 @@ describe('ResourcesController - Unit Tests', () => {
       it('returns 404 when question not found', async () => {
         mockRequest.params = { id: 'non-existent' };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockResolvedValue(null);
+        mockGetPublic.mockResolvedValue(null);
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(404);
@@ -199,13 +232,11 @@ describe('ResourcesController - Unit Tests', () => {
       it('returns 404 when question is not published', async () => {
         mockRequest.params = { id: 'draft-question' };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockResolvedValue(null);
+        mockGetPublic.mockResolvedValue(null);
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(404);
@@ -217,13 +248,13 @@ describe('ResourcesController - Unit Tests', () => {
       it('returns 500 on repository error', async () => {
         mockRequest.params = { id: 'question-error' };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockRejectedValue(new Error('Database connection failed'));
+        mockGetPublic.mockRejectedValue(
+          new Error('Database connection failed'),
+        );
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(500);
@@ -240,13 +271,11 @@ describe('ResourcesController - Unit Tests', () => {
       it('handles non-Error exceptions', async () => {
         mockRequest.params = { id: 'question-weird-error' };
 
-        (
-          QuestionRepository.getPublicResourcesBundle as jest.Mock
-        ).mockRejectedValue('string error');
+        mockGetPublic.mockRejectedValue('string error');
 
         await getPublicQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(500);
@@ -261,17 +290,17 @@ describe('ResourcesController - Unit Tests', () => {
 
   describe('getAdminQuestionResources', () => {
     beforeEach(() => {
-      mockRequest.user = { userId: 'admin-123', role: Role.ADMIN };
+      mockRequest.user = makeJwt({ userId: 'admin-123', role: Role.ADMIN });
     });
 
     describe('authentication and authorization', () => {
       it('returns 403 when user is not admin', async () => {
         mockRequest.params = { id: 'question-123' };
-        mockRequest.user = { userId: 'user-456', role: Role.USER };
+        mockRequest.user = makeJwt({ userId: 'user-456', role: Role.USER });
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(403);
@@ -279,18 +308,20 @@ describe('ResourcesController - Unit Tests', () => {
           message: 'Access denied. Admins only.',
         });
         expect(log.warn).toHaveBeenCalled();
-        expect(
-          QuestionRepository.getInternalResourcesBundle,
-        ).not.toHaveBeenCalled();
+        expect(mockGetInternal).not.toHaveBeenCalled();
       });
 
       it('returns 403 when user role is undefined', async () => {
         mockRequest.params = { id: 'question-123' };
-        mockRequest.user = { userId: 'user-789', role: undefined as any };
+        // force bad role via cast only in test
+        mockRequest.user = makeJwt({
+          userId: 'user-789',
+          role: undefined as any,
+        });
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(403);
@@ -306,7 +337,7 @@ describe('ResourcesController - Unit Tests', () => {
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(400);
@@ -319,7 +350,7 @@ describe('ResourcesController - Unit Tests', () => {
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(400);
@@ -328,27 +359,26 @@ describe('ResourcesController - Unit Tests', () => {
 
       it('trims whitespace from id parameter', async () => {
         mockRequest.params = { id: '  admin-test-id  ' };
-        const mockPayload = { starter_code: {}, test_cases: [] };
+        const mockPayload: ResourcesPayload = {
+          starter_code: {},
+          test_cases: [],
+        };
 
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockResolvedValue(mockPayload);
+        mockGetInternal.mockResolvedValue(mockPayload);
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
-        expect(
-          QuestionRepository.getInternalResourcesBundle,
-        ).toHaveBeenCalledWith('admin-test-id');
+        expect(mockGetInternal).toHaveBeenCalledWith('admin-test-id');
       });
     });
 
     describe('successful responses', () => {
       it('returns resources including hidden test cases', async () => {
         mockRequest.params = { id: 'question-123' };
-        const mockPayload = {
+        const mockPayload: ResourcesPayload = {
           starter_code: { python: 'def solution():' },
           test_cases: [
             { input: '[1,2]', expected: '3', visibility: 'sample' },
@@ -356,18 +386,14 @@ describe('ResourcesController - Unit Tests', () => {
           ],
         };
 
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockResolvedValue(mockPayload);
+        mockGetInternal.mockResolvedValue(mockPayload);
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
-        expect(
-          QuestionRepository.getInternalResourcesBundle,
-        ).toHaveBeenCalledWith('question-123');
+        expect(mockGetInternal).toHaveBeenCalledWith('question-123');
         expect(mockJson).toHaveBeenCalledWith(mockPayload);
         expect(log.info).toHaveBeenCalledWith(
           expect.any(String),
@@ -381,14 +407,11 @@ describe('ResourcesController - Unit Tests', () => {
 
       it('returns resources for draft questions', async () => {
         mockRequest.params = { id: 'draft-question' };
-
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockResolvedValue({ starter_code: {}, test_cases: [] });
+        mockGetInternal.mockResolvedValue({ starter_code: {}, test_cases: [] });
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockJson).toHaveBeenCalledWith({
@@ -399,7 +422,7 @@ describe('ResourcesController - Unit Tests', () => {
 
       it('logs correct counts for test cases', async () => {
         mockRequest.params = { id: 'question-456' };
-        const mockPayload = {
+        const mockPayload: ResourcesPayload = {
           starter_code: { javascript: 'function test() {}' },
           test_cases: [
             { input: '1', expected: '2', visibility: 'sample' },
@@ -410,13 +433,11 @@ describe('ResourcesController - Unit Tests', () => {
           ],
         };
 
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockResolvedValue(mockPayload);
+        mockGetInternal.mockResolvedValue(mockPayload);
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(log.info).toHaveBeenCalledWith(
@@ -431,14 +452,11 @@ describe('ResourcesController - Unit Tests', () => {
 
       it('handles empty test_cases array', async () => {
         mockRequest.params = { id: 'question-empty' };
-
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockResolvedValue({ starter_code: {}, test_cases: [] });
+        mockGetInternal.mockResolvedValue({ starter_code: {}, test_cases: [] });
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(log.info).toHaveBeenCalledWith(
@@ -456,13 +474,11 @@ describe('ResourcesController - Unit Tests', () => {
       it('returns 404 when question not found', async () => {
         mockRequest.params = { id: 'non-existent' };
 
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockResolvedValue(null);
+        mockGetInternal.mockResolvedValue(null);
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(404);
@@ -475,13 +491,11 @@ describe('ResourcesController - Unit Tests', () => {
       it('returns 500 on repository error', async () => {
         mockRequest.params = { id: 'question-error' };
 
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockRejectedValue(new Error('Database query failed'));
+        mockGetInternal.mockRejectedValue(new Error('Database query failed'));
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(500);
@@ -498,13 +512,11 @@ describe('ResourcesController - Unit Tests', () => {
       it('handles non-Error exceptions', async () => {
         mockRequest.params = { id: 'question-weird' };
 
-        (
-          QuestionRepository.getInternalResourcesBundle as jest.Mock
-        ).mockRejectedValue({ code: 'UNKNOWN' });
+        mockGetInternal.mockRejectedValue({ code: 'UNKNOWN' });
 
         await getAdminQuestionResources(
           mockRequest as AuthRequest,
-          mockResponse as Response,
+          mockResponse,
         );
 
         expect(mockStatus).toHaveBeenCalledWith(500);
@@ -516,18 +528,19 @@ describe('ResourcesController - Unit Tests', () => {
   describe('Edge cases', () => {
     it('handles special characters in question id', async () => {
       mockRequest.params = { id: 'question-with-dashes_and_underscores' };
-      const mockPayload = { starter_code: {}, test_cases: [] };
+      const mockPayload: ResourcesPayload = {
+        starter_code: {},
+        test_cases: [],
+      };
 
-      (
-        QuestionRepository.getPublicResourcesBundle as jest.Mock
-      ).mockResolvedValue(mockPayload);
+      mockGetPublic.mockResolvedValue(mockPayload);
 
       await getPublicQuestionResources(
         mockRequest as AuthRequest,
-        mockResponse as Response,
+        mockResponse,
       );
 
-      expect(QuestionRepository.getPublicResourcesBundle).toHaveBeenCalledWith(
+      expect(mockGetPublic).toHaveBeenCalledWith(
         'question-with-dashes_and_underscores',
       );
       expect(mockJson).toHaveBeenCalledWith(mockPayload);
@@ -536,20 +549,19 @@ describe('ResourcesController - Unit Tests', () => {
     it('handles very long question ids', async () => {
       const longId = 'a'.repeat(200);
       mockRequest.params = { id: longId };
-      const mockPayload = { starter_code: {}, test_cases: [] };
+      const mockPayload: ResourcesPayload = {
+        starter_code: {},
+        test_cases: [],
+      };
 
-      (
-        QuestionRepository.getPublicResourcesBundle as jest.Mock
-      ).mockResolvedValue(mockPayload);
+      mockGetPublic.mockResolvedValue(mockPayload);
 
       await getPublicQuestionResources(
         mockRequest as AuthRequest,
-        mockResponse as Response,
+        mockResponse,
       );
 
-      expect(QuestionRepository.getPublicResourcesBundle).toHaveBeenCalledWith(
-        longId,
-      );
+      expect(mockGetPublic).toHaveBeenCalledWith(longId);
     });
 
     it('handles undefined params object', async () => {
@@ -557,7 +569,7 @@ describe('ResourcesController - Unit Tests', () => {
 
       await getPublicQuestionResources(
         mockRequest as AuthRequest,
-        mockResponse as Response,
+        mockResponse,
       );
 
       expect(mockStatus).toHaveBeenCalledWith(400);
