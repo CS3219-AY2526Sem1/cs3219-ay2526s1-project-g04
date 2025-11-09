@@ -84,16 +84,12 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
     console.error('User id not found');
   }
 
-  // prevent window close or reload
+  // warn window close or reload
   React.useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (matchState.status === 'waiting') {
         e.preventDefault();
         e.returnValue = '';
-
-        const url = `${process.env.NEXT_PUBLIC_API_MATCHING}/match/cancel`;
-
-        navigator.sendBeacon(url);
       } else if (matchState.status === 'matched') {
         e.preventDefault();
         e.returnValue = '';
