@@ -28,9 +28,8 @@ const s3Client = new S3Client({
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size (e.g., 5MB)
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    // Filter for allowed image types
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
       cb(null, true);
     } else {
@@ -40,12 +39,14 @@ const upload = multer({
 });
 
 const privateKeyBase64 = process.env.PRIVATE_KEY_BASE_64;
+console.log(privateKeyBase64);
 if (!privateKeyBase64) {
   throw new Error(
     'FATAL ERROR: PRIVATE_KEY is not defined in environment variables.',
   );
 }
 const privateKey = Buffer.from(privateKeyBase64, 'base64').toString('utf8');
+console.log(privateKey);
 
 const publicKey = fs.readFileSync('./public.pem', 'utf8');
 
@@ -1084,14 +1085,12 @@ app.post('/user/auth/forgot-password', async (req, res) => {
     // Check if user exists
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // Don't reveal if email exists or not for security
       return res.status(200).json({
         message:
           'If an account with this email exists, you will receive a password reset code.',
       });
     }
 
-    // Check if user is verified
     if (!user.isVerified) {
       return res.status(400).json({
         message:
@@ -1099,7 +1098,6 @@ app.post('/user/auth/forgot-password', async (req, res) => {
       });
     }
 
-    // Check OTP cooldown
     if (
       user.otpLastSentAt &&
       new Date().getTime() - user.otpLastSentAt.getTime() <
@@ -1110,7 +1108,6 @@ app.post('/user/auth/forgot-password', async (req, res) => {
       });
     }
 
-    // Generate and store OTP
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     const now = new Date();
@@ -1155,17 +1152,14 @@ app.post('/user/auth/reset-password', async (req, res) => {
       return res.status(400).json({ message: 'Reset code has expired.' });
     }
 
-    // Hash new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password and clear OTP
     await prisma.user.update({
       where: { email },
       data: {
         password: hashedNewPassword,
         verificationOtp: null,
         otpExpiresAt: null,
-        // Invalidate all refresh tokens for security
         refreshToken: null,
       },
     });
