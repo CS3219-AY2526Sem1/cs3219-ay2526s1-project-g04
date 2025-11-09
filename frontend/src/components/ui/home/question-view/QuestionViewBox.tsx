@@ -3,11 +3,10 @@
 import { Question } from '@/lib/question-service';
 import TagComponent from './TagComponent';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
-import { UserRole } from '@/lib/test-data/TestUser';
 
 interface QuestionViewBoxProps {
   questionData: Question;
-  userRole: UserRole;
+  userRole: string | null;
 }
 
 export default function QuestionViewBox({
@@ -30,7 +29,7 @@ export default function QuestionViewBox({
 
       <div className="flex flex-row items-center gap-x-5">
         {/* Version */}
-        {userRole === 'admin' && (
+        {userRole === 'ADMIN' && (
           <div className="flex flex-row items-center gap-x-2">
             <p className="font-bold text-gray-500">Version:</p>
             <p>{questionData.version}</p>
@@ -38,7 +37,7 @@ export default function QuestionViewBox({
         )}
 
         {/* Status */}
-        {userRole === 'admin' && (
+        {userRole === 'ADMIN' && (
           <div className="flex flex-row items-center gap-x-2">
             <p className="font-bold text-gray-500">Status:</p>
             <p>{questionData.status}</p>

@@ -1,4 +1,5 @@
 import * as Types from '@/lib/question-service';
+import { fetchWithAuth } from '@/lib/utils/apiClient';
 
 const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_API_QUESTION_SERVICE!;
 
@@ -17,7 +18,7 @@ export async function postAdminTopics(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/topics`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -61,7 +62,7 @@ export async function postAdminAttachmentsSignUpload(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/attachments/sign-upload`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ export async function postAdminAttachmentsSignView(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/attachments/sign-view`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -152,7 +153,7 @@ export async function getAdminQuestions(
       url.searchParams.set(key, String(value));
     });
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithAuth(url.toString(), {
       method: 'GET',
     });
 
@@ -186,7 +187,7 @@ export async function postAdminQuestions(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/questions`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -229,7 +230,7 @@ export async function getAdminQuestionById(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/questions/${id}`;
 
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
 
     const resData = await res.json().catch(() => ({}));
 
@@ -267,7 +268,7 @@ export async function patchAdminQuestions(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/questions/${id}`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -310,7 +311,7 @@ export async function deleteAdminQuestions(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/questions/${id}`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'DELETE',
     });
 
@@ -344,7 +345,7 @@ export async function postAdminQuestionsPublish(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/questions/${id}/publish`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'POST',
     });
 
@@ -378,7 +379,7 @@ export async function getAdminQuestionsResources(
   try {
     const url = `${QUESTION_SERVICE_URL}/admin/questions/${id}/resources`;
 
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
     const resData = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -421,7 +422,7 @@ export async function getTopics(): Promise<
   try {
     const url = `${QUESTION_SERVICE_URL}/topics`;
 
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
 
     if (!res.ok) {
       return {
@@ -457,7 +458,7 @@ export async function getTopicsByDifficulty(
       url.searchParams.set('difficulty', difficulty);
     }
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithAuth(url.toString(), {
       method: 'GET',
     });
 
@@ -497,7 +498,7 @@ export async function getQuestions(
       url.searchParams.set(key, String(value));
     });
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithAuth(url.toString(), {
       method: 'GET',
     });
 
@@ -530,7 +531,7 @@ export async function getQuestionById(
 ): Promise<Types.ApiResponse<Types.Question>> {
   try {
     const url = `${QUESTION_SERVICE_URL}/questions/${id}`;
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
 
     const resData = await res.json().catch(() => ({}));
 
@@ -567,7 +568,7 @@ export async function getQuestionsResources(
   try {
     const url = `${QUESTION_SERVICE_URL}/questions/${id}/resources`;
 
-    const res = await fetch(url);
+    const res = await fetchWithAuth(url);
 
     const resData = await res.json().catch(() => ({}));
 
