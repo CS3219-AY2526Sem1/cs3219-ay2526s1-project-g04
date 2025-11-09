@@ -884,46 +884,45 @@ paths:
 
   /questions/topics:
     get:
-      tags: [Read]
       summary: List topics that appear in published questions
-      security: []
+      description: Returns topics with question counts for a given difficulty.
+      parameters:
+        - in: query
+          name: difficulty
+          required: true
+          schema:
+            type: string
+            enum: [easy, medium, hard]
+          description: Difficulty to filter by.
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TopicListResponse'
-
-  /admin/attachments/sign-upload:
-    post:
-      tags: [Admin]
-      summary: Get a presigned PUT URL for direct S3 upload
-      description: |
-        Returns:
-        - `object_key` (staging/... key referenced in Markdown via `pp://<object_key>`)
-        - short-lived presigned PUT URL
-        - size/expiry metadata
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SignUploadRequest'
-      responses:
-        '200':
-          description: OK
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        slug: { type: string }
+                        display: { type: string }
+                        color_hex: { type: string }
+                        count: { type: integer }
+        '400':
+          description: Missing or invalid difficulty
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SignUploadResponse'
-        '400': { description: Bad input }
-        '401': { description: Unauthorized }
-        '403': { description: Forbidden }
-      security:
-        - bearerAuth: []
-      x-roles:
-        - ADMIN
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: invalid_or_missing_difficulty
+        '500':
+          description: Internal error
 
   /admin/attachments/sign-view:
     post:
