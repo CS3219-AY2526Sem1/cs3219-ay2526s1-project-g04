@@ -6,6 +6,7 @@ import { finalizeStagedAttachments } from '../services/AttachmentService.js';
 import type { AttachmentInput } from '../types/attachments.js';
 import { log } from '../utils/logger.js';
 import { prisma } from '../repositories/prisma.js'; // for topic existence checks
+import * as Service from '../services/QuestionService.js';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
@@ -492,13 +493,47 @@ export async function list(req: Request, res: Response) {
   if (p !== undefined) args.page = p;
   if (s !== undefined) args.page_size = s;
 
-  const { rows, total } = await Repo.listAll(args);
-  return res.json({
-    items: rows,
-    total,
-    page: args.page ?? 1,
-    page_size: args.page_size ?? 20,
+  log.info('[GET /questions] request', {
+    ip: req.ip,
+    ua: req.get('user-agent'),
+    userRole: req.user?.role,
+    userId: req.user?.sub ?? req.user?.userId,
+    difficulty: args.difficulty,
+    topics: args.topics,
+    q_len: args.q?.length ?? 0,
+    page: args.page,
+    page_size: args.page_size,
   });
+
+  try {
+    const { items, total } = await Service.listPublished(args);
+
+    log.info('[GET /questions] success', {
+      returned: items.length,
+      first_id: items[0]?.id,
+      difficulty: args.difficulty,
+      topics: args.topics,
+      page: args.page,
+      page_size: args.page_size,
+    });
+
+    return res.json({
+      items,
+      total,
+      page: args.page ?? 1,
+      page_size: args.page_size ?? 20,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error('[GET /questions] error', {
+      ip: req.ip,
+      userRole: req.user?.role,
+      userId: req.user?.sub ?? req.user?.userId,
+      error: msg,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    return res.status(500).json({ error: 'internal_error' });
+  }
 }
 
 /**
@@ -523,26 +558,66 @@ export async function archive(req: Request, res: Response) {
  * - ALL test cases (sample + hidden)
  */
 export async function getById(req: Request, res: Response) {
-  try {
-    const id = String(req.params['id'] ?? '');
-    if (!id) return res.status(400).json({ error: 'id param required' });
+  const id = String(req.params['id'] ?? '');
 
-    const core = await Repo.getQuestionById(id);
-    if (!core) return res.status(404).json({ error: 'not found' });
+  if (!id) {
+    log.warn('[GET /questions/:id] missing id param', {
+      ip: req.ip,
+      ua: req.get('user-agent'),
+      userRole: req.user?.role,
+      userId: req.user?.sub ?? req.user?.userId,
+    });
+    return res.status(400).json({ error: 'id param required' });
+  }
+
+  try {
+    log.info('[GET /questions/:id] request', {
+      id,
+      ip: req.ip,
+      ua: req.get('user-agent'),
+      userRole: req.user?.role,
+      userId: req.user?.sub ?? req.user?.userId,
+    });
+
+    const view = await Service.getPublishedWithHtml(id);
+    if (!view) {
+      log.warn('[GET /questions/:id] not found', {
+        id,
+        ip: req.ip,
+        userRole: req.user?.role,
+        userId: req.user?.sub ?? req.user?.userId,
+      });
+      return res.status(404).json({ error: 'not found' });
+    }
 
     const bundle = await Repo.getInternalResourcesBundle(id);
-    // bundle can technically be null if somehow question vanished between calls,
-    // but since core exists, treat null bundle as empty resources.
-    const starter_code = bundle?.starter_code ?? '';
+    const starter_code = bundle?.starter_code ?? {};
     const test_cases = bundle?.test_cases ?? [];
 
+    log.info('[GET /questions/:id] success', {
+      id: view.id,
+      difficulty: view.difficulty,
+      topics_count: Array.isArray(view.topics) ? view.topics.length : 0,
+      attachments_count: Array.isArray(view.attachments)
+        ? view.attachments.length
+        : 0,
+      sample_testcases: test_cases.length,
+      starter_code_langs: Object.keys(starter_code),
+    });
+
+    // Merge base question view with runtime resources
     return res.json({
-      ...core,
+      ...view,
       starter_code,
       test_cases,
     });
-  } catch (err) {
-    log.error('AdminController.getById failed:', err);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error('[GET /questions/:id] error', {
+      id,
+      error: msg,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
     return res.status(500).json({ error: 'internal_error' });
   }
 }
