@@ -14,24 +14,30 @@ export class MessageListener {
     this.messageHandler = this.messageHandler.bind(this);
   }
 
-  private handleStartSession(matchedId: string) {
-    this.communicationManager.createDoc(matchedId);
+  private async handleStartSession(matchedId: string, sessionId: string) {
+    this.communicationManager.createDoc(matchedId, sessionId);
   }
 
-  private messageHandler(msgType: MESSAGE_TYPES, msg: string) {
+  private async messageHandler(msgType: MESSAGE_TYPES, msg: string) {
     switch (msgType) {
-      case MESSAGE_TYPES.CollaborationService: {
+      case MESSAGE_TYPES.CommunicationService: {
         const msgJson = JSON.parse(msg);
-        if (msgJson['type'] === 'matched') {
-          console.log(msgJson['matchedId']);
-          this.handleStartSession(msgJson['matchedId']);
+        // Assume that collab service already creates the code document
+        if (msgJson['type'] === 'create') {
+          console.log(
+            `matchedId: ${msgJson['matchedId']}; sessionId: ${msgJson[`sessionId`]}`,
+          );
+          await this.handleStartSession(
+            msgJson['matchedId'],
+            msgJson['sessionId'],
+          );
         }
         break;
       }
     }
   }
   public async start() {
-    const broker = new MessageReceiver('communication_service');
+    const broker = new MessageReceiver(MESSAGE_TYPES.CommunicationService);
     await broker.connect();
 
     broker.listenForMessagesWithType(this.TYPES_TO_LISTEN, this.messageHandler);

@@ -4,9 +4,11 @@ import { Session } from './session.js';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from '@y/websocket-server/utils';
 import { PostgresqlPersistence } from 'y-postgresql';
+import { MessagePublisher } from '@shared/messaging/src/publisher.js';
 import * as Y from 'yjs';
 import type { IncomingMessage } from 'http';
 import type WebSocket from 'ws';
+import { MESSAGE_TYPES } from '@shared/messaging/src/constants.js';
 
 export enum SESSIONSTATE {
   notCreated = 'notCreated',
@@ -139,6 +141,24 @@ export class SessionManager {
     }
 
     logPersistedDoc(this.pgdb, sessionId.toString());
+
+    // Initialize communication service documents
+    const broker = new MessagePublisher('CollaborationService');
+    await broker.connect();
+
+    const payload = JSON.stringify({
+      type: 'create',
+      matchedId,
+      sessionId,
+    });
+
+    await broker.publishMessageWithType(
+      MESSAGE_TYPES.CommunicationService,
+      payload,
+    );
+    console.log(
+      `Sent session creation for ${sessionId} (match ${matchedId}) to communication service`,
+    );
   }
 
   public saveSession(sessionId: string) {

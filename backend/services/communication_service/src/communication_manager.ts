@@ -4,17 +4,22 @@ import { setupWSConnection } from '@y/websocket-server/utils';
 import * as Y from 'yjs';
 import type { IncomingMessage } from 'http';
 import type WebSocket from 'ws';
+import { COMMUNICATION_STATE } from './types/enums.js';
+
+type SessionEntry = {
+  matchedId: string;
+  ydoc: Y.Doc;
+};
 
 export class CommunicationManager {
   private redis: CommunicationRedis;
   private wss: WebSocketServer;
-  private sessionDict: Map<string, string>; // session id key, match id value
-  private docs: Map<string, Y.Doc>; // session id -> Y.doc
+  private sessions: Map<string, SessionEntry>; // session id key, match id value
 
   constructor(redis: CommunicationRedis, wss: WebSocketServer) {
     this.redis = redis;
     this.wss = wss;
-    this.sessionDict = new Map<string, string>();
+    this.sessions = new Map<string, SessionEntry>();
 
     this.wss.on('connection', (ws, req) => {
       this.handleConnection(ws, req);
@@ -22,31 +27,23 @@ export class CommunicationManager {
   }
 
   // Created when session is formed
-  public createDoc(sessionId: string) {
-    if (this.docs.has(sessionId)) {
+  public createDoc(matchedId: string, sessionId: string) {
+    if (this.sessions.has(sessionId)) {
       console.log(`[Doc] already exists for session ${sessionId}`);
-      return this.docs.get(sessionId)!;
+      return;
     }
 
-    const doc = new Y.Doc();
-    doc.getArray('messages');
-    doc.getArray('strokes');
+    const ydoc = new Y.Doc();
+    ydoc.getArray('messages');
+    ydoc.getArray('strokes');
 
-    this.docs.set(sessionId, doc);
-    console.log(`[Doc] Created in-memory doc for session ${sessionId}`);
-    return doc;
-  }
+    this.sessions.set(sessionId, { matchedId, ydoc });
 
-  public destroyDoc(sessionId: string) {
-    if (this.docs.has(sessionId)) {
-      this.docs.delete(sessionId);
-      console.log(`[Doc] Destroyed doc for session ${sessionId}`);
-    }
-    this.sessionDict.delete(sessionId);
+    this.redis.setCommunicationState(matchedId, COMMUNICATION_STATE.active);
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
-    console.log('a client connected');
+    console.log('a client connected in comms service');
 
     // Get param values
     const fullUrl = `ws://${req.headers.host}${req.url}`;
@@ -55,24 +52,29 @@ export class CommunicationManager {
     const userId = params.get('userId');
     const sessionId = urlObj.pathname.slice(1);
 
-    if (!this.sessionDict.has(sessionId)) {
-      console.log(`session id not found in keypair dictionary: ${sessionId}`);
+    if (!this.sessions.has(sessionId)) {
+      console.log(
+        'ERROR, create doc is not run after session is created, creating doc entry without match id',
+      );
+      this.createDoc('', sessionId);
       return;
     }
-    const matchId = this.sessionDict.get(sessionId);
-    if (!this.redis.isUserInSession(matchId, userId)) {
+
+    const { matchedId, ydoc } = this.sessions.get(sessionId)!;
+
+    if (!this.redis.isUserInSession(matchedId, userId)) {
       console.log(`user ${userId} don't belong in ${sessionId}`);
       return;
     }
 
-    if (this.redis.isSessionDead(matchId)) {
+    if (this.redis.isSessionDead(matchedId)) {
       console.log(`session ${sessionId} has ended`);
       return;
     }
-
-    const doc = this.docs.get(sessionId);
     // Setup y-websocket
-    setupWSConnection(ws, req, { doc, docName: sessionId });
-    console.log(`[WS] Connected user ${userId} to session ${sessionId}`);
+    setupWSConnection(ws, req, { doc: ydoc });
+    console.log(
+      `Connected user ${userId} to session ${sessionId} in communication service.`,
+    );
   }
 }
