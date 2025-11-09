@@ -1,10 +1,11 @@
 // src/controllers/QuestionController.ts
 
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import * as Service from '../services/QuestionService.js';
 import { selectOne } from '../services/SelectionService.js';
 import { log } from '../utils/logger.js';
 import * as Repo from '../repositories/QuestionRepository.js';
+import type { AuthRequest } from '../middleware/auth.js';
 
 // types
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
@@ -45,36 +46,8 @@ function parseNum(x: unknown): number | undefined {
 
 /**
  * GET /questions/:id
- *
- * Public view of a *published* question.
- * Response shape:
- * {
- *   id,
- *   title,
- *   body_md,
- *   body_html,         // sanitized HTML
- *   difficulty,
- *   topics: [{ slug, color_hex }],
- *   attachments: [...],
- *   status,
- *   version,
- *   created_at,
- *   updated_at,
- *
- *   starter_code: { python?: string },
- *   test_cases: [
- *     {
- *       name: string,
- *       visibility: "sample",
- *       input: string,
- *       expected: string,
- *       ordinal: number
- *     },
- *     ...
- *   ]
- * }
  */
-export async function getById(req: Request, res: Response) {
+export async function getById(req: AuthRequest, res: Response) {
   const id = String(req.params['id'] ?? '');
 
   if (!id) {
@@ -82,7 +55,7 @@ export async function getById(req: Request, res: Response) {
       ip: req.ip,
       ua: req.get('user-agent'),
       userRole: req.user?.role,
-      userId: req.user?.sub ?? req.user?.userId,
+      userId: req.user?.userId,
     });
     return res.status(400).json({ error: 'id param required' });
   }
@@ -93,7 +66,7 @@ export async function getById(req: Request, res: Response) {
       ip: req.ip,
       ua: req.get('user-agent'),
       userRole: req.user?.role,
-      userId: req.user?.sub ?? req.user?.userId,
+      userId: req.user?.userId,
     });
 
     const view = await Service.getPublishedWithHtml(id);
@@ -102,7 +75,7 @@ export async function getById(req: Request, res: Response) {
         id,
         ip: req.ip,
         userRole: req.user?.role,
-        userId: req.user?.sub ?? req.user?.userId,
+        userId: req.user?.userId,
       });
       return res.status(404).json({ error: 'not found' });
     }
@@ -122,7 +95,6 @@ export async function getById(req: Request, res: Response) {
       starter_code_langs: Object.keys(starter_code),
     });
 
-    // Merge base question view with runtime resources
     return res.json({
       ...view,
       starter_code,
@@ -142,7 +114,7 @@ export async function getById(req: Request, res: Response) {
 /**
  * GET /questions
  */
-export async function list(req: Request, res: Response) {
+export async function list(req: AuthRequest, res: Response) {
   const args: {
     difficulty?: Difficulty;
     topics?: string[];
@@ -167,7 +139,7 @@ export async function list(req: Request, res: Response) {
     ip: req.ip,
     ua: req.get('user-agent'),
     userRole: req.user?.role,
-    userId: req.user?.sub ?? req.user?.userId,
+    userId: req.user?.userId,
     difficulty: args.difficulty,
     topics: args.topics,
     q_len: args.q?.length ?? 0,
@@ -198,7 +170,7 @@ export async function list(req: Request, res: Response) {
     log.error('[GET /questions] error', {
       ip: req.ip,
       userRole: req.user?.role,
-      userId: req.user?.sub ?? req.user?.userId,
+      userId: req.user?.userId,
       error: msg,
       stack: err instanceof Error ? err.stack : undefined,
     });
@@ -207,31 +179,17 @@ export async function list(req: Request, res: Response) {
 }
 
 /**
- * POST /select
- *
- * Body:
- *   {
- *     "matching_id": "sess-123",  (required)
- *     "difficulty": "medium",     (optional)
- *     "topics": ["arrays"],       (optional)
- *     "recent_ids": ["two-sum"]   (optional)
- *   }
- *
- * Behavior:
- *   - Calls SelectionService.selectOne(), which:
- *       * enforces per-session idempotency (reservation in DB)
- *       * respects difficulty/topics/recent_ids
- *   - Returns 404 if no eligible published question
+ * POST /select  (public)
  */
-export async function select(req: Request, res: Response) {
+export async function select(req: AuthRequest, res: Response) {
   const { matching_id, difficulty, topics, recent_ids } = req.body || {};
 
-  if (!matching_id) {
+  if (typeof matching_id !== 'string' || matching_id.trim() === '') {
     log.warn('[POST /select] missing matching_id', {
       ip: req.ip,
       ua: req.get('user-agent'),
       userRole: req.user?.role,
-      userId: req.user?.sub ?? req.user?.userId,
+      userId: req.user?.userId,
     });
     return res.status(400).json({ error: 'matching_id required' });
   }
@@ -241,7 +199,7 @@ export async function select(req: Request, res: Response) {
     ip: req.ip,
     ua: req.get('user-agent'),
     userRole: req.user?.role,
-    userId: req.user?.sub ?? req.user?.userId,
+    userId: req.user?.userId,
     difficulty,
     topics,
     recent_ids_len: Array.isArray(recent_ids) ? recent_ids.length : undefined,
@@ -256,9 +214,7 @@ export async function select(req: Request, res: Response) {
     });
 
     if (!result.question_id) {
-      log.warn('[POST /select] no eligible question', {
-        matching_id,
-      });
+      log.warn('[POST /select] no eligible question', { matching_id });
       return res.status(404).json({ error: 'no eligible question' });
     }
 
@@ -282,17 +238,8 @@ export async function select(req: Request, res: Response) {
 
 /**
  * GET /questions/batch?ids=q1,q2,q3
- *
- * Returns an array of published questions (sanitized public view).
- * - Only returns questions with status='published'
- * - Keeps the same order as requested ids
- * - Skips ids that don't exist / aren't published
- *
- * Error cases:
- * - missing/empty ids => 400
- * - too many ids ( > 50 ) => 400 (to stop people from nuking us)
  */
-export async function getBatchById(req: Request, res: Response) {
+export async function getBatchById(req: AuthRequest, res: Response) {
   const raw = (req.query['ids'] as string | undefined)?.trim() ?? '';
   if (!raw) {
     return res.status(400).json({
