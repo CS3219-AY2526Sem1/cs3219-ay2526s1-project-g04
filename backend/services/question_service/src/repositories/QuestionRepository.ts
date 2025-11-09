@@ -780,7 +780,7 @@ export async function getPublicResourcesBundle(questionId: string) {
 
   return {
     question_id: q.id,
-    starter_code: starterRow ? { python: starterRow.starter_code } : {},
+    starter_code: starterRow?.starter_code,
     test_cases: sampleCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility,
@@ -823,7 +823,7 @@ export async function getInternalResourcesBundle(questionId: string) {
   return {
     question_id: q.id,
     status: q.status,
-    starter_code: starterRow ? { python: starterRow.starter_code } : {},
+    starter_code: starterRow?.starter_code,
     test_cases: allCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility, // includes 'hidden'

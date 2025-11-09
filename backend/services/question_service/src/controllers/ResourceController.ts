@@ -58,7 +58,13 @@ export async function getPublicQuestionResources(
 
     log.info('[GET /questions/:id/resources] success', {
       id,
-      starter_langs: Object.keys(payload.starter_code ?? {}),
+      has_starter_code:
+        typeof payload.starter_code === 'string' &&
+        payload.starter_code.length > 0,
+      starter_code_len:
+        typeof payload.starter_code === 'string'
+          ? payload.starter_code.length
+          : 0,
       sampleCount,
     });
 
@@ -147,7 +153,13 @@ export async function getAdminQuestionResources(
       totalCases,
       sampleCount,
       hiddenCount,
-      starter_langs: Object.keys(payload.starter_code ?? {}),
+      has_starter_code:
+        typeof payload.starter_code === 'string' &&
+        payload.starter_code.length > 0,
+      starter_code_len:
+        typeof payload.starter_code === 'string'
+          ? payload.starter_code.length
+          : 0,
     });
 
     return res.json(payload);

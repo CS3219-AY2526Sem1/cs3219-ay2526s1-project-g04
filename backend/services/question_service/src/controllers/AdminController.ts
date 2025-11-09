@@ -278,7 +278,7 @@ export async function create(req: Request, res: Response) {
     }
 
     const bundle = await Repo.getInternalResourcesBundle(saved.id);
-    const starter_code_out = bundle?.starter_code?.python ?? '';
+    const starter_code_out = bundle?.starter_code ?? '';
     const test_cases_out = bundle?.test_cases ?? [];
 
     // respond
@@ -430,7 +430,7 @@ export async function update(req: Request, res: Response) {
     if (!updated) return res.status(404).json({ error: 'not_found' });
 
     const bundle = await Repo.getInternalResourcesBundle(id);
-    const starter_code_out = bundle?.starter_code?.python ?? '';
+    const starter_code_out = bundle?.starter_code ?? '';
     const test_cases_out = bundle?.test_cases ?? [];
 
     return res.json({
@@ -458,7 +458,7 @@ export async function publish(req: Request, res: Response) {
 
     // Include execution resources in publish response
     const bundle = await Repo.getInternalResourcesBundle(id);
-    const starter_code = bundle?.starter_code?.python ?? '';
+    const starter_code = bundle?.starter_code ?? '';
     const test_cases = bundle?.test_cases ?? [];
 
     return res.json({ ...published, starter_code, test_cases });
@@ -533,7 +533,7 @@ export async function getById(req: Request, res: Response) {
     const bundle = await Repo.getInternalResourcesBundle(id);
     // bundle can technically be null if somehow question vanished between calls,
     // but since core exists, treat null bundle as empty resources.
-    const starter_code = bundle?.starter_code?.python ?? '';
+    const starter_code = bundle?.starter_code ?? '';
     const test_cases = bundle?.test_cases ?? [];
 
     return res.json({
