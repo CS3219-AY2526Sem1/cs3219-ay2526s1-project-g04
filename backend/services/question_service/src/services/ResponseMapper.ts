@@ -51,13 +51,14 @@ export function toPublicQuestion(args: {
   const { row, body_html } = args;
 
   // Flatten the relation join: question_topics[*].topics
-  const topics = Array.isArray(row.question_topics)
-    ? row.question_topics.map((qt) => ({
-        slug: qt.topics.slug,
-        display: qt.topics.display,
-        color_hex: qt.topics.color_hex,
-      }))
-    : [];
+  const topics =
+    Array.isArray(row.question_topics) && row.question_topics.length > 0
+      ? row.question_topics.map((qt) => ({
+          slug: qt.topics.slug,
+          display: qt.topics.display,
+          color_hex: qt.topics.color_hex,
+        }))
+      : [];
 
   // Safely map attachments (optional metadata)
   const attachmentsArray = Array.isArray(row.attachments)
