@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { makeTestApp } from '../helpers/test-app';
+import { makeTestApp } from '../helpers/test-app.js';
 
 describe('App', () => {
   it('GET /healthz', async () => {
