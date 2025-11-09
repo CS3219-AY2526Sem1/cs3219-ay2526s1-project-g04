@@ -265,11 +265,9 @@ const authorizeInternal = (req: Request, res: Response, next: NextFunction) => {
   }
 
   if (!requestSecret || requestSecret !== internalSecret) {
-    return res
-      .status(403)
-      .json({
-        message: 'Forbidden: Invalid or missing internal secret token.',
-      });
+    return res.status(403).json({
+      message: 'Forbidden: Invalid or missing internal secret token.',
+    });
   }
 
   next();
@@ -1363,6 +1361,54 @@ app.post(
       });
     } catch (error) {
       console.error('Promote User Error:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+);
+
+app.post(
+  '/user/utility/demote-admin',
+  authorizeInternal, // Protects with your new secret key
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res
+        .status(400)
+        .json({ message: 'A valid email is required in the body.' });
+    }
+
+    try {
+      const userToDemote = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!userToDemote) {
+        return res
+          .status(404)
+          .json({ message: 'User not found with that email.' });
+      }
+
+      if (userToDemote.role === Role.USER) {
+        return res.status(200).json({
+          message: 'User is already a regular user.',
+          user: userToDemote,
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { email },
+        data: {
+          role: Role.USER,
+        },
+      });
+
+      res.status(200).json({
+        message: 'User successfully demoted to user.',
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error('Demote User Error:', error);
       res.status(500).json({ message: 'Internal server error.' });
     }
   },
