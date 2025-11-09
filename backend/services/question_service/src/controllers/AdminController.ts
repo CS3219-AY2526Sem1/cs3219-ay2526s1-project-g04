@@ -5,8 +5,7 @@ import { slugify } from '../utils/slug.js';
 import { finalizeStagedAttachments } from '../services/AttachmentService.js';
 import type { AttachmentInput } from '../types/attachments.js';
 import { log } from '../utils/logger.js';
-import { prisma } from '../repositories/prisma.js'; 
-import * as Service from '../services/QuestionService.js';
+import { prisma } from '../repositories/prisma.js';
 
 type Difficulty = 'Easy' | 'Medium' | 'Hard';
 type Status = 'draft' | 'published' | 'archived';
@@ -434,37 +433,6 @@ export async function archive(req: Request, res: Response) {
 }
 
 export async function getById(req: Request, res: Response) {
-  const id = String(req.params['id'] ?? '');
-
-  if (!id) {
-    log.warn('[GET /questions/:id] missing id param', {
-      ip: req.ip,
-      ua: req.get('user-agent'),
-      userRole: req.user?.role,
-      userId: req.user?.sub ?? req.user?.userId,
-    });
-    return res.status(400).json({ error: 'id param required' });
-  }
-
-  try {
-    log.info('[GET /questions/:id] request', {
-      id,
-      ip: req.ip,
-      ua: req.get('user-agent'),
-      userRole: req.user?.role,
-      userId: req.user?.sub ?? req.user?.userId,
-    });
-
-    const view = await Service.getPublishedWithHtml(id);
-    if (!view) {
-      log.warn('[GET /questions/:id] not found', {
-        id,
-        ip: req.ip,
-        userRole: req.user?.role,
-        userId: req.user?.sub ?? req.user?.userId,
-      });
-      return res.status(404).json({ error: 'not found' });
-    }
   try {
     const { id } = req.params ?? {};
     if (!id || id.trim() === '') {
@@ -474,21 +442,6 @@ export async function getById(req: Request, res: Response) {
     if (!q) return res.status(404).json({ error: 'not found' });
 
     const bundle = await Repo.getInternalResourcesBundle(id);
-    const starter_code = bundle?.starter_code ?? {};
-    const test_cases = bundle?.test_cases ?? [];
-
-    log.info('[GET /questions/:id] success', {
-      id: view.id,
-      difficulty: view.difficulty,
-      topics_count: Array.isArray(view.topics) ? view.topics.length : 0,
-      attachments_count: Array.isArray(view.attachments)
-        ? view.attachments.length
-        : 0,
-      sample_testcases: test_cases.length,
-      starter_code_langs: Object.keys(starter_code),
-    });
-
-    // Merge base question view with runtime resources
     return res.json({
       ...q,
       starter_code: bundle?.starter_code ?? '',
@@ -522,9 +475,6 @@ export async function list(req: Request, res: Response) {
 
     const out = await Repo.listAll(args);
     return res.json({
-      ...view,
-      starter_code,
-      test_cases,
       items: out.rows,
       total: out.total,
       page: args.page ?? 1,

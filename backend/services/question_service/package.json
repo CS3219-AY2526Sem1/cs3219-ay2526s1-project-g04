@@ -41,10 +41,6 @@
     "db:test:up": "docker compose -f docker-compose.test.yaml up -d postgres",
     "db:test:down": "docker compose -f docker-compose.test.yaml down",
     "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "db:create:compose": "docker compose -f docker-compose.dev.yaml exec -T qs-postgres bash -lc \"psql -U postgres -d postgres -v ON_ERROR_STOP=1 -c \\\"DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_database WHERE datname='qs') THEN PERFORM dblink_exec('dbname=postgres', 'CREATE DATABASE qs'); END IF; END $$;\\\"\"",
-    "db:migrate:compose": "cat ./migrations/0001_init.sql | docker compose -f docker-compose.dev.yaml exec -T qs-postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f -",
-    "db:seed:compose": "cat ./migrations/999_seed_data.sql | docker compose -f docker-compose.dev.yaml exec -T qs-postgres psql -U postgres -d qs -v ON_ERROR_STOP=1 -f -",
     "smoke": "tsx scripts/prisma_smoke.ts"
   },
   "dependencies": {
