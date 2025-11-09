@@ -20,9 +20,9 @@ export async function registerMatchRoutes(
     async (req: AuthRequest, res: Response) => {
       try {
         const userId = req.user!.userId;
-        const { criteria } = req.body; // userId should be from token (future implementation)
+        const { difficulty, topics } = req.body; // userId should be from token (future implementation)
 
-        if (!criteria || !criteria.difficulty || !criteria.topics) {
+        if (!difficulty || !topics) {
           logger.info(
             `[POST /match/request] Invalid request body: ${JSON.stringify(req.body)}`,
           );
@@ -32,7 +32,7 @@ export async function registerMatchRoutes(
         }
 
         logger.info(
-          `[POST /match/request] Received match request from user ${userId} with difficulty=${criteria.difficulty} and topics=${criteria.topics.join(', ')}`,
+          `[POST /match/request] Received match request from user ${userId} with difficulty=${difficulty} and topics=${topics.join(', ')}`,
         );
 
         const existingUser = await redis.statusHash.getUserData(userId);
@@ -49,8 +49,8 @@ export async function registerMatchRoutes(
         const userData: HashData = {
           sessionKey: Date.now(),
           status: 'waiting',
-          difficulty: criteria.difficulty,
-          topics: criteria.topics,
+          difficulty: difficulty,
+          topics: topics,
           lastSeen: Date.now(),
         };
         const userMatchJob: EntryQueueData = {

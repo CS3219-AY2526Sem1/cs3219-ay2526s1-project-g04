@@ -32,6 +32,6 @@ export const logger = winston.createLogger({
       level: 'error',
     }),
     // Console output for development
-    // new winston.transports.Console(),
+    new winston.transports.Console(),
   ],
 });
