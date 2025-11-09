@@ -19,23 +19,29 @@ tags:
     description: Endpoints for changing a user's email address.
   - name: User
     description: General operations for fetching user data.
-  - name: Admin
-    description: Admin-only operations.
+  - name: Internal Admin
+    description: Internal utility endpoints for promoting/demoting admins.
   - name: Utility
-    description: Health checks and utility endpoints.
+    description: Health checks and other utility endpoints.
 
 # 2. Define reusable components (schemas and security)
 components:
-  # 2a. Define the Bearer Token security scheme
+  # 2a. Define the security schemes used by the API
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: Standard JWT Access Token (uses RS256)
+    internalSecret:
+      type: apiKey
+      in: header
+      name: x-internal-secret
+      description: A static secret key for internal server-to-server operations.
 
   # 2b. Define all the reusable data models (schemas)
   schemas:
-    # --- Request Schemas ---
+    # --- Request Schemas (from Zod) ---
     SignupRequest:
       type: object
       properties:
@@ -45,9 +51,11 @@ components:
         password:
           type: string
           description: Min 8 chars, 1 upper, 1 lower, 1 num, 1 special.
+          example: 'StrongP@ss123'
         username:
           type: string
           description: 3-30 chars, lowercase letters, numbers, and underscores.
+          example: 'new_user_123'
       required: [email, password, username]
     LoginRequest:
       type: object
@@ -63,6 +71,7 @@ components:
       properties:
         token:
           type: string
+          description: The Refresh Token.
       required: [token]
     VerifyEmailRequest:
       type: object
@@ -72,6 +81,7 @@ components:
           format: email
         otp:
           type: string
+          description: 6-digit OTP code.
           minLength: 6
           maxLength: 6
       required: [email, otp]
@@ -178,6 +188,13 @@ components:
           minLength: 6
           maxLength: 6
       required: [oldPassword, newPassword, otp]
+    InternalRoleChangeRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required: [email]
 
     # --- Response Schemas ---
     AuthResponse:
@@ -313,6 +330,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid request (Zod validation error).
         '401':
           description: Invalid email or password.
         '403':
@@ -426,7 +445,7 @@ paths:
       tags:
         - Profile
       summary: Update current user's profile
-      description: Updates the username or bio for the authenticated user.
+      description: Updates the username, bio, or profilePictureUrl for the authenticated user.
       security:
         - bearerAuth: []
       requestBody:
@@ -473,6 +492,7 @@ paths:
                 profilePicture:
                   type: string
                   format: binary
+                  description: The image file to upload.
       responses:
         '200':
           description: Profile picture updated successfully.
@@ -686,6 +706,7 @@ paths:
           required: true
           schema:
             type: string
+          example: 'new_user_123'
       responses:
         '200':
           description: Returns availability status.
@@ -713,7 +734,7 @@ paths:
           required: true
           schema:
             type: string
-          example: 1,2,3
+          example: '1,2,3'
           description: A comma-separated list of user IDs.
       responses:
         '200':
@@ -756,42 +777,58 @@ paths:
         '404':
           description: User not found.
 
-  # --- Admin ---
-  /user/{id}/promote:
-    patch:
+  # --- Internal Admin ---
+  /user/utility/promote-admin:
+    post:
       tags:
-        - Admin
-      summary: Promote a user to Admin
-      description: Promotes a regular user to an ADMIN. This endpoint is restricted to Admins.
+        - Internal Admin
+      summary: (Internal) Promote user to Admin
+      description: Protected by a static secret token (`x-internal-secret`). Promotes a user by their email.
       security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: integer
-          description: The ID of the user to promote.
+        - internalSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalRoleChangeRequest'
       responses:
         '200':
           description: User successfully promoted or was already an admin.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                  user:
-                    $ref: '#/components/schemas/UserProfileResponse'
         '400':
-          description: Invalid user ID or admin trying to promote themselves.
-        '401':
-          description: Authentication required.
+          description: A valid email is required.
         '403':
-          description: Forbidden. Admin privileges required.
+          description: Forbidden. Invalid or missing internal secret token.
         '404':
-          description: User not found.
+          description: User not found with that email.
+        '500':
+          description: Internal server error.
+
+  /user/utility/demote-admin:
+    post:
+      tags:
+        - Internal Admin
+      summary: (Internal) Demote admin to User
+      description: Protected by a static secret token (`x-internal-secret`). Demotes an admin by their email.
+      security:
+        - internalSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InternalRoleChangeRequest'
+      responses:
+        '200':
+          description: User successfully demoted or was already a user.
+        '400':
+          description: A valid email is required.
+        '403':
+          description: Forbidden. Invalid or missing internal secret token.
+        '404':
+          description: User not found with that email.
+        '500':
+          description: Internal server error.
 
   # --- Utility ---
   /user/utility/list:
@@ -818,3 +855,4 @@ paths:
               schema:
                 type: string
                 example: alive
+

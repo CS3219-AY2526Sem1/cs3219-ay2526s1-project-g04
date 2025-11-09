@@ -1179,58 +1179,6 @@ app.post('/user/auth/reset-password', async (req, res) => {
   }
 });
 
-app.patch(
-  '/user/:id/promote',
-  // authenticateToken,
-  // authorizeAdmin,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const targetUserId = parseInt(req.params.id, 10);
-      if (isNaN(targetUserId)) {
-        return res.status(400).json({ message: 'Invalid user ID format.' });
-      }
-
-      const adminUserId = req.user!.userId;
-
-      if (targetUserId === adminUserId) {
-        return res
-          .status(400)
-          .json({ message: 'Admins cannot change their own role.' });
-      }
-
-      const userToPromote = await prisma.user.findUnique({
-        where: { id: targetUserId },
-      });
-
-      if (!userToPromote) {
-        return res.status(404).json({ message: 'User not found.' });
-      }
-
-      if (userToPromote.role === Role.ADMIN) {
-        return res.status(200).json({
-          message: 'User is already an admin.',
-          user: userToPromote,
-        });
-      }
-
-      const updatedUser = await prisma.user.update({
-        where: { id: targetUserId },
-        data: {
-          role: Role.ADMIN,
-        },
-      });
-
-      res.status(200).json({
-        message: 'User successfully promoted to admin.',
-        user: updatedUser,
-      });
-    } catch (error) {
-      console.error('Promote User Error:', error);
-      res.status(500).json({ message: 'Internal server error.' });
-    }
-  },
-);
-
 // username availability check
 app.get('/user/check-username', async (req: Request, res: Response) => {
   try {
