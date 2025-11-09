@@ -1,6 +1,6 @@
 // src/app/routes.ts
 import { Router } from 'express';
-import { authenticateToken, isAdmin, isUser } from '../middleware/auth.js';
+import { authenticateToken, isAdmin } from '../middleware/auth.js';
 
 import * as AdminAttachmentController from '../controllers/AdminAttachmentController.js';
 import * as QuestionController from '../controllers/QuestionController.js';
@@ -33,8 +33,8 @@ r.get('/questions/:id', QuestionController.getById);
 r.get('/questions', QuestionController.list);
 r.get('/topics', TopicController.list);
 
-// Selection (any authenticated user; keep isUser so USER/ADMIN both pass)
-r.post('/select', authenticateToken, isUser, QuestionController.select);
+// Selection
+r.post('/select', QuestionController.select);
 
 // Admin subtree
 r.post(
