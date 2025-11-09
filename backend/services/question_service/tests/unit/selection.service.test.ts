@@ -1,9 +1,14 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 // ----- Create controllable mock functions -----
-const getReservation = jest.fn<Promise<string | null>, [string]>();
-const upsertReservation = jest.fn<Promise<void>, [string, string, number]>();
-const pickRandomEligible = jest.fn<Promise<{ id: string } | null>, [any]>();
+const getReservation =
+  jest.fn<(matchingId: string) => Promise<string | null>>();
+const upsertReservation =
+  jest.fn<
+    (matchingId: string, questionId: string, ttl: number) => Promise<void>
+  >();
+const pickRandomEligible =
+  jest.fn<(filters?: any) => Promise<{ id: string } | null>>();
 
 await jest.unstable_mockModule(
   '../../src/repositories/ReservationRepository.js',
