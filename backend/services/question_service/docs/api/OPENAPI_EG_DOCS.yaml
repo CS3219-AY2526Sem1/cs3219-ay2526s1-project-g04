@@ -24,7 +24,7 @@ info:
       - Roles: `USER`, `ADMIN`.
 
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:3008
     description: Local dev (direct service)
   - url: https://api.example.com/q
     description: Production via API Gateway (prefix `/q` shown as example)
