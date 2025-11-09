@@ -45,27 +45,6 @@ export interface MatchingPoolData {
   sessionKey: number;
 }
 
-export type QuestionTopic = {
-  slug: string;
-  color_hex: string;
-};
-
-export type QuestionAttachment = {
-  object_key: string;
-  mime: string;
-  filename: string;
-};
-
 export type QuestionSelectResponse = {
-  id: string;
-  title: string;
-  body_md: string;
-  difficulty: Difficulty;
-  topics: QuestionTopic[];
-  attachments: QuestionAttachment[];
-  status: string;
-  version: number;
-  created_at: string;
-  updated_at: string;
-  body_html: string;
+  question_id: string;
 };

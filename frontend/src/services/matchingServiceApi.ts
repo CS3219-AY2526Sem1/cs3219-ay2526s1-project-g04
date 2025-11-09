@@ -1,21 +1,22 @@
 import * as Types from '@/lib/matching-service';
+import { fetchWithAuth } from '@/lib/utils/apiClient';
 
 const MATCHING_URL = process.env.NEXT_PUBLIC_API_MATCHING_SERVICE!;
 
 /**
  * POST /match/request
  * sends a match request to the matching service
+ * userId in user token
  */
 export async function postMatchRequest(
-  data: Types.MatchRequestBody,
+  data: Types.MatchCriteria,
 ): Promise<Types.ApiResult<Types.MatchResponseBody>> {
   try {
     const url = `${MATCHING_URL}/match/request`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'POST',
       headers: {
-        // 'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
@@ -46,18 +47,16 @@ export async function postMatchRequest(
 /**
  * GET /match/status/{userId}
  * Gets the status of the user with userId in the matching service
+ * userId in user token
  */
-export async function getMatchStatus(
-  userId: string,
-): Promise<Types.ApiResult<Types.StatusResponseBody>> {
+export async function getMatchStatus(): Promise<
+  Types.ApiResult<Types.StatusResponseBody>
+> {
   try {
-    const url = `${MATCHING_URL}/match/status/${userId}`;
+    const url = `${MATCHING_URL}/match/status`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'GET',
-      headers: {
-        // 'Authorization': `Bearer ${token}`,
-      },
     });
 
     const resData = await res.json();
@@ -83,20 +82,18 @@ export async function getMatchStatus(
 }
 
 /**
- * DELETE /match/cancel/{userId}
+ * DELETE /match/cancel
  * Cancels a match request by user with userId
+ * userId in user token
  */
-export async function deleteMatchRequest(
-  userId: string,
-): Promise<Types.ApiResult<Types.DeleteResponseBody>> {
+export async function deleteMatchRequest(): Promise<
+  Types.ApiResult<Types.DeleteResponseBody>
+> {
   try {
-    const url = `${MATCHING_URL}/match/cancel/${userId}`;
+    const url = `${MATCHING_URL}/match/cancel`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithAuth(url, {
       method: 'DELETE',
-      headers: {
-        // 'Authorization': `Bearer ${token}`,
-      },
     });
 
     const resData = (await res.json()) as Types.DeleteResponseBody;
