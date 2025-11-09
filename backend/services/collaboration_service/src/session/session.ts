@@ -42,12 +42,19 @@ export class Session {
 
   public readyUser(userId: number) {
     console.log(`Added userId ${userId} to session ${this.sessionId}`);
-    this.users[userId]!.state = USERSTATE.ready;
+    if (userId in this.users) {
+      this.users[userId]!.state = USERSTATE.ready;
+    }
   }
 
   public userNotReady(userId: number): boolean {
     console.log(this.users[userId]);
-    return this.users[userId]!.state === USERSTATE.waiting;
+    if (userId in this.users) {
+      return this.users[userId]!.state === USERSTATE.waiting;
+    } else {
+      // handle the case where userId does not exist
+      return false;
+    }
   }
 
   public updateCodeDocument() {

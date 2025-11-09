@@ -1,5 +1,6 @@
 // src/controllers/AdminAttachmentController.ts
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
+import { Role, type AuthRequest } from '../middleware/auth.js';
 import { signUploadUrl, signViewUrl } from '../services/AttachmentService.js';
 import { log } from '../utils/logger.js';
 
@@ -37,11 +38,11 @@ function isAllowedKeyForAdmin(
  * Headers:
  *   - x-upload-session?: string (ulid to group uploads)
  */
-export async function signUpload(req: Request, res: Response) {
+export async function signUpload(req: AuthRequest, res: Response) {
   // req.user is typed via module augmentation
   const user = req.user;
 
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== Role.ADMIN) {
     log.warn(
       '[signUpload] forbidden: missing/invalid user role',
       user ? user.role : 'no-user',
@@ -63,7 +64,7 @@ export async function signUpload(req: Request, res: Response) {
 
     if (!contentType || !filename) {
       log.warn('[signUpload] bad request: missing fields', {
-        admin: user.sub ?? user.userId,
+        admin: user.userId,
         contentTypePresent: !!contentType,
         filenamePresent: !!filename,
       });
@@ -76,7 +77,7 @@ export async function signUpload(req: Request, res: Response) {
     const sessionUlid = req.get('x-upload-session') || undefined;
 
     log.info('[signUpload] request', {
-      admin: user.sub ?? user.userId,
+      admin: user.userId,
       filename,
       contentType,
       suggestedPrefix,
@@ -84,7 +85,7 @@ export async function signUpload(req: Request, res: Response) {
     });
 
     const payload = await signUploadUrl(
-      user.sub ?? user.userId ?? 'admin',
+      user.userId,
       {
         content_type: contentType,
         filename,
@@ -94,7 +95,7 @@ export async function signUpload(req: Request, res: Response) {
     );
 
     log.info('[signUpload] success', {
-      admin: user.sub ?? user.userId,
+      admin: user.userId,
       object_key: payload.object_key,
       max_bytes: payload.max_bytes,
       expires_at: payload.expires_at,
@@ -105,7 +106,7 @@ export async function signUpload(req: Request, res: Response) {
     const msg = err instanceof Error ? err.message : String(err);
 
     log.error('[signUpload] failed', {
-      admin: user?.sub ?? user?.userId,
+      admin: user?.userId,
       error: msg,
       stack: err instanceof Error ? err.stack : undefined,
     });
@@ -130,9 +131,9 @@ export async function signUpload(req: Request, res: Response) {
  *       questions/*  OR
  *       staging/<this-admin>/*
  */
-export async function signView(req: Request, res: Response) {
+export async function signView(req: AuthRequest, res: Response) {
   const user = req.user;
-  if (!user || user.role !== 'admin') {
+  if (!user || user.role !== Role.ADMIN) {
     log.warn(
       '[signView] forbidden: missing/invalid user role',
       user ? user.role : 'no-user',
@@ -155,13 +156,13 @@ export async function signView(req: Request, res: Response) {
 
     if (!objectKey) {
       log.warn('[signView] bad request: missing object_key', {
-        admin: user.sub ?? user.userId,
+        admin: user.userId,
       });
       return res.status(400).json({ error: 'object_key is required (string)' });
     }
 
     // enforce prefix policy
-    const adminId = user.sub ?? user.userId;
+    const adminId = user.userId;
     if (!isAllowedKeyForAdmin(adminId, objectKey)) {
       log.warn('[signView] key_not_allowed', {
         admin: adminId,
@@ -197,14 +198,14 @@ export async function signView(req: Request, res: Response) {
     // Map common S3-ish "not found" to 404, and log appropriately
     if (msg.includes('NotFound') || msg.includes('404')) {
       log.warn('[signView] object_not_found', {
-        admin: user.sub ?? user.userId,
+        admin: user.userId,
         error: msg,
       });
       return res.status(404).json({ error: 'object_not_found' });
     }
 
     log.error('[signView] failed', {
-      admin: user.sub ?? user.userId,
+      admin: user.userId,
       error: msg,
       stack: err instanceof Error ? err.stack : undefined,
     });

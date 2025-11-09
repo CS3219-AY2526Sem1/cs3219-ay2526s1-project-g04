@@ -9,15 +9,25 @@ import {
   GridRowParams,
   GridRenderCellParams,
 } from '@mui/x-data-grid';
-import { Link } from '@mui/material';
-import { Question, Topic } from '@/lib/question-service';
-import { DIFFICULTY_LEVELS } from '@/lib/constants/difficultyLevels';
+import { Link, Tooltip } from '@mui/material';
+import {
+  PencilIcon,
+  ArrowUpTrayIcon,
+  ArchiveBoxXMarkIcon,
+} from '@heroicons/react/24/outline';
+import {
+  Question,
+  Topic,
+  getQuestionsRequestParams,
+} from '@/lib/question-service';
+import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
 import {
   getAdminQuestions,
   getQuestions,
-  deleteQuestion,
-  publishQuestion,
+  deleteAdminQuestions,
+  postAdminQuestionsPublish,
 } from '@/services/questionServiceApi';
+// import { TEST_QUESTION_LIST } from '@/lib/test-data/TestQuestionList';
 
 interface QuestionBankTableProps {
   topicFilter: string;
@@ -50,7 +60,7 @@ export default function QuestionBankTable({
     if (!confirmed) return;
 
     try {
-      const success = await deleteQuestion(id);
+      const success = await deleteAdminQuestions(id);
       if (success) {
         alert('Question deleted successfully!');
       }
@@ -67,7 +77,7 @@ export default function QuestionBankTable({
     if (!confirmed) return;
 
     try {
-      const success = await publishQuestion(id);
+      const success = await postAdminQuestionsPublish(id);
       if (success) {
         alert('Question published successfully!');
       }
@@ -80,8 +90,18 @@ export default function QuestionBankTable({
   useEffect(() => {
     setLoading(true);
     if (userRole === 'user') {
-      getQuestions(paginationModel.page, paginationModel.pageSize, topicFilter)
-        .then((data) => {
+      const params: getQuestionsRequestParams = {
+        page: paginationModel.page,
+        page_size: paginationModel.pageSize,
+        topics: topicFilter,
+      };
+      getQuestions(params)
+        .then((res) => {
+          if (!res.success) {
+            alert(res.message);
+            return;
+          }
+          const data = res.data;
           const items = data.items;
 
           setQuestions(items);
@@ -91,12 +111,18 @@ export default function QuestionBankTable({
     }
 
     if (userRole === 'admin') {
-      getAdminQuestions(
-        paginationModel.page,
-        paginationModel.pageSize,
-        topicFilter,
-      )
-        .then((data) => {
+      const params: getQuestionsRequestParams = {
+        page: paginationModel.page,
+        page_size: paginationModel.pageSize,
+        topics: topicFilter,
+      };
+      getAdminQuestions(params)
+        .then((res) => {
+          if (!res.success) {
+            alert(res.message);
+            return;
+          }
+          const data = res.data;
           const items = data.items;
 
           setQuestions(items);
@@ -161,7 +187,7 @@ export default function QuestionBankTable({
                   color: t.color_hex,
                 }}
               >
-                {t.slug}
+                {t.display}
               </span>
             ))}
           </div>
@@ -177,35 +203,41 @@ export default function QuestionBankTable({
       filterable: false,
       renderCell: (params) => {
         return (
-          <div className="flex gap-2">
-            <Link
-              component="button"
-              onClick={() => {
-                router.push(`/home/question-edit/${params.row.id}`);
-              }}
-            >
-              Edit
-            </Link>
-            {(params.row.status === 'draft' ||
-              params.row.status === 'archived') && (
-              <Link
-                component="button"
+          <div className="flex items-center gap-2 h-full">
+            <Tooltip title="Edit question">
+              <button
                 onClick={() => {
-                  handlePublishClick(params.row.id);
+                  router.push(`/home/question-edit/${params.row.id}`);
                 }}
+                className="group p-2 rounded-full transition-all"
               >
-                Publish
-              </Link>
+                <PencilIcon className="w-5 h-5 group-hover:text-blue-500" />
+              </button>
+            </Tooltip>
+
+            {params.row.status !== 'published' && (
+              <Tooltip title="Publish question">
+                <button
+                  onClick={() => {
+                    handlePublishClick(params.row.id);
+                  }}
+                  className="group p-2 rounded-full transition-all"
+                >
+                  <ArrowUpTrayIcon className="w-5 h-5 group-hover:text-blue-500" />
+                </button>
+              </Tooltip>
             )}
             {params.row.status !== 'archived' && (
-              <Link
-                component="button"
-                onClick={() => {
-                  handleDeleteClick(params.row.id);
-                }}
-              >
-                Delete
-              </Link>
+              <Tooltip title="Archive question">
+                <button
+                  onClick={() => {
+                    handleDeleteClick(params.row.id);
+                  }}
+                  className="group p-2 rounded-full transition-all"
+                >
+                  <ArchiveBoxXMarkIcon className="w-5 h-5 group-hover:text-blue-500" />
+                </button>
+              </Tooltip>
             )}
           </div>
         );
@@ -283,6 +315,7 @@ export default function QuestionBankTable({
     <div className="w-full bg-[var(--background)] rounded-xl shadow-xl">
       <DataGrid
         rows={questions}
+        // rows={TEST_QUESTION_LIST} // for test
         columns={columns}
         rowCount={rowCount}
         loading={loading}

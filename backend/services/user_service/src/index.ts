@@ -39,8 +39,14 @@ const upload = multer({
   },
 });
 
-const privateKey = fs.readFileSync('./private.pem', 'utf8');
+const privateKey = process.env.PRIVATE_KEY;
 const publicKey = fs.readFileSync('./public.pem', 'utf8');
+
+if (!privateKey) {
+  throw new Error(
+    'FATAL ERROR: PRIVATE_KEY is not defined in environment variables.',
+  );
+}
 
 app.use(cors());
 app.use(express.json());
@@ -120,6 +126,63 @@ const updateEmailSchema = z.object({
   password: z.string(), // current password for verification
 });
 
+// OTP schemas for email and password changes
+const requestEmailChangeOtpSchema = z.object({
+  newEmail: z.string().email(),
+  password: z.string(), // current password for verification
+});
+
+const verifyEmailChangeSchema = z.object({
+  newEmail: z.string().email(),
+  password: z.string(),
+  otp: z.string().length(6),
+});
+
+const requestPasswordChangeOtpSchema = z.object({
+  oldPassword: z.string(),
+});
+
+const verifyPasswordChangeSchema = z.object({
+  oldPassword: z.string(),
+  newPassword: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters.' })
+    .regex(/[A-Z]/, {
+      message: 'Password must contain at least one uppercase letter.',
+    })
+    .regex(/[a-z]/, {
+      message: 'Password must contain at least one lowercase letter.',
+    })
+    .regex(/\d/, { message: 'Password must contain at least one number.' })
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, {
+      message: 'Password must contain at least one special character.',
+    }),
+  otp: z.string().length(6),
+});
+
+// Forgot password schemas
+const forgotPasswordRequestSchema = z.object({
+  email: z.string().email(),
+});
+
+const forgotPasswordResetSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().length(6),
+  newPassword: z
+    .string()
+    .min(8, { message: 'Password must be at least 8 characters.' })
+    .regex(/[A-Z]/, {
+      message: 'Password must contain at least one uppercase letter.',
+    })
+    .regex(/[a-z]/, {
+      message: 'Password must contain at least one lowercase letter.',
+    })
+    .regex(/\d/, { message: 'Password must contain at least one number.' })
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, {
+      message: 'Password must contain at least one special character.',
+    }),
+});
+
 const updatePasswordSchema = z.object({
   oldPassword: z.string(),
   newPassword: z
@@ -139,8 +202,7 @@ const updatePasswordSchema = z.object({
 
 // --- JWT Payload Interface ---
 interface JwtPayload {
-  userId: string;
-  email: string;
+  userId: number;
   role: Role;
   username: string;
   iat: number;
@@ -148,7 +210,7 @@ interface JwtPayload {
 }
 
 interface RefreshTokenPayload {
-  userId: string;
+  userId: number;
 }
 
 // --- Middleware for Authentication & Authorization ---
@@ -182,6 +244,24 @@ const authenticateToken = (
     req.user = user as JwtPayload;
     next();
   });
+};
+
+const authorizeAdmin = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required.' });
+  }
+
+  if (req.user.role !== Role.ADMIN) {
+    return res
+      .status(403)
+      .json({ message: 'Forbidden: Admin privileges required.' });
+  }
+
+  next();
 };
 
 /**
@@ -236,6 +316,45 @@ async function sendOtpEmail(email: string, otp: string) {
   });
 }
 
+async function sendPasswordResetOtpEmail(email: string, otp: string) {
+  const productIconUrl =
+    'https://s3.ap-southeast-2.amazonaws.com/peerprep.prep/peerprep_banner.png';
+
+  await transporter.sendMail({
+    from: '"PeerPrep" <no-reply@peerprep.com>',
+    to: email,
+    subject: 'PeerPrep Password Reset Code',
+    text: `Your PeerPrep password reset code is: ${otp}. It will expire in 10 minutes.`,
+    html: `
+      <!doctype html>
+      <html>
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        </head>
+        <body style="font-family: sans-serif;">
+          <div style="display: block; margin: auto; max-width: 600px;" class="main">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img alt="PeerPrep Banner" src="${productIconUrl}" style="width: 400px; display: inline-block;">
+            </div>
+            <h1 style="font-size: 18px; font-weight: bold; margin-top: 20px">Password Reset Request</h1>
+            <p>We received a request to reset your PeerPrep account password.</p>
+            <p>Please use the following code to reset your password. The code is valid for 10 minutes.</p>
+            <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #f2f2f2; padding: 10px 20px; text-align: center;">
+              ${otp}
+            </p>
+            <p><strong>If you did not request this password reset, please ignore this email and your password will remain unchanged.</strong></p>
+            <p>For security reasons, this code will expire in 10 minutes.</p>
+          </div>
+          <style>
+            .main { background-color: white; }
+            a:hover { border-left-width: 1em; min-height: 2em; }
+          </style>
+        </body>
+      </html>
+    `,
+  });
+}
+
 /**
  * API Endpoints
  */
@@ -249,19 +368,14 @@ async function sendOtpEmail(email: string, otp: string) {
 app.post('/user/auth/signup', async (req, res) => {
   try {
     const { email, password, username } = signupSchema.parse(req.body);
-
-    // --- UPDATED LOGIC ---
-    // 1. Check if EMAIL already exists
     const userByEmail = await prisma.user.findUnique({ where: { email } });
 
     if (userByEmail) {
-      // If email exists (verified OR unverified), block the signup immediately
       return res.status(409).json({
         message: 'An account with this email already exists. Please log in.',
       });
     }
 
-    // 2. Check if USERNAME already exists (only if email is new)
     const userByUsername = await prisma.user.findUnique({
       where: { username },
     });
@@ -271,11 +385,12 @@ app.post('/user/auth/signup', async (req, res) => {
         .json({ message: 'This username is already taken.' });
     }
 
-    // --- If both email and username are available, proceed to create ---
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     const now = new Date();
+    const userCount = await prisma.user.count();
+    const role = userCount === 0 ? Role.ADMIN : Role.USER;
 
     const newUser = await prisma.user.create({
       data: {
@@ -286,6 +401,7 @@ app.post('/user/auth/signup', async (req, res) => {
         verificationOtp: otp,
         otpExpiresAt,
         otpLastSentAt: now,
+        role: role,
       },
     });
 
@@ -297,6 +413,7 @@ app.post('/user/auth/signup', async (req, res) => {
       user: { email: newUser.email, username: newUser.username },
     });
   } catch (error) {
+    console.error('Signup Endpoint Error:', error);
     if (error instanceof z.ZodError) {
       return res
         .status(400)
@@ -721,6 +838,390 @@ app.post('/user/auth/resend-otp', async (req, res) => {
   }
 });
 
+// Request OTP for email change
+app.post(
+  '/user/me/email/request-otp',
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const { newEmail, password } = requestEmailChangeOtpSchema.parse(
+        req.body,
+      );
+      const userId = req.user?.userId;
+
+      // Get current user
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: 'Invalid current password.' });
+      }
+
+      // Check if new email already exists
+      const existingUser = await prisma.user.findUnique({
+        where: { email: newEmail },
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already in use.' });
+      }
+
+      // Check OTP cooldown
+      if (
+        user.otpLastSentAt &&
+        new Date().getTime() - user.otpLastSentAt.getTime() <
+          OTP_COOLDOWN_SECONDS * 1000
+      ) {
+        return res.status(429).json({
+          message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+        });
+      }
+
+      // Generate and store OTP
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const now = new Date();
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
+      });
+
+      // Send OTP to new email
+      await sendOtpEmail(newEmail, otp);
+
+      res.status(200).json({
+        message: 'OTP sent to your new email address. Please check your inbox.',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  },
+);
+
+// Verify OTP and change email
+app.post(
+  '/user/me/email/verify-otp',
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const { newEmail, password, otp } = verifyEmailChangeSchema.parse(
+        req.body,
+      );
+      const userId = req.user?.userId;
+
+      // Get current user
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: 'Invalid current password.' });
+      }
+
+      // Verify OTP
+      if (!user.verificationOtp || user.verificationOtp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP.' });
+      }
+      if (new Date() > user.otpExpiresAt!) {
+        return res.status(400).json({ message: 'OTP has expired.' });
+      }
+
+      // Check if new email already exists (double-check)
+      const existingUser = await prisma.user.findUnique({
+        where: { email: newEmail },
+      });
+      if (existingUser) {
+        return res.status(400).json({ message: 'Email already in use.' });
+      }
+
+      // Update email and clear OTP
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          email: newEmail,
+          verificationOtp: null,
+          otpExpiresAt: null,
+        },
+      });
+
+      res.status(200).json({
+        message: 'Email updated successfully.',
+        newEmail,
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  },
+);
+
+// Request OTP for password change
+app.post(
+  '/user/me/password/request-otp',
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const { oldPassword } = requestPasswordChangeOtpSchema.parse(req.body);
+      const userId = req.user?.userId;
+
+      // Get current user
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: 'Invalid current password.' });
+      }
+
+      // Check OTP cooldown
+      if (
+        user.otpLastSentAt &&
+        new Date().getTime() - user.otpLastSentAt.getTime() <
+          OTP_COOLDOWN_SECONDS * 1000
+      ) {
+        return res.status(429).json({
+          message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+        });
+      }
+
+      // Generate and store OTP
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+      const now = new Date();
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
+      });
+
+      // Send OTP to current email
+      await sendOtpEmail(user.email, otp);
+
+      res.status(200).json({
+        message: 'OTP sent to your email address. Please check your inbox.',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  },
+);
+
+// Verify OTP and change password
+app.post(
+  '/user/me/password/verify-otp',
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const { oldPassword, newPassword, otp } =
+        verifyPasswordChangeSchema.parse(req.body);
+      const userId = req.user?.userId;
+
+      // Get current user
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // Verify current password
+      const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+      if (!isPasswordValid) {
+        return res.status(400).json({ message: 'Invalid current password.' });
+      }
+
+      // Verify OTP
+      if (!user.verificationOtp || user.verificationOtp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP.' });
+      }
+      if (new Date() > user.otpExpiresAt!) {
+        return res.status(400).json({ message: 'OTP has expired.' });
+      }
+
+      // Hash new password
+      const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update password and clear OTP
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hashedNewPassword,
+          verificationOtp: null,
+          otpExpiresAt: null,
+        },
+      });
+
+      res.status(200).json({
+        message: 'Password updated successfully.',
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  },
+);
+
+// Request OTP for forgot password
+app.post('/user/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = forgotPasswordRequestSchema.parse(req.body);
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return res.status(200).json({
+        message:
+          'If an account with this email exists, you will receive a password reset code.',
+      });
+    }
+
+    // Check if user is verified
+    if (!user.isVerified) {
+      return res.status(400).json({
+        message:
+          'Please verify your email first before resetting your password.',
+      });
+    }
+
+    // Check OTP cooldown
+    if (
+      user.otpLastSentAt &&
+      new Date().getTime() - user.otpLastSentAt.getTime() <
+        OTP_COOLDOWN_SECONDS * 1000
+    ) {
+      return res.status(429).json({
+        message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+      });
+    }
+
+    // Generate and store OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    const now = new Date();
+
+    await prisma.user.update({
+      where: { email },
+      data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
+    });
+
+    // Send password reset OTP email
+    await sendPasswordResetOtpEmail(email, otp);
+
+    res.status(200).json({
+      message:
+        'If an account with this email exists, you will receive a password reset code.',
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
+// Reset password with OTP
+app.post('/user/auth/reset-password', async (req, res) => {
+  try {
+    const { email, otp, newPassword } = forgotPasswordResetSchema.parse(
+      req.body,
+    );
+
+    // Get user
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid reset request.' });
+    }
+
+    // Verify OTP
+    if (!user.verificationOtp || user.verificationOtp !== otp) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid or expired reset code.' });
+    }
+    if (new Date() > user.otpExpiresAt!) {
+      return res.status(400).json({ message: 'Reset code has expired.' });
+    }
+
+    // Hash new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear OTP
+    await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedNewPassword,
+        verificationOtp: null,
+        otpExpiresAt: null,
+        // Invalidate all refresh tokens for security
+        refreshToken: null,
+      },
+    });
+
+    res.status(200).json({
+      message:
+        'Password reset successfully. Please log in with your new password.',
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
+app.patch(
+  '/user/:id/promote',
+  authenticateToken,
+  authorizeAdmin,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const targetUserId = parseInt(req.params.id, 10);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ message: 'Invalid user ID format.' });
+      }
+
+      const adminUserId = req.user!.userId;
+
+      if (targetUserId === adminUserId) {
+        return res
+          .status(400)
+          .json({ message: 'Admins cannot change their own role.' });
+      }
+
+      const userToPromote = await prisma.user.findUnique({
+        where: { id: targetUserId },
+      });
+
+      if (!userToPromote) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      if (userToPromote.role === Role.ADMIN) {
+        return res.status(200).json({
+          message: 'User is already an admin.',
+          user: userToPromote,
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          role: Role.ADMIN,
+        },
+      });
+
+      res.status(200).json({
+        message: 'User successfully promoted to admin.',
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error('Promote User Error:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+);
+
 // username availability check
 app.get('/user/check-username', async (req: Request, res: Response) => {
   try {
@@ -745,9 +1246,45 @@ app.get('/user/check-username', async (req: Request, res: Response) => {
   }
 });
 
+app.get('/user', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const idsQuery = req.query.ids as string;
+    if (!idsQuery) {
+      return res.status(400).json({ message: 'User IDs are required.' });
+    }
+
+    const userIds = idsQuery.split(',').map((id) => parseInt(id, 10));
+    // Check if any of the conversions failed
+    if (userIds.some(isNaN)) {
+      return res
+        .status(400)
+        .json({ message: 'Invalid user ID format in list.' });
+    }
+
+    const users = await prisma.user.findMany({
+      where: {
+        id: {
+          in: userIds,
+        },
+      },
+      select: {
+        id: true,
+        username: true,
+      },
+    });
+
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
 app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ message: 'Invalid user ID format.' });
+    }
     const user = await prisma.user.findUnique({
       where: {
         id: id,
@@ -786,7 +1323,13 @@ app.get('/user/utility/list', async (req, res) => {
   }
 });
 
+app.get('/healthz', async (req, res) => {
+  res.status(200).send('alive');
+});
+
 /**
  * port
  */
-app.listen(PORT, () => {});
+app.listen(PORT, () => {
+  console.log(PORT);
+});

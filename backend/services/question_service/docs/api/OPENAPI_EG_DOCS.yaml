@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Question Service API (PeerPrep)
-  version: 0.3.0
+  version: 0.4.0
   description: |
     Microservice to manage and serve coding interview questions.
 
@@ -19,15 +19,15 @@ info:
 
     - `/select` is idempotent for a `matching_id` for ~10 minutes.
 
-    - Admin endpoints require `admin` role (via `x-role: admin` in dev or RBAC'ed JWT in prod).
-
-    - Service-to-service calls (like the matching worker) may use `x-role: service`.
+    - Auth:
+      - JWT (RS256) verified locally using a public key file (from user-service).
+      - Roles: `USER`, `ADMIN`.
 
 servers:
   - url: http://localhost:3000
-    description: Local dev
-  - url: https://api.example.com/question-service
-    description: Production (placeholder)
+    description: Local dev (direct service)
+  - url: https://api.example.com/q
+    description: Production via API Gateway (prefix `/q` shown as example)
 
 components:
   securitySchemes:
@@ -36,8 +36,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: |
-        Production calls should include a Bearer token.
-        In local/dev we also allow `x-role: admin` or `x-role: service`.
+        Bearer JWT signed by the user-service (RS256). Services verify using `public.pem`.
 
   parameters:
     Difficulty:
@@ -87,6 +86,13 @@ components:
       schema:
         type: boolean
         default: false
+
+    IdsCsv:
+      name: ids
+      in: query
+      description: 'Comma-separated question IDs to fetch (e.g., `two-sum,rotate-image`).'
+      schema:
+        type: string
 
   schemas:
     Difficulty:
@@ -783,12 +789,12 @@ tags:
   - name: Health
   - name: Read
   - name: Selection
+  - name: Debug
 
 paths:
   /healthz:
     get:
-      tags:
-        - Health
+      tags: [Health]
       summary: Liveness probe
       security: []
       responses:
@@ -805,8 +811,7 @@ paths:
 
   /readyz:
     get:
-      tags:
-        - Health
+      tags: [Health]
       summary: Readiness probe (DB/AMQP reachable)
       security: []
       responses:
@@ -832,17 +837,12 @@ paths:
 
   /admin/topics:
     post:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Create a new canonical topic
       description: |
         Creates a `topics` row.
-
         - The service slugifies `display` into `slug`.
         - That slug can then be referenced in `questions.topics`.
-        - If the slug already exists, the repo may upsert (implementation detail).
-
-        Controller expects `display` and `color_hex` in the JSON body.
       requestBody:
         required: true
         content:
@@ -862,23 +862,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
   /topics:
     get:
-      tags:
-        - Read
+      tags: [Read]
       summary: List all known topic tags (slug + color)
-      description: |
-        Returns *all* topics in the system, even if they are not used by any
-        published question. Useful for admin UIs, dropdowns, etc.
+      security: []
       responses:
         '200':
           description: OK
@@ -886,24 +881,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TopicListResponse'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
 
   /questions/topics:
     get:
-      tags:
-        - Read
+      tags: [Read]
       summary: List topics that appear in published questions
-      description: |
-        Returns distinct topic slugs + colors that are currently attached
-        to at least one PUBLISHED question.
-
-        Useful for building topic filters in the public UI.
-
-        This is different from `GET /topics`, which returns *all* known topics,
-        even if they are not used by any published question.
+      security: []
       responses:
         '200':
           description: OK
@@ -911,28 +894,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TopicListResponse'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
 
   /admin/attachments/sign-upload:
     post:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Get a presigned PUT URL for direct S3 upload
       description: |
         Returns:
-        - `object_key` (staging/... key you will reference in Markdown via `pp://<object_key>`)
-        - a short-lived presigned PUT URL
+        - `object_key` (staging/... key referenced in Markdown via `pp://<object_key>`)
+        - short-lived presigned PUT URL
         - size/expiry metadata
-
-        Flow:
-        1. Call this to get `upload_url` + `object_key`.
-        2. `PUT` bytes directly to S3 using `upload_url`.
-        3. Use that `object_key` when creating/updating questions.
-
-        The service will later "finalize" staging keys into `questions/{id}/...`.
       requestBody:
         required: true
         content:
@@ -946,29 +917,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SignUploadResponse'
-        '400':
-          description: Bad input
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+        '400': { description: Bad input }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
   /admin/attachments/sign-view:
     post:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Get a short-lived view URL for an object key
-      description: |
-        Mainly for preview in the admin editor.
-
-        Public `GET /questions/{id}` already returns `body_html`
-        with signed `<img>` tags, so you usually don't need this for end users.
-
-        Backend will 404 if the key doesn't exist / not allowed.
       requestBody:
         required: true
         content:
@@ -982,27 +942,20 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SignViewResponse'
-        '400':
-          description: Bad input
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '404':
-          description: Not found
+        '400': { description: Bad input }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Not found }
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
   /admin/questions:
     get:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: List questions (any status)
-      description: |
-        Admin view over all questions (`draft`, `published`, `archived`) with filters.
-        Result items are summaries (no test cases inline).
+      description: Admin view over all questions with filters.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -1021,33 +974,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionListResponse'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
     post:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Create a new draft question
-      description: |
-        - Creates the initial `questions` row with `status = draft`.
-        - Generates a unique slug (`id`).
-        - Finalizes any `staging/...` attachments (copies them under `questions/{id}/...`)
-          and rewrites `body_md` accordingly.
-        - Persists starter code (python) into `question_python_starter`.
-        - Replaces any existing test cases for that question with the provided array.
-        - Rewrites topics → `question_topics` join table (FK to `topics.slug`).
-        - Returns full admin view (including hidden tests and starter code).
-
-        IMPORTANT:
-        - All slugs in `topics` MUST already exist in `/admin/topics`.
-        - If you reference an unknown topic slug, the service SHOULD 400
-          with `unknown_topics` (FK failures will otherwise surface as 500).
       requestBody:
         required: true
         content:
@@ -1062,37 +998,27 @@ paths:
               schema:
                 $ref: '#/components/schemas/QuestionAdminRead'
         '400':
-          description: Validation error (missing title, bad topic slug, etc.)
+          description: Validation error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
   /admin/questions/{id}:
     get:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Get full question (draft / published / archived)
-      description: |
-        Returns the internal/admin bundle:
-        - question metadata
-        - sanitized `body_html` with signed URLs
-        - ALL test cases (including hidden)
-        - starter_code (string)
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         '200':
           description: OK
@@ -1100,8 +1026,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionAdminRead'
-        '401':
-          description: Unauthorized
+        '401': { description: Unauthorized }
         '404':
           description: Not found
           content:
@@ -1111,27 +1036,11 @@ paths:
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
     patch:
       tags: [Admin]
       summary: Update an existing question (any status)
-      description: |
-        Partial update.
-
-        Behavior:
-        - Any provided simple fields (`title`, `difficulty`, `status`, etc.) are updated.
-        - If `attachments` includes new `staging/...` keys, those are finalized
-          under `questions/{id}/...`, and if `body_md` is provided,
-          its `pp://staging/...` refs are rewritten.
-        - If `starter_code` is provided, python starter is upserted.
-        - If `test_cases` is provided, ALL test cases are replaced by the new list.
-        - If `topics` is provided, the entire topic set is replaced
-          (all slugs must already exist via `/admin/topics`).
-
-        ⚠️ Publishing:
-        - To **publish** with a version bump and snapshot, call
-          **POST `/admin/questions/{id}/publish`**.
       parameters:
         - name: id
           in: path
@@ -1151,7 +1060,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/QuestionAdminRead'
         '400':
-          description: Validation error (e.g. topics_not_found)
+          description: Validation error
           content:
             application/json:
               schema:
@@ -1162,24 +1071,16 @@ paths:
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
     delete:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Archive a published question
-      description: |
-        Soft-delete semantics:
-        - Only allowed if current status is `published`.
-        - Updates `questions.status = archived`,
-          bumps `version`, writes snapshot.
-        - Returns the updated row as JSON.
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         '200':
           description: Archived
@@ -1187,36 +1088,23 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionAdminRead'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '404':
-          description: Not found or not eligible
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Not found or not eligible }
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
   /admin/questions/{id}/publish:
     post:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Publish the current head
-      description: |
-        Promotes the current question to **published** from **draft** or **archived**:
-        - bumps `version`
-        - sets `status = published`
-        - writes an immutable snapshot into `question_versions`
-
-        Returns the updated, now-published question
-        (same shape as QuestionAdminRead).
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         '200':
           description: Published OK
@@ -1224,40 +1112,24 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionAdminRead'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden / invalid role
-        '404':
-          description: Not found
-        '409':
-          description: Invalid state (e.g. archived)
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden / invalid role }
+        '404': { description: Not found }
+        '409': { description: Invalid state (e.g. archived) }
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
   /admin/questions/{id}/resources:
     get:
-      tags:
-        - Admin
+      tags: [Admin]
       summary: Get full execution resources for a question (any status)
-      description: |
-        Returns the internal runtime bundle for a question:
-        - starter code (string)
-        - ALL test cases, including hidden
-        - status
-
-        This endpoint is intended for:
-        - admin editing / previewing
-        - internal judge / grader services
-
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
       responses:
         '200':
           description: OK
@@ -1265,10 +1137,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionResourcesAdmin'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
         '404':
           description: Not found
           content:
@@ -1278,21 +1148,14 @@ paths:
       security:
         - bearerAuth: []
       x-roles:
-        - admin
+        - ADMIN
 
   /questions:
     get:
-      tags:
-        - Read
+      tags: [Read]
       summary: List published questions
       description: |
         Returns a paginated list of **published** questions only.
-
-        Filters:
-        - `difficulty`
-        - `topics` (comma-separated slugs)
-        - `q` (basic search / FTS)
-        - `highlight` (include `snippet`)
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -1300,6 +1163,7 @@ paths:
         - $ref: '#/components/parameters/Topics'
         - $ref: '#/components/parameters/Q'
         - $ref: '#/components/parameters/Highlight'
+      security: []
       responses:
         '200':
           description: OK
@@ -1307,34 +1171,48 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionListResponse'
-        '401':
-          description: Unauthorized (if anonymous read is disabled)
-        '403':
-          description: Forbidden
+
+  /questions/batch:
+    get:
+      tags: [Read]
+      summary: Batch fetch published questions by ID
+      description: |
+        Returns a list of **published** questions, given a set of IDs.
+        Useful for hydration in clients that already know specific IDs.
+      parameters:
+        - $ref: '#/components/parameters/IdsCsv'
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/QuestionPublicRead'
+        '400':
+          description: Missing or invalid ids query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /debug/questions/{id}:
     get:
-      tags:
-        - Debug
+      tags: [Debug]
       summary: Render a published question as sanitized HTML (DEV ONLY)
       description: |
-        DEVELOPMENT / TEST ONLY.
-
-        Returns a preview of what a published question would look like to the public UI:
-        - Sanitized `body_html` with short-lived signed URLs for inline images.
-        - Basic question metadata (`id`, `title`, `difficulty`, `topics`, `version`).
-
-        This endpoint is:
-        - NOT mounted at all in production (`NODE_ENV=production`).
-        - Additionally guarded in the controller.
-
-        Intended for local authoring / debugging the Markdown pipeline.
+        DEVELOPMENT / TEST ONLY. Not mounted in production.
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
+      security: []
       responses:
         '200':
           description: OK (development preview)
@@ -1343,14 +1221,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: string
-                  title:
-                    type: string
-                  difficulty:
-                    $ref: '#/components/schemas/Difficulty'
-                  version:
-                    type: integer
+                  id: { type: string }
+                  title: { type: string }
+                  difficulty: { $ref: '#/components/schemas/Difficulty' }
+                  version: { type: integer }
                   body_html:
                     type: string
                     description: Sanitized HTML with signed <img> sources.
@@ -1377,32 +1251,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      security: []
       x-internal: true
-      x-env:
-        - development
-        - test
+      x-env: [development, test]
 
   /questions/{id}:
     get:
-      tags:
-        - Read
+      tags: [Read]
       summary: Get a published question by ID (public-safe view)
-      description: |
-        Returns:
-        - published question metadata
-        - sanitized `body_html` (with signed image URLs)
-        - public-safe execution bundle:
-          - `starter_code` (string)
-          - `test_cases` (SAMPLE ONLY; hidden cases are not included)
-
-        Returns 404 if the question is not `published`.
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
+      security: []
       responses:
         '200':
           description: OK (published)
@@ -1410,8 +1271,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionPublicRead'
-        '401':
-          description: Unauthorized
         '404':
           description: Not found / not published
           content:
@@ -1421,24 +1280,14 @@ paths:
 
   /questions/{id}/resources:
     get:
-      tags:
-        - Read
+      tags: [Read]
       summary: Get execution resources for a published question
-      description: |
-        Returns the runtime bundle for a published question:
-        - starter code (string)
-        - SAMPLE test cases only (no hidden cases)
-
-        If the question does not exist or is not published, returns 404.
-
-        This is a lighter-weight, runner-friendly view compared to
-        GET /questions/{id}, which focuses on the problem statement and rendered HTML.
       parameters:
         - name: id
           in: path
           required: true
-          schema:
-            type: string
+          schema: { type: string }
+      security: []
       responses:
         '200':
           description: OK
@@ -1446,8 +1295,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionResourcesPublic'
-        '401':
-          description: Unauthorized
         '404':
           description: Not found / not published
           content:
@@ -1457,26 +1304,19 @@ paths:
 
   /select:
     post:
-      tags:
-        - Selection
+      tags: [Selection]
       summary: Select one eligible published question for a session
       description: |
         Returns exactly one **published** question that matches the requested filters.
 
         Also:
-        - Idempotent for a given `matching_id` for ~10 minutes
-          (stored in Postgres `reservations` table).
+        - Idempotent for a given `matching_id` for ~10 minutes (stored in Postgres).
         - Attempts to avoid `recent_ids` and `exclude_ids`.
         - Emits a `question.selected` event to RabbitMQ.
 
         Auth:
-        - Typically called by the matching / collaboration service.
-        - Requires a role of `service` (or `admin`) in dev,
-          or a valid JWT with proper audience/scope in prod.
-
-        Response body is basically the same safe shape
-        that `/questions/{id}` returns
-        (i.e. public/published view, not including hidden tests).
+        - Called by the collaboration/matching service or by signed-in users.
+        - Requires `USER`.
       requestBody:
         required: true
         content:
@@ -1488,12 +1328,11 @@ paths:
                 value:
                   matching_id: 'sess-123'
                   difficulty: 'Medium'
-                  topics:
-                    - arrays
-                  exclude_ids:
-                    - two-sum
-                  recent_ids:
-                    - rotate-image-in-place
+                  topics: [arrays]
+                  exclude_ids: [two-sum]
+                  recent_ids: [rotate-image-in-place]
+      security:
+        - bearerAuth: []
       responses:
         '200':
           description: Selected question
@@ -1507,18 +1346,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/QuestionPublicRead'
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden (role)
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden (role) }
         '409':
           description: No eligible question / pool empty
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-      security:
-        - bearerAuth: []
-      x-roles:
-        - service
-        - admin

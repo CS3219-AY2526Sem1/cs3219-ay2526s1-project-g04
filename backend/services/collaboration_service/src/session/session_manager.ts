@@ -9,6 +9,7 @@ import type { IncomingMessage } from 'http';
 import type WebSocket from 'ws';
 
 export enum SESSIONSTATE {
+  notCreated = 'notCreated',
   created = 'created',
   active = 'active',
   end = 'end',
@@ -145,11 +146,40 @@ export class SessionManager {
   }
 
   public endSession(sessionId: string, userId: string) {
+    const matchingId = this.sessions[sessionId]?.matchedId;
+    if (!matchingId) {
+      return;
+    }
     this.sessions[sessionId]?.session.end(userId);
     this.db.setTerminationSession(
       Number(sessionId),
       SessionTerminations.endByUser,
     );
+
+    this.redis.setSessionState(sessionId, matchingId, SESSIONSTATE.end);
+    delete this.sessions[sessionId];
+  }
+
+  public async getSessionStateByMatchedId(
+    matchedId: string,
+  ): Promise<Record<string, string>> {
+    const sessionData = await this.redis.getSessionState(matchedId);
+    if (
+      sessionData &&
+      sessionData['session_state'] &&
+      sessionData['session_id']
+    ) {
+      console.log(1);
+      return {
+        session_state: sessionData['session_state'],
+        session_id: sessionData['session_id'],
+      };
+    } else {
+      return {
+        session_state: SESSIONSTATE.notCreated.valueOf(),
+        session_id: SESSIONSTATE.notCreated.valueOf(),
+      };
+    }
   }
 
   public async getSessionState(
@@ -161,9 +191,11 @@ export class SessionManager {
         `session cannot be found during state retrieval" ${session_id}`,
       );
     }
-    const session_state = await this.redis.getSessionState(matchedId);
+    const sessionData = await this.redis.getSessionState(matchedId);
     const toRet = {
-      session_state: session_state ? session_state : 'NOTFOUND',
+      session_state: sessionData['session_state']
+        ? sessionData['session_state']
+        : 'NOTFOUND',
     };
     return toRet;
   }
@@ -178,6 +210,7 @@ export class SessionManager {
     const userId = Number(params.get('userId'));
     const sessionId = Number(urlObj.pathname.slice(1));
     const session = this.getSessionById(sessionId);
+    console.log(fullUrl);
 
     if (!session) {
       console.log(`session id not found in session manager: ${sessionId}`);

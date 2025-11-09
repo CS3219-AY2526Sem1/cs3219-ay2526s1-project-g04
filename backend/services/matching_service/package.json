@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "tsx --watch src/main.ts",
+    "dev_rs": "npm run dev",
     "start": "node dist/services/matching_service/src/main.js",
     "build": "tsc && tsc-alias",
     "type-check": "tsc --noEmit",
@@ -24,9 +25,11 @@
     "@types/node": "^24.8.0",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@types/cors": "^2.8.19"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "amqplib": "^0.10.9",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",

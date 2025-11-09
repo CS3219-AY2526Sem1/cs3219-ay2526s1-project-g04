@@ -17,7 +17,15 @@ export default function Page() {
 
     setLoading(true);
     getAdminQuestionById(id.toString())
-      .then((data) => setQuestionData(data))
+      .then((res) => {
+        if (!res.success) {
+          alert(`⚠️ Error: ${res.message}`);
+          return;
+        }
+
+        const data = res.data;
+        setQuestionData(data);
+      })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, [id]);

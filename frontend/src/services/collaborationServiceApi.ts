@@ -55,9 +55,11 @@ export async function terminateSessionIsSuccess(
   }
 }
 
-export async function sessionIsReady(sessId: string): Promise<boolean> {
+export async function sessionIsReady(
+  matchId: string,
+): Promise<{ sessionId?: string; created: boolean; ready: boolean }> {
   try {
-    const url = `${COLLAB_SERVICE_URL}/sessions/status/${sessId}`;
+    const url = `${COLLAB_SERVICE_URL}/sessions/status/matched/${matchId}`;
     console.log('Get session status URL:', url);
     console.log('Making request...');
 
@@ -76,10 +78,48 @@ export async function sessionIsReady(sessId: string): Promise<boolean> {
 
     const jsonRes = await res.json();
 
-    console.log('Get session state successfully', jsonRes);
-
-    return jsonRes.sessionState === 'ready';
+    console.log('Get session state successfully', jsonRes['sessionState']);
+    const ready = jsonRes.sessionState === 'active';
+    const created = jsonRes.sessionState === 'created';
+    return {
+      sessionId: jsonRes.sessionId,
+      created: created,
+      ready: ready,
+    };
   } catch (err) {
+    console.error('getSessionState error:', err);
+    return {
+      ready: false,
+      created: false,
+    };
+  }
+}
+
+export async function sessionIsAlive(sessId: string): Promise<boolean> {
+  try {
+    const url = `${COLLAB_SERVICE_URL}/sessions/status/session/${sessId}`;
+    console.log('Get session status URL:', url);
+    console.log('Making request...');
+
+    const res = await fetch(url);
+
+    console.log('Response status:', res.status);
+    console.log('Response ok:', res.ok);
+
+    if (!res.ok) {
+      console.log('opopo');
+      const errorText = await res.text();
+      console.log('Error response body:', errorText);
+      throw new Error(
+        `Failed to get sessions state: ${res.status} ${res.statusText}`,
+      );
+    }
+    const jsonRes = await res.json();
+    console.log('Get session state successfully', jsonRes['sessionState']);
+    const ready = jsonRes.sessionState === 'active';
+    return ready;
+  } catch (err) {
+    console.log(2233);
     console.error('getSessionState error:', err);
     return false;
   }

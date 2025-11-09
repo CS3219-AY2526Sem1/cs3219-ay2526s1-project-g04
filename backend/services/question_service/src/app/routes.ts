@@ -1,24 +1,23 @@
 // src/app/routes.ts
-
 import { Router } from 'express';
+import { authenticateToken, isAdmin, isUser } from '../middleware/auth.js';
+
 import * as AdminAttachmentController from '../controllers/AdminAttachmentController.js';
 import * as QuestionController from '../controllers/QuestionController.js';
 import * as AdminController from '../controllers/AdminController.js';
 import * as TopicController from '../controllers/TopicController.js';
 import * as HealthController from '../controllers/HealthController.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
 import * as DebugController from '../controllers/DebugController.js';
 import * as ResourcesController from '../controllers/ResourceController.js';
 
 const r = Router();
-
 const NODE_ENV = process.env['NODE_ENV'] ?? 'development';
 
 // Health
 r.get('/healthz', HealthController.healthz);
 r.get('/readyz', HealthController.readyz);
 
-// debug
+// Debug (dev/test only)
 if (NODE_ENV === 'development' || NODE_ENV === 'test') {
   r.get('/debug/questions/:id', DebugController.previewQuestion);
 }
@@ -34,73 +33,55 @@ r.get('/questions/:id', QuestionController.getById);
 r.get('/questions', QuestionController.list);
 r.get('/topics', TopicController.list);
 
-// Service-to-service (selection) — lock to 'service'
-r.post(
-  '/select',
-  requireAuth(),
-  requireRole('service'),
-  QuestionController.select,
-);
+// Selection (any authenticated user; keep isUser so USER/ADMIN both pass)
+r.post('/select', authenticateToken, isUser, QuestionController.select);
 
-// Admin — lock entire /admin subtree
+// Admin subtree
 r.post(
   '/admin/attachments/sign-upload',
-  requireAuth(),
-  requireRole('admin'),
+  authenticateToken,
+  isAdmin,
   AdminAttachmentController.signUpload,
 );
 r.post(
   '/admin/attachments/sign-view',
-  requireAuth(),
-  requireRole('admin'),
+  authenticateToken,
+  isAdmin,
   AdminAttachmentController.signView,
 );
-r.post(
-  '/admin/topics',
-  requireAuth(),
-  requireRole('admin'),
-  TopicController.create,
-);
-r.get(
-  '/admin/questions',
-  requireAuth(),
-  requireRole('admin'),
-  AdminController.list,
-);
-r.post(
-  '/admin/questions',
-  requireAuth(),
-  requireRole('admin'),
-  AdminController.create,
-);
+
+r.post('/admin/topics', authenticateToken, isAdmin, TopicController.create);
+
+r.get('/admin/questions', authenticateToken, isAdmin, AdminController.list);
+r.post('/admin/questions', authenticateToken, isAdmin, AdminController.create);
 r.delete(
   '/admin/questions/:id',
-  requireAuth(),
-  requireRole('admin'),
+  authenticateToken,
+  isAdmin,
   AdminController.archive,
 );
 r.patch(
   '/admin/questions/:id',
-  requireAuth(),
-  requireRole('admin'),
+  authenticateToken,
+  isAdmin,
   AdminController.update,
 );
 r.get(
   '/admin/questions/:id',
-  requireAuth(),
-  requireRole('admin'),
+  authenticateToken,
+  isAdmin,
   AdminController.getById,
 );
 r.post(
   '/admin/questions/:id/publish',
-  requireAuth(),
-  requireRole('admin'),
+  authenticateToken,
+  isAdmin,
   AdminController.publish,
 );
 r.get(
   '/admin/questions/:id/resources',
-  requireAuth(),
-  requireRole('admin'),
+  authenticateToken,
+  isAdmin,
   ResourcesController.getAdminQuestionResources,
 );
 

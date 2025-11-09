@@ -176,18 +176,23 @@ export async function list(req: Request, res: Response) {
   });
 
   try {
-    const data = await Service.listPublished(args);
+    const { items, total } = await Service.listPublished(args);
 
     log.info('[GET /questions] success', {
-      returned: data.length,
-      first_id: data[0]?.id,
+      returned: items.length,
+      first_id: items[0]?.id,
       difficulty: args.difficulty,
       topics: args.topics,
       page: args.page,
       page_size: args.page_size,
     });
 
-    return res.json({ items: data });
+    return res.json({
+      items,
+      total,
+      page: args.page ?? 1,
+      page_size: args.page_size ?? 20,
+    });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     log.error('[GET /questions] error', {

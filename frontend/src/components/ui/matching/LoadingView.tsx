@@ -3,7 +3,8 @@
 import * as React from 'react';
 import Image from 'next/image';
 import { getMatchStatus } from '@/services/matchingServiceApi';
-import { type MatchState, TEST_USERID, TOTAL_MATCH_TIME } from './Types';
+import { getUserId } from '@/lib/utils/jwt';
+import { type MatchState, TOTAL_MATCH_TIME } from '@/lib/constants/MatchTypes';
 
 interface LoadingViewProps {
   setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
@@ -30,7 +31,7 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
   // poll match status every 1 second
   const fetchStatus = async () => {
     try {
-      const res = await getMatchStatus(TEST_USERID);
+      const res = await getMatchStatus(getUserId()!.toString());
       if (!res.success) return;
 
       const status = res.data?.status;
