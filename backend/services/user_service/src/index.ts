@@ -246,6 +246,24 @@ const authenticateToken = (
   });
 };
 
+const authorizeAdmin = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+) => {
+  if (!req.user) {
+    return res.status(401).json({ message: 'Authentication required.' });
+  }
+
+  if (req.user.role !== Role.ADMIN) {
+    return res
+      .status(403)
+      .json({ message: 'Forbidden: Admin privileges required.' });
+  }
+
+  next();
+};
+
 /**
  * OTP and emailing
  */
@@ -371,6 +389,8 @@ app.post('/user/auth/signup', async (req, res) => {
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     const now = new Date();
+    const userCount = await prisma.user.count();
+    const role = userCount === 0 ? Role.ADMIN : Role.USER;
 
     const newUser = await prisma.user.create({
       data: {
@@ -381,6 +401,7 @@ app.post('/user/auth/signup', async (req, res) => {
         verificationOtp: otp,
         otpExpiresAt,
         otpLastSentAt: now,
+        role: role,
       },
     });
 
@@ -1148,6 +1169,58 @@ app.post('/user/auth/reset-password', async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 });
+
+app.patch(
+  '/user/:id/promote',
+  authenticateToken,
+  authorizeAdmin,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const targetUserId = parseInt(req.params.id, 10);
+      if (isNaN(targetUserId)) {
+        return res.status(400).json({ message: 'Invalid user ID format.' });
+      }
+
+      const adminUserId = req.user!.userId;
+
+      if (targetUserId === adminUserId) {
+        return res
+          .status(400)
+          .json({ message: 'Admins cannot change their own role.' });
+      }
+
+      const userToPromote = await prisma.user.findUnique({
+        where: { id: targetUserId },
+      });
+
+      if (!userToPromote) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      if (userToPromote.role === Role.ADMIN) {
+        return res.status(200).json({
+          message: 'User is already an admin.',
+          user: userToPromote,
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { id: targetUserId },
+        data: {
+          role: Role.ADMIN,
+        },
+      });
+
+      res.status(200).json({
+        message: 'User successfully promoted to admin.',
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error('Promote User Error:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+);
 
 // username availability check
 app.get('/user/check-username', async (req: Request, res: Response) => {
