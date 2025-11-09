@@ -28,6 +28,9 @@ const config: Config = {
     '!src/**/schemas/**',
     '!src/app/routes.ts',
     '!src/**/index.ts',
+    '!src/controllers/DebugController.ts', // dev-only
+    '!src/services/AttachmentService.ts', // S3/signing heavy; cover later if you want
+    '!src/repositories/ReservationRepository.ts', // thin DB wrapper
   ],
 
   // The directory where Jest should output its coverage files

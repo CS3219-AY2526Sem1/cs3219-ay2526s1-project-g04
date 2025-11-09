@@ -2,6 +2,7 @@
 import { execSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { generateKeyPairSync } from 'node:crypto';
 
 export default async () => {
   // 1) Boot DB
@@ -17,16 +18,35 @@ export default async () => {
       if (m) process.env[m[1]] = m[2];
     }
   }
-  process.env.NODE_ENV = 'test';
+  process.env['NODE_ENV'] = 'test';
 
   // Fallback to what your logs showed (5430) if not set
-  if (!process.env.DATABASE_URL) {
-    process.env.DATABASE_URL = 'postgresql://postgres@localhost:5430/qs_test';
+  if (!process.env['DATABASE_URL']) {
+    process.env['DATABASE_URL'] =
+      'postgresql://postgres@localhost:5430/qs_test';
+  }
+
+  const pubPath = path.join(process.cwd(), 'public.pem');
+  const privPath = path.join(process.cwd(), '.private.test.pem');
+
+  if (!fs.existsSync(pubPath) || !fs.existsSync(privPath)) {
+    const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+      modulusLength: 2048,
+      publicExponent: 0x10001,
+    });
+    fs.writeFileSync(
+      privPath,
+      privateKey.export({ type: 'pkcs8', format: 'pem' }).toString(),
+    );
+    fs.writeFileSync(
+      pubPath,
+      publicKey.export({ type: 'spki', format: 'pem' }).toString(),
+    );
   }
 
   // 3) Apply raw SQL migration with psql
   // psql prefers postgres:// — convert if needed
-  const psqlUrl = process.env.DATABASE_URL.replace(
+  const psqlUrl = process.env['DATABASE_URL'].replace(
     /^postgresql:\/\//,
     'postgres://',
   );
