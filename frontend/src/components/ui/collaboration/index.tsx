@@ -3,7 +3,11 @@ import CollabMonaco from './CollabMonaco';
 import { Communication } from './communication';
 import { QuestionCard } from './question';
 import { TestCases } from './tests';
-import { getCollabProvider, ProviderIsUndefined } from './collabSingleton';
+import {
+  getCollabProvider,
+  ProviderIsUndefined,
+  removeCollabProvider,
+} from './collabSingleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { sessionIsAlive } from '@/services/collaborationServiceApi';
@@ -77,9 +81,9 @@ export const Collaboration = (p: CollaborationProps) => {
         if (value && value.senderId.toString() !== getUserId()!.toString()) {
           alert(value.message);
           router.push('/home/dashboard');
+          notifications.delete(key);
+          removeCollabProvider();
         }
-
-        notifications.delete(key);
       }
     });
   };

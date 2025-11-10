@@ -103,28 +103,26 @@ export default function EditingSection({
   };
 
   return (
-    <div className="flex flex-row items-end gap-x-6">
+    <div className="flex flex-row items-start gap-x-6">
       {/* Input */}
       <div className="flex-1 flex flex-col gap-y-2">
         <p className="text-lg font-semibold">Input</p>
-        <input
-          type="text"
+        <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Enter test case input here"
-          className="border border-gray-400 p-2 rounded h-12 w-full flex items-center hover:bg-blue-100 transition"
+          className="border border-gray-400 p-3 rounded h-36 w-full resize-none flex items-center hover:bg-blue-100 transition scrollbar-auto"
         />
       </div>
 
       {/* Expected Output */}
       <div className="flex-1 flex flex-col gap-y-2">
         <p className="text-lg font-semibold">Expected Output</p>
-        <input
-          type="text"
+        <textarea
           value={output}
           onChange={(e) => setOutput(e.target.value)}
           placeholder="Enter test case expected output here"
-          className="border border-gray-400 p-2 rounded h-12 w-full flex items-center hover:bg-blue-100 transition"
+          className="border border-gray-400 p-3 rounded h-36 w-full resize-none flex items-center hover:bg-blue-100 transition scrollbar-auto"
         />
       </div>
 
@@ -145,51 +143,53 @@ export default function EditingSection({
       </div>
 
       {/* Actions */}
-      {mode === 'creating' ? (
-        <>
-          <Tooltip title="Add new test case">
-            <button
-              type="button"
-              onClick={() => handleAddNew()}
-              className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-blue-100 transition"
-            >
-              <PlusIcon className="w-6 h-6 text-gray-500 group-hover:text-blue-500 transition" />
-            </button>
-          </Tooltip>
+      <div className="flex flex-row gap-x-2 h-full mt-9">
+        {mode === 'creating' ? (
+          <>
+            <Tooltip title="Add new test case">
+              <button
+                type="button"
+                onClick={() => handleAddNew()}
+                className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-blue-100 transition"
+              >
+                <PlusIcon className="w-6 h-6 text-gray-500 group-hover:text-blue-500 transition" />
+              </button>
+            </Tooltip>
 
-          <Tooltip title="Clear">
-            <button
-              type="button"
-              onClick={() => handleCancel()}
-              className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-red-100 transition"
-            >
-              <XMarkIcon className="w-6 h-6 text-gray-500 group-hover:text-red-500 transition" />
-            </button>
-          </Tooltip>
-        </>
-      ) : (
-        <>
-          <Tooltip title="Save edits">
-            <button
-              type="button"
-              onClick={() => handleSaveEdits()}
-              className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-green-100 transition"
-            >
-              <CheckIcon className="w-6 h-6 text-gray-500 group-hover:text-green-500 transition" />
-            </button>
-          </Tooltip>
+            <Tooltip title="Clear">
+              <button
+                type="button"
+                onClick={() => handleCancel()}
+                className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-red-100 transition"
+              >
+                <XMarkIcon className="w-6 h-6 text-gray-500 group-hover:text-red-500 transition" />
+              </button>
+            </Tooltip>
+          </>
+        ) : (
+          <>
+            <Tooltip title="Save edits">
+              <button
+                type="button"
+                onClick={() => handleSaveEdits()}
+                className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-green-100 transition"
+              >
+                <CheckIcon className="w-6 h-6 text-gray-500 group-hover:text-green-500 transition" />
+              </button>
+            </Tooltip>
 
-          <Tooltip title="Cancel edit">
-            <button
-              type="button"
-              onClick={() => handleCancel()}
-              className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-red-100 transition"
-            >
-              <XMarkIcon className="w-6 h-6 text-gray-500 group-hover:text-red-500 transition" />
-            </button>
-          </Tooltip>
-        </>
-      )}
+            <Tooltip title="Cancel edit">
+              <button
+                type="button"
+                onClick={() => handleCancel()}
+                className="w-12 h-12 flex items-center justify-center border border-gray-400 rounded-full group hover:bg-red-100 transition"
+              >
+                <XMarkIcon className="w-6 h-6 text-gray-500 group-hover:text-red-500 transition" />
+              </button>
+            </Tooltip>
+          </>
+        )}
+      </div>
     </div>
   );
 }

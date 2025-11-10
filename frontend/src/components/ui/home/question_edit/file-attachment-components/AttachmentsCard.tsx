@@ -72,15 +72,17 @@ export default function AttachmentsCard({ attachment, setAttachments }: props) {
 
   return (
     <div className="flex items-center h-10 w-full py-2 rounded-md border border-gray-300">
-      <div className="flex flex-row flex-1 border-r border-gray-300 px-3 gap-x-2">
-        <p className="font-semibold">Name:</p>
-        <p className="truncate">{attachment.filename}</p>
+      <div className="flex flex-row flex-shrink-0 w-[40%] border-r border-gray-300 px-3 gap-x-2">
+        <p className="font-semibold flex-shrink-0">Name:</p>
+        <p className="truncate min-width-0">{attachment.filename}</p>
       </div>
 
-      <div className="flex-2 flex items-center px-3 gap-2">
-        <p className="flex-1 font-mono truncate">{markdownText}</p>
+      <div className="flex flex-shrink-0 w-[60%] items-center px-3 gap-2">
+        <div className="flex-1 overflow-x-auto">
+          <p className="font-mono truncate">{markdownText}</p>
+        </div>
 
-        <div className="flex gap-x-1">
+        <div className="flex gap-x-1 flex-shrink-0">
           <Tooltip title="Copy to clipboard">
             <button
               type="button"

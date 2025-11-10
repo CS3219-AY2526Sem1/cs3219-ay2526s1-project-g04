@@ -23,7 +23,7 @@ import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
 import { useRouter } from 'next/navigation';
-import { removeCollabProvider } from './collabSingleton';
+import { getCollabProvider, removeCollabProvider } from './collabSingleton';
 import { getUserId } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
@@ -37,8 +37,9 @@ export default function CollabNavigationBar({
   const appBarRef = useRef<HTMLDivElement>(null);
 
   const { code, language, testCases, setResults, sessionId } = useCodeContext();
-
+  console.log('code in nav', code);
   const router = useRouter();
+  const CODEEXEURL = process.env.NEXT_PUBLIC_CODE_EXE_SERVICE;
 
   useEffect(() => {
     if (appBarRef.current && onHeightChange) {
@@ -66,14 +67,15 @@ export default function CollabNavigationBar({
     }
   }
 
-  async function runBatchCode(
-    code: string,
-    inputs: (number | string | boolean | object)[],
-  ) {
+  async function runBatchCode(code: string, inputs: string[]) {
     console.log('[Batch Runner Inputs]', inputs);
 
+    // console.log('parsed output', parsedInputs);
+    // console.log(JSON.stringify({ code, parsedInputs }));
+    // console.log(JSON.stringify({ code, inputs }));
+
     try {
-      const response = await fetch('http://localhost:5000/batch-run', {
+      const response = await fetch(`${CODEEXEURL}/batch-run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, inputs }),
@@ -83,6 +85,7 @@ export default function CollabNavigationBar({
       console.log('[Batch Runner Results]', results);
 
       if (results?.outputs) {
+        console.log('outputs', results.outputs);
         setResults(results.outputs);
         console.log('[Context Updated] Stored outputs in test case context.');
       } else {
@@ -119,8 +122,20 @@ export default function CollabNavigationBar({
         getUserId()!.toString(),
       );
       if (terminated) {
-        removeCollabProvider();
-        router.push('/home/dashboard');
+        const providers = getCollabProvider(sessionId, getUserId()!.toString());
+        if (providers && providers.yCodeDoc) {
+          console.log('SENDING MESSAGE');
+          const yNotifications = providers.yCodeDoc.getMap('notifications');
+          const messagePayload = {
+            senderId: getUserId(),
+            message:
+              'your coding buddy has left, you will be redirected to the home page',
+            timestamp: Date.now(),
+          };
+          yNotifications.set(Date.now().toString(), messagePayload);
+          removeCollabProvider();
+          router.push('/home/dashboard');
+        }
       }
     } catch (error) {
       console.error('Failed to end session:', error);

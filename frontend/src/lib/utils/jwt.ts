@@ -58,6 +58,11 @@ export const getUsername = (): string | null => {
   return decoded ? decoded.username : null;
 };
 
+export const getRole = (): string | null => {
+  const decoded = getDecodedToken();
+  return decoded ? decoded.role : null;
+};
+
 export const isTokenExpired = (): boolean => {
   const decoded = getDecodedToken();
   if (!decoded || !decoded.exp) {

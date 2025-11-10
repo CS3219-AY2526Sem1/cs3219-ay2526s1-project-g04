@@ -22,7 +22,7 @@ model Session {
   terminationStatus Int?
   startedAt DateTime?
   endedAt DateTime?
-  
+  solved Boolean? 
   codeDocument  Document?     
   users    Participants?
 }

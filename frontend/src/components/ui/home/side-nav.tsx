@@ -12,6 +12,7 @@ import {
   ArchiveBoxIcon,
   Bars3Icon,
   XMarkIcon,
+  MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline';
 
 export const drawerWidth = 240;
@@ -30,6 +31,11 @@ const navLinks = [
     name: 'Question Bank',
     href: '/home/question-bank',
     icon: ArchiveBoxIcon,
+  },
+  {
+    name: 'Question Search',
+    href: '/home/question-search',
+    icon: MagnifyingGlassIcon,
   },
 ];
 

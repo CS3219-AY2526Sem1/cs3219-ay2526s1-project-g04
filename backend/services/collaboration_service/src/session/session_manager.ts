@@ -26,6 +26,9 @@ export enum SessionTerminations {
   endByUser = 0,
   timeout = 1,
 }
+interface QuestionResponse {
+  starter_code?: string;
+}
 
 export class SessionManager {
   private sessions: Record<string, SessionEntry>;
@@ -44,12 +47,7 @@ export class SessionManager {
     this.redis = redis;
     this.db = db;
     this.wss = wss;
-    this.sessions = {
-      40: {
-        session: new Session(40, 1, 2, 'two_sum'),
-        matchedId: '123',
-      },
-    };
+    this.sessions = {};
     this.pgdb = pgdb;
 
     this.wss.on('connection', (ws, req) => {
@@ -79,17 +77,17 @@ export class SessionManager {
 
     //Create session id
     const sessionId: number = await this.db.createSessionDataModel(
-      Number(matchedData['user_a']),
-      Number(matchedData['user_b']),
-      matchedData['question_id'] ?? '',
+      Number(matchedData['userAId']),
+      Number(matchedData['userBId']),
+      matchedData['questionId'] ?? '',
     );
 
     // create session object
     const session = new Session(
       sessionId,
-      Number(matchedData['user_a']),
-      Number(matchedData['user_b']),
-      matchedData['question_id'] ?? '',
+      Number(matchedData['userAId']),
+      Number(matchedData['userBId']),
+      matchedData['questionId'] ?? '',
     );
     this.sessions[sessionId] = {
       session: session,
@@ -105,16 +103,15 @@ export class SessionManager {
 
     // const sessionId = await this.db.createSessionDataModel(...);
     const ydoc = new Y.Doc();
-    const docName = sessionId.toString();
-
     const yText = ydoc.getText('monaco');
-    yText.insert(
-      0,
-      `def twoSum(nums, target):
-    # Write your solution here
-    pass
-    `,
+    const questionUrl = process.env['QUESTIONURL'];
+    const res = await fetch(
+      `${questionUrl}/questions/${matchedData['questionId']}`,
     );
+    const resJson: QuestionResponse = await res.json();
+    if (resJson['starter_code']) yText.insert(0, resJson['starter_code']);
+
+    const docName = sessionId.toString();
 
     this.pgdb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
     console.log(`[y-postgres] Document initialized for session ${docName}`);
@@ -218,6 +215,36 @@ export class SessionManager {
         : 'NOTFOUND',
     };
     return toRet;
+  }
+
+  public getActiveSessionForUser(userId: number): number | undefined {
+    const sessionItem = Object.values(this.sessions).find((item) =>
+      item.session.getUsers().includes(userId.toString()),
+    );
+
+    if (sessionItem) {
+      return sessionItem.session.getId();
+    }
+  }
+
+  public getSessionsQuestion(sessionId: number): string | undefined {
+    const session = this.getSessionById(sessionId);
+    return session?.getQuestionId();
+  }
+
+  public getSessionsOtherUser(
+    sessionId: number,
+    userId: number,
+  ): number | undefined {
+    const session = this.getSessionById(sessionId);
+    const users = session?.getUsers();
+    if (users) {
+      if (Number(users[0]) !== userId) {
+        return Number(users[0]);
+      } else {
+        return Number(users[1]);
+      }
+    }
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {

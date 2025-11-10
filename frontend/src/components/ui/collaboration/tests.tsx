@@ -68,7 +68,7 @@ export const TestCases = () => {
                 fontFamily="monospace"
                 className="bg-gray-100 p-1 px-3 rounded-xl"
               >
-                {JSON.stringify(testCase.input)}
+                {testCase.input}
               </Typography>
 
               <Typography variant="subtitle2">Expected Output:</Typography>
