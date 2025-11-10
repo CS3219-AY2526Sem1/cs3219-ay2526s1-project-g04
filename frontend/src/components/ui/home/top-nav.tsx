@@ -127,12 +127,6 @@ export default function TopNavigationBar({
 
           {/* Top Navigation Bar right elements */}
           <div className="flex flex-row space-x-2">
-            <Tooltip title="settings">
-              <IconButton className="text-[var(--foreground)]">
-                <SettingsOutlined />
-              </IconButton>
-            </Tooltip>
-
             <Tooltip title="notifications">
               <IconButton className="text-[var(--foreground)]">
                 <NotificationsOutlined />
