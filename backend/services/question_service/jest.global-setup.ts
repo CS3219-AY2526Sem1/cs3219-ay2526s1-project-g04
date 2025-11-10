@@ -15,7 +15,11 @@ export default async () => {
   if (fs.existsSync(envPath)) {
     for (const ln of fs.readFileSync(envPath, 'utf8').split('\n')) {
       const m = ln.match(/^\s*([A-Z0-9_]+)=(.*)\s*$/);
-      if (m) process.env[m[1]] = m[2];
+      if (m && m[1]) {
+        const key = m[1];
+        const val = m[2] ?? '';
+        process.env[key] = val;
+      }
     }
   }
   process.env['NODE_ENV'] = 'test';

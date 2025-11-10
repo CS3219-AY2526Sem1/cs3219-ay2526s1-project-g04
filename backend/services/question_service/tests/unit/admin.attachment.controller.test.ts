@@ -1,4 +1,3 @@
-// tests/unit/admin.attachment.controller.test.ts
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import type { Response } from 'express';
 import type { AuthRequest } from '../../src/middleware/auth.js';
