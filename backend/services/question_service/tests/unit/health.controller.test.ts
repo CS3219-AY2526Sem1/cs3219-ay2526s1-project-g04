@@ -38,17 +38,19 @@ beforeEach(() => {
   originalEnv = process.env;
   process.env = { ...originalEnv };
 
-  jsonMock = jest.fn();
-  statusMock = jest.fn().mockReturnThis();
+  jsonMock = jest.fn() as any;
+  statusMock = jest.fn(function (this: Response) {
+    return this;
+  }) as any;
 
   mockResponse = {
-    json: jsonMock,
-    status: statusMock,
+    json: jsonMock as unknown as Response['json'],
+    status: statusMock as unknown as Response['status'],
   };
 
   mockRequest = {
     ip: '127.0.0.1',
-    get: jest.fn().mockReturnValue('test-user-agent'),
+    get: ((name: string) => 'test-user-agent') as unknown as Request['get'],
   };
 
   // IMPORTANT: Spy on already-imported ESM modules (no hoisting issues)
@@ -299,8 +301,11 @@ describe('HealthController', () => {
       it('should handle missing S3_BUCKET configuration', async () => {
         // Use an isolated module graph just for this branch so we can alter S3_BUCKET binding
         await jest.isolateModulesAsync(async () => {
-          const prismaExecuteRaw = jest.fn().mockResolvedValue(1);
-          const s3Send = jest.fn(); // won't be called because code short-circuits
+          const prismaExecuteRaw = jest.fn() as jest.MockedFunction<
+            () => Promise<number>
+          >;
+          prismaExecuteRaw.mockResolvedValue(1);
+          const s3Send = jest.fn() as unknown as jest.Mock;
 
           await jest.unstable_mockModule(
             '../../src/repositories/prisma.js',
@@ -469,7 +474,9 @@ describe('HealthController', () => {
             }),
           );
 
-          const payload = (infoSpy as jest.Mock).mock.calls[0][1];
+          const payload = (infoSpy as unknown as jest.Mock).mock
+            .calls[0]?.[1] as any;
+          expect(payload).toBeDefined();
           expect(payload.durationMs).toBeGreaterThanOrEqual(0);
           expect(payload.durationMs).toBeLessThanOrEqual(
             endTime - startTime + 100,
@@ -482,13 +489,14 @@ describe('HealthController', () => {
           spyExec.mockResolvedValue(1);
           spySend.mockResolvedValue({});
 
-          mockRequest.ip = '192.168.1.1';
-          (mockRequest.get as jest.Mock).mockReturnValue('Custom-Agent/1.0');
+          const req2 = {
+            ...mockRequest,
+            ip: '192.168.1.1',
+            get: ((name: string) =>
+              'Custom-Agent/1.0') as unknown as Request['get'],
+          } as Request;
 
-          await HealthController.readyz(
-            mockRequest as Request,
-            mockResponse as Response,
-          );
+          await HealthController.readyz(req2, mockResponse as Response);
 
           expect(infoSpy).toHaveBeenCalledWith(
             '[readyz] ready',
