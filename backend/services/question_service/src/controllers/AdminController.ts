@@ -343,7 +343,7 @@ export async function update(req: Request, res: Response) {
       const stat = normalizeStatus(req.body.status);
       if (!stat) {
         return res.status(400).json({
-          error: 'difficulty must be one of: draft, published, archived',
+          error: 'status must be one of: draft, published, archived',
         });
       }
       newStatus = stat;
@@ -372,7 +372,7 @@ export async function update(req: Request, res: Response) {
       if (!isAttachmentArray(req.body.attachments)) {
         return res.status(400).json({
           error:
-            'attachments must be [{ object_key: string, mime: string, alt?: string }]',
+            'attachments must be an array of { object_key, filename, mime, [alt] }',
         });
       }
 
@@ -403,7 +403,7 @@ export async function update(req: Request, res: Response) {
       if (!isTestCaseArray(req.body.test_cases)) {
         return res.status(400).json({
           error:
-            'test_cases must be [{ visibility: "sample"|"hidden", input_data: string, expected_output: string, ordinal?: number }]',
+            'test_cases must be an array of { visibility, input_data, expected_output, [ordinal] }',
         });
       }
       newTestCases = req.body.test_cases;
@@ -602,7 +602,7 @@ export async function getById(req: Request, res: Response) {
     }
 
     const bundle = await Repo.getInternalResourcesBundle(id);
-    const starter_code = bundle?.starter_code ?? {};
+    const starter_code = bundle?.starter_code ?? '';
     const test_cases = bundle?.test_cases ?? [];
 
     log.info('[GET /questions/:id] success', {

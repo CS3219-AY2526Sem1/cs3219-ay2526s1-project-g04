@@ -37,8 +37,9 @@ export default function CollabNavigationBar({
   const appBarRef = useRef<HTMLDivElement>(null);
 
   const { code, language, testCases, setResults, sessionId } = useCodeContext();
-
+  console.log('code in nav', code);
   const router = useRouter();
+  const CODEEXEURL = process.env.NEXT_PUBLIC_CODE_EXE_SERVICE;
 
   useEffect(() => {
     if (appBarRef.current && onHeightChange) {
@@ -66,14 +67,15 @@ export default function CollabNavigationBar({
     }
   }
 
-  async function runBatchCode(
-    code: string,
-    inputs: (number | string | boolean | object)[],
-  ) {
+  async function runBatchCode(code: string, inputs: string[]) {
     console.log('[Batch Runner Inputs]', inputs);
 
+    // console.log('parsed output', parsedInputs);
+    // console.log(JSON.stringify({ code, parsedInputs }));
+    // console.log(JSON.stringify({ code, inputs }));
+
     try {
-      const response = await fetch('http://localhost:5000/batch-run', {
+      const response = await fetch(`${CODEEXEURL}/batch-run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, inputs }),
@@ -83,6 +85,7 @@ export default function CollabNavigationBar({
       console.log('[Batch Runner Results]', results);
 
       if (results?.outputs) {
+        console.log('outputs', results.outputs);
         setResults(results.outputs);
         console.log('[Context Updated] Stored outputs in test case context.');
       } else {

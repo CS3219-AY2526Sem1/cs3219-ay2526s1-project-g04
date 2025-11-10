@@ -9,8 +9,8 @@ import LoadingView from './LoadingView';
 import MatchedView from './MatchedView';
 import { type MatchState } from '@/lib/constants/MatchTypes';
 import TimeoutView from './TimeoutView';
-// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 import { getUserId } from '@/lib/utils/jwt';
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 
 interface MatchingPopUpProps {
   setShowMatching: React.Dispatch<React.SetStateAction<boolean>>;
@@ -20,12 +20,15 @@ interface CloseButtonProps {
   sendCancelReq?: boolean;
   onClick: () => void;
   setShowMatching: React.Dispatch<React.SetStateAction<boolean>>;
+  isCancelling: boolean;
+  setIsCancelling: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 function CloseFormButton({
   sendCancelReq = false,
   onClick,
   setShowMatching,
+  setIsCancelling,
 }: CloseButtonProps) {
   const [loading, setLoading] = React.useState(false);
 
@@ -38,6 +41,7 @@ function CloseFormButton({
           'Are you sure you want to cancel your match request?',
         );
         if (confirmed) {
+          setIsCancelling(true);
           const res = await deleteMatchRequest();
           if (!res.success) {
             const force = confirm(
@@ -46,10 +50,13 @@ function CloseFormButton({
             if (!force) {
               return;
             } else {
+              setIsCancelling(false);
               setShowMatching(false);
             }
           } else {
             alert(`${res.message}`);
+            setIsCancelling(false);
+            setShowMatching(false);
           }
         }
       } else {
@@ -75,6 +82,7 @@ function CloseFormButton({
 }
 
 export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
+  const [isCancelling, setIsCancelling] = React.useState(false);
   const [matchState, setMatchState] = React.useState<MatchState>({
     status: 'requesting',
     // matchingId: '123',
@@ -112,12 +120,16 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
           <CloseFormButton
             setShowMatching={setShowMatching}
             onClick={() => setShowMatching(false)}
+            isCancelling={isCancelling}
+            setIsCancelling={setIsCancelling}
           />
         ) : matchState.status === 'waiting' ? (
           <CloseFormButton
             sendCancelReq
             setShowMatching={setShowMatching}
             onClick={() => setShowMatching(false)}
+            isCancelling={isCancelling}
+            setIsCancelling={setIsCancelling}
           />
         ) : null}
 
@@ -127,7 +139,10 @@ export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
             <MatchingForm setMatchState={setMatchState} />
           )}
           {matchState.status === 'waiting' && (
-            <LoadingView setMatchState={setMatchState} />
+            <LoadingView
+              setMatchState={setMatchState}
+              isCancelling={isCancelling}
+            />
           )}
           {matchState.status === 'matched' && (
             <MatchedView

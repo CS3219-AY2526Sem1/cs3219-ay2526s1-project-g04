@@ -435,12 +435,14 @@ app.post('/user/auth/signup', async (req, res) => {
 // 2. LOG IN (for user or admin)
 app.post('/user/auth/login', async (req, res) => {
   try {
+    console.log(11);
     const { email, password } = loginSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
-
+    console.log(11);
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
+    console.log(11);
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -478,6 +480,7 @@ app.post('/user/auth/login', async (req, res) => {
 
     res.status(200).json({ message: 'Login successful.', token, refreshToken });
   } catch (error) {
+    console.log(error);
     res.status(400).json({ message: 'Invalid request', details: error });
   }
 });
@@ -807,6 +810,7 @@ app.post('/user/auth/verify-email', async (req, res) => {
       refreshToken,
     });
   } catch (error) {
+    console.log('error at verify', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 });

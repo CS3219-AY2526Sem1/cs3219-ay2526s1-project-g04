@@ -22,7 +22,10 @@ export class MatchingMessenger {
   public publishToCollaborationService(matchingId: string): void {
     this.publisher.publishMessageWithType(
       MESSAGE_TYPES.CollaborationService,
-      matchingId,
+      JSON.stringify({
+        type: 'matched',
+        matchedId: `matched:${matchingId}`,
+      }),
     );
     logger.info(
       `[MatchingMessenger] Published matching id ${matchingId} to collaboration service.`,

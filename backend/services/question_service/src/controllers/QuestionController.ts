@@ -185,7 +185,7 @@ export async function list(req: AuthRequest, res: Response) {
       error: msg,
       stack: err instanceof Error ? err.stack : undefined,
     });
-    return res.status(500).json({ error: 'internal_error' });
+    return res.status(500).json({ error: 'internal_error', message: err });
   }
 }
 

@@ -11,7 +11,7 @@ export async function initServer(redis: MatchingServiceRedis) {
 
   app.use(express.json());
 
-  app.use(cors({ origin: 'http://localhost:3000' }));
+  app.use(cors());
   app.get('/', (req: Request, res: Response) => {
     res.send('Hello World!');
   });

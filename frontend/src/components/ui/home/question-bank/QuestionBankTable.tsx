@@ -40,6 +40,7 @@ export default function QuestionBankTable({
 }: QuestionBankTableProps) {
   const router = useRouter();
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]); // store questions
   const [rowCount, setRowCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function QuestionBankTable({
       const success = await deleteAdminQuestions(id);
       if (success) {
         alert('Question deleted successfully!');
+        setRefreshTrigger((prev) => prev + 1);
       }
     } catch (err) {
       console.error(err);
@@ -80,6 +82,7 @@ export default function QuestionBankTable({
       const success = await postAdminQuestionsPublish(id);
       if (success) {
         alert('Question published successfully!');
+        setRefreshTrigger((prev) => prev + 1);
       }
     } catch (err) {
       console.error(err);
@@ -112,7 +115,7 @@ export default function QuestionBankTable({
 
     if (userRole === 'ADMIN') {
       const params: getQuestionsRequestParams = {
-        page: paginationModel.page,
+        page: paginationModel.page + 1,
         page_size: paginationModel.pageSize,
         topics: topicFilter,
       };
@@ -125,12 +128,22 @@ export default function QuestionBankTable({
           const data = res.data;
           const items = data.items;
 
+          console.log(
+            `[Question Bank Table] retrieved items: ${JSON.stringify(items)}`,
+          );
+
           setQuestions(items);
           setRowCount(data.total || items.length);
         })
         .finally(() => setLoading(false));
     }
-  }, [paginationModel.page, paginationModel.pageSize, topicFilter, userRole]);
+  }, [
+    paginationModel.page,
+    paginationModel.pageSize,
+    topicFilter,
+    userRole,
+    refreshTrigger,
+  ]);
 
   const adminColumns: GridColDef[] = [
     { field: 'title', headerName: 'Title', flex: 2 },

@@ -76,16 +76,24 @@ app.post('/batch-run', async (req, res) => {
   const funcNameMatch = code.match(/def\s+(\w+)\s*\(/);
   const funcName = funcNameMatch ? funcNameMatch[1] : 'user_function';
 
+  console.log(funcNameMatch);
+  console.log(funcName);
+  console.log(code);
+  console.log(inputs);
+
   // Wrap code
   const wrapper = `
 ${code}
 
 if __name__ == "__main__":
     import sys, json
+    import ast
     inputs = json.loads(sys.argv[1])
+    solver = Solution()
     for case in inputs:
+        case = ast.literal_eval(case)
         try:
-            result = ${funcName}(*case)
+            result = solver.${funcName}(case)
             print(json.dumps(result))  # JSON-encoded output for easy parsing
         except Exception as e:
             print(json.dumps(f"Error: {e}"))
@@ -121,7 +129,7 @@ if __name__ == "__main__":
   const timeout = setTimeout(() => {
     stderr += '\nTimeout: execution exceeded 3s.\n';
     child.kill('SIGKILL');
-  }, 5000);
+  }, 30000);
 
   child.on('error', (err) => {
     clearTimeout(timeout);
@@ -163,4 +171,4 @@ function escapeForShell(input: string): string {
   return input.replace(/(["\\$`])/g, '\\$1');
 }
 
-app.listen(5000, () => console.log('Python Runner ready on :5000'));
+app.listen(3010, () => console.log('Python Runner ready on :3010'));

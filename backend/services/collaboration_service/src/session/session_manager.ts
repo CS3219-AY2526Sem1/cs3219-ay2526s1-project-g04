@@ -77,17 +77,17 @@ export class SessionManager {
 
     //Create session id
     const sessionId: number = await this.db.createSessionDataModel(
-      Number(matchedData['user_a']),
-      Number(matchedData['user_b']),
-      matchedData['question_id'] ?? '',
+      Number(matchedData['userAId']),
+      Number(matchedData['userBId']),
+      matchedData['questionId'] ?? '',
     );
 
     // create session object
     const session = new Session(
       sessionId,
-      Number(matchedData['user_a']),
-      Number(matchedData['user_b']),
-      matchedData['question_id'] ?? '',
+      Number(matchedData['userAId']),
+      Number(matchedData['userBId']),
+      matchedData['questionId'] ?? '',
     );
     this.sessions[sessionId] = {
       session: session,
@@ -104,15 +104,6 @@ export class SessionManager {
     // const sessionId = await this.db.createSessionDataModel(...);
     const ydoc = new Y.Doc();
     const docName = sessionId.toString();
-
-    const yText = ydoc.getText('monaco');
-    yText.insert(
-      0,
-      `def twoSum(nums, target):
-    # Write your solution here
-    pass
-    `,
-    );
 
     this.pgdb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
     console.log(`[y-postgres] Document initialized for session ${docName}`);
