@@ -33,15 +33,6 @@ export function ProviderIsUndefined() {
 export function removeCollabProvider() {
   if (!yCodeDoc) return;
 
-  const yNotifications = yCodeDoc.getMap('notifications');
-  const messagePayload = {
-    senderId: getUserId(),
-    message:
-      'your coding buddy has left, you will be redirected to the home page',
-    timestamp: Date.now(),
-  };
-  yNotifications.set(Date.now().toString(), messagePayload);
-
   setTimeout(() => {
     if (codeProvider) {
       codeProvider.destroy(); // Disconnects from server
@@ -54,5 +45,5 @@ export function removeCollabProvider() {
     }
 
     console.log('Collab provider removed');
-  }, 1000);
+  }, 3000);
 }

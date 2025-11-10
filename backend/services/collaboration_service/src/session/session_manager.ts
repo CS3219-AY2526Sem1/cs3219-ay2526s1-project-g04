@@ -24,6 +24,9 @@ export enum SessionTerminations {
   endByUser = 0,
   timeout = 1,
 }
+interface QuestionResponse {
+  starter_code?: string;
+}
 
 export class SessionManager {
   private sessions: Record<string, SessionEntry>;
@@ -98,6 +101,14 @@ export class SessionManager {
 
     // const sessionId = await this.db.createSessionDataModel(...);
     const ydoc = new Y.Doc();
+    const yText = ydoc.getText('monaco');
+    const questionUrl = process.env['QUESTIONURL'];
+    const res = await fetch(
+      `${questionUrl}/questions/${matchedData['questionId']}`,
+    );
+    const resJson: QuestionResponse = await res.json();
+    if (resJson['starter_code']) yText.insert(0, resJson['starter_code']);
+
     const docName = sessionId.toString();
 
     this.pgdb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
