@@ -71,6 +71,18 @@ export default function CollabMonaco(p: props) {
 
     const yText = yCodeDoc.getText('monaco');
     yTextRef.current = yText;
+    console.log(yTextRef.current);
+    console.log(yText.length);
+    if (yText.length === 0) {
+      console.log('Setting Y.Text with default code...');
+      const initialCode = code;
+
+      // Use a transaction for the change
+      yCodeDoc.transact(() => {
+        yText.insert(0, initialCode);
+      });
+    }
+
     bindingRef.current = new MonacoBinding(
       yText,
       model,

@@ -40,7 +40,8 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
 
       setRemainingTime(timeLeft);
 
-      if (status === 'matched') {
+      if (status === 'matched' && res.data?.matchingId) {
+        console.log(11111, res.data);
         setMatchState({
           status: 'matched',
           matchingId: res.data?.matchingId ?? '',

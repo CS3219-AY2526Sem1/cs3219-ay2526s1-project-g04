@@ -1,4 +1,4 @@
-const COLLAB_SERVICE_URL = process.env.COLLAB_SERVICE_URL!;
+const COLLAB_SERVICE_URL = process.env.NEXT_PUBLIC_API_COLLAB_SERVICE!;
 
 export async function getQuestionIdBySessId(
   sessId: string,
