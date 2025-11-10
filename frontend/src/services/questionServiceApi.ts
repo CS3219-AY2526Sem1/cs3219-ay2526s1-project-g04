@@ -103,6 +103,7 @@ export async function postAdminAttachmentsSignView(
     const url = `${QUESTION_SERVICE_URL}/admin/attachments/sign-view`;
 
     const res = await fetchWithAuth(url, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -449,7 +450,7 @@ export async function getTopics(): Promise<
  * List topics that appear in published questions
  */
 export async function getTopicsByDifficulty(
-  difficulty?: string,
+  difficulty: string,
 ): Promise<Types.ApiResponse<Types.getTopicsResponse>> {
   try {
     const url = new URL(`${QUESTION_SERVICE_URL}/questions/topics`);

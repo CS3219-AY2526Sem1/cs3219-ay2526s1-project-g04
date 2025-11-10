@@ -24,6 +24,8 @@ export default function Page() {
         }
 
         const data = res.data;
+
+        console.log(`[Question Form] Question data retrieved: ${data}`);
         setQuestionData(data);
       })
       .catch((err) => console.error(err))
