@@ -42,12 +42,7 @@ export class SessionManager {
     this.redis = redis;
     this.db = db;
     this.wss = wss;
-    this.sessions = {
-      40: {
-        session: new Session(40, 1, 2, 'two_sum'),
-        matchedId: '123',
-      },
-    };
+    this.sessions = {};
     this.pgdb = pgdb;
 
     this.wss.on('connection', (ws, req) => {
@@ -189,6 +184,34 @@ export class SessionManager {
         : 'NOTFOUND',
     };
     return toRet;
+  }
+
+  public getActiveSessionForUser(userId: number): number | undefined {
+    for (const [key, item] of Object.entries(this.sessions)) {
+      if (item.session.getUsers().includes(userId.toString())) {
+        return item.session.getId();
+      }
+    }
+  }
+
+  public getSessionsQuestion(sessionId: number): string | undefined {
+    const session = this.getSessionById(sessionId);
+    return session?.getQuestionId();
+  }
+
+  public getSessionsOtherUser(
+    sessionId: number,
+    userId: number,
+  ): number | undefined {
+    const session = this.getSessionById(sessionId);
+    const users = session?.getUsers();
+    if (users) {
+      if (Number(users[0]) !== userId) {
+        return Number(users[0]);
+      } else {
+        return Number(users[1]);
+      }
+    }
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {

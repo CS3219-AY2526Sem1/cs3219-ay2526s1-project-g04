@@ -74,6 +74,10 @@ export class Session {
     console.log(userId);
   }
 
+  public getUsers(): string[] {
+    return Object.keys(this.users);
+  }
+
   public getId() {
     return this.sessionId;
   }
