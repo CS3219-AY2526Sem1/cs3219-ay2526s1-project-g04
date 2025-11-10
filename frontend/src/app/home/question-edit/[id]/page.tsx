@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import QuestionForm from '@/components/ui/home/question_edit/forms/QuestionForm';
 import { getAdminQuestionById } from '@/services/questionServiceApi';
 import { Question } from '@/lib/question-service';
 
 export default function Page() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id;
   const [questionData, setQuestionData] = useState<Question | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,6 +21,7 @@ export default function Page() {
       .then((res) => {
         if (!res.success) {
           alert(`⚠️ Error: ${res.message}`);
+          router.push('/home/question-bank');
           return;
         }
 

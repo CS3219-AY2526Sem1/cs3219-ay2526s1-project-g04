@@ -40,6 +40,7 @@ export default function QuestionBankTable({
 }: QuestionBankTableProps) {
   const router = useRouter();
 
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]); // store questions
   const [rowCount, setRowCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function QuestionBankTable({
       const success = await deleteAdminQuestions(id);
       if (success) {
         alert('Question deleted successfully!');
+        setRefreshTrigger((prev) => prev + 1);
       }
     } catch (err) {
       console.error(err);
@@ -80,6 +82,7 @@ export default function QuestionBankTable({
       const success = await postAdminQuestionsPublish(id);
       if (success) {
         alert('Question published successfully!');
+        setRefreshTrigger((prev) => prev + 1);
       }
     } catch (err) {
       console.error(err);
@@ -134,7 +137,13 @@ export default function QuestionBankTable({
         })
         .finally(() => setLoading(false));
     }
-  }, [paginationModel.page, paginationModel.pageSize, topicFilter, userRole]);
+  }, [
+    paginationModel.page,
+    paginationModel.pageSize,
+    topicFilter,
+    userRole,
+    refreshTrigger,
+  ]);
 
   const adminColumns: GridColDef[] = [
     { field: 'title', headerName: 'Title', flex: 2 },
