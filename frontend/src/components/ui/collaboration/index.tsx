@@ -1,4 +1,4 @@
-import { Box, Stack } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import CollabMonaco from './CollabMonaco';
 import { Communication } from './communication';
 import { QuestionCard } from './question';
@@ -14,6 +14,7 @@ import { sessionIsAlive } from '@/services/collaborationServiceApi';
 import { getUserId } from '@/lib/utils/jwt';
 import { useCodeContext } from './CodeContext';
 import { YMapEvent } from 'yjs';
+import Image from 'next/image';
 
 interface CollaborationProps {
   sessionId: string;
@@ -63,11 +64,32 @@ export const Collaboration = (p: CollaborationProps) => {
   }, []);
 
   if (loading) {
-    return <h1>Loading session...</h1>;
+    return (
+      <Box className="w-full h-full flex justify-center">
+        <Stack className="h-full w-full flex justify-center">
+          <Image
+            className="h-fit self-center"
+            src="/spinner.gif"
+            alt="Loading topics..."
+            width={96}
+            height={96}
+            unoptimized
+          />
+          <Typography className="self-center" variant={'h6'}>
+            Spinning up your session ...
+          </Typography>
+        </Stack>
+      </Box>
+    );
   }
 
   if (!providers) {
-    return <h1>Oppsss, start session from home page</h1>;
+    return (
+      <Typography className="justify-self-center self-center" variant="h5">
+        Oops, you do not have any session, please start a session from your
+        homepage
+      </Typography>
+    );
   }
 
   const { yCodeDoc, codeProvider } = providers;
