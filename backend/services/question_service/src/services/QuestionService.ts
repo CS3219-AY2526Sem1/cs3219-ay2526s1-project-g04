@@ -12,6 +12,7 @@ type ListResult<T> = {
   items: T[];
   total: number;
 };
+type WithSnippetHtml<T> = T & { snippet_html?: string | null };
 
 export async function getPublishedWithHtml(id: string) {
   const row = await Repo.getPublishedById(id);
@@ -42,18 +43,18 @@ export async function listPublished(opts: {
 
   const items = await Promise.all(
     rows.map(async (row) => {
-      const attachments = (row.attachments ?? []) as AttachmentLike[];
-      const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+      const r = row as WithSnippetHtml<QuestionRecordFromRepo>;
+      const attachments = (r.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(r.body_md, attachments);
 
       const base = toPublicQuestion({
-        row: row as QuestionRecordFromRepo,
+        row: r,
         body_html,
       });
 
-      if (opts.highlight && (row as any).snippet_html) {
-        (base as any).snippet_html = (row as any).snippet_html;
-      }
-      return base;
+      return opts.highlight && r.snippet_html
+        ? { ...base, snippet_html: r.snippet_html }
+        : base;
     }),
   );
 
@@ -101,18 +102,18 @@ export async function listAll(opts: {
 
   const items = await Promise.all(
     rows.map(async (row) => {
-      const attachments = (row.attachments ?? []) as AttachmentLike[];
-      const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+      const r = row as WithSnippetHtml<QuestionRecordFromRepo>;
+      const attachments = (r.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(r.body_md, attachments);
 
       const base = toPublicQuestion({
-        row: row as QuestionRecordFromRepo,
+        row: r,
         body_html,
       });
 
-      if (opts.highlight && (row as any).snippet_html) {
-        (base as any).snippet_html = (row as any).snippet_html;
-      }
-      return base;
+      return opts.highlight && r.snippet_html
+        ? { ...base, snippet_html: r.snippet_html }
+        : base;
     }),
   );
 
