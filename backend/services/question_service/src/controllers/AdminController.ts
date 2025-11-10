@@ -500,7 +500,7 @@ export async function list(req: Request, res: Response) {
   if (q !== undefined) args.q = q;
   if (p !== undefined) args.page = p;
   if (s !== undefined) args.page_size = s;
-  if (h !== undefined) args.highlight = h;
+  if (h) args.highlight = true;
 
   log.info('[GET /questions] request', {
     ip: req.ip,
@@ -512,7 +512,7 @@ export async function list(req: Request, res: Response) {
     q_len: args.q?.length ?? 0,
     page: args.page,
     page_size: args.page_size,
-    highlight: args.highlight ?? false,
+    highlight: !!args.highlight,
   });
 
   try {
