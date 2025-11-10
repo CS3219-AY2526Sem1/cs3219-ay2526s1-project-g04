@@ -187,10 +187,12 @@ export class SessionManager {
   }
 
   public getActiveSessionForUser(userId: number): number | undefined {
-    for (const [key, item] of Object.entries(this.sessions)) {
-      if (item.session.getUsers().includes(userId.toString())) {
-        return item.session.getId();
-      }
+    const sessionItem = Object.values(this.sessions).find((item) =>
+      item.session.getUsers().includes(userId.toString()),
+    );
+
+    if (sessionItem) {
+      return sessionItem.session.getId();
     }
   }
 
