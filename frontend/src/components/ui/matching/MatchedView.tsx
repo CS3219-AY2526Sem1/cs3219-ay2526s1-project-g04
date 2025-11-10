@@ -30,7 +30,7 @@ export default function MatchedView({
           `matched:${matchingId}`,
         );
         console.log(sessionId, created, createProcessIsDone);
-        if (created && sessionId && !createProcessIsDone) {
+        if (created && sessionId) {
           getCollabProvider(sessionId, getUserId()!.toString());
           setCreateProcessIsDone(true);
         }

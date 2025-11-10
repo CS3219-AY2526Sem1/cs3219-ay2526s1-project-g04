@@ -1,9 +1,10 @@
-import express from 'express';
+import express, { type Response } from 'express';
 import cors from 'cors';
 import { PostgresPrisma } from './data/postgres/postgres.js';
 import { PostgresqlPersistence } from 'y-postgresql';
 import { error } from 'console';
 import { SessionManager } from './session/session_manager.js';
+import { authenticateToken, type AuthRequest } from '../middleware/auth.js';
 
 export const app = express();
 const db = PostgresPrisma.getInstance();
@@ -29,9 +30,103 @@ app.get('/', (req, res) => {
   res.status(200).send('Collab service is alive');
 });
 
-app.get('/sessions/:userId', async (req, res) => {
+app.get(
+  '/sessions/me',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.userId;
+      if (!userId) {
+        return res.status(400).json({ error: 'Invalid userId' });
+      }
+      // const sessions = await db.getPastSessionsByUser(Number(userId));
+      const sessions = [
+        {
+          id: 1,
+          questionId: 'q_math_001',
+          endedAt: '2025-11-10T10:05:20.000Z',
+          solved: true,
+          UserAId: 101,
+          UserBId: 102,
+        },
+        {
+          id: 2,
+          questionId: 'q_chem_045',
+          endedAt: null,
+          solved: false,
+          UserAId: 103,
+          UserBId: 101,
+        },
+        {
+          id: 3,
+          questionId: 'q_hist_120',
+          endedAt: '2025-11-10T10:35:10.000Z',
+          solved: true,
+          UserAId: 102,
+          UserBId: 104,
+        },
+        {
+          id: 4,
+          questionId: 'q_cs_211',
+          endedAt: '2025-11-10T10:42:00.000Z',
+          solved: false,
+          UserAId: 105,
+          UserBId: 103,
+        },
+        {
+          id: 5,
+          questionId: 'q_phys_008',
+          endedAt: '2025-11-10T10:55:45.000Z',
+          solved: true,
+          UserAId: 101,
+          UserBId: 106,
+        },
+      ];
+      res.json(sessions);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
+
+app.get(
+  '/sessions/me/active',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const userId = req.user!.userId;
+      if (!userId) {
+        return res.status(400).json({ error: 'Invalid userId' });
+      }
+      // const sessions = await db.getPastSessionsByUser(Number(userId));
+      const sessionManager = SessionManager.getInstance();
+      const activeSessionId =
+        sessionManager.getActiveSessionForUser(Number(userId)) ?? 1;
+      if (!activeSessionId) {
+        throw new Error('SessionId not found during active session retrieval');
+      }
+      const questionId = sessionManager.getSessionsQuestion(activeSessionId);
+      const buddyId = sessionManager.getSessionsOtherUser(
+        activeSessionId,
+        Number(userId),
+      );
+      const activeSession = {
+        sessionId: activeSessionId ?? 1,
+        questionId: questionId ?? 'two sums',
+        partnerId: buddyId ?? 3,
+      };
+      res.send(activeSession);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
+
+app.get('/sessions/:userId', authenticateToken, async (req, res) => {
   try {
-    const userId = Number(req.params.userId);
+    const userId = Number(req.params['userId']);
     if (isNaN(userId)) {
       return res.status(400).json({ error: 'Invalid userId' });
     }
