@@ -7,6 +7,7 @@ import {
   beforeAll,
 } from '@jest/globals';
 import type { Request, Response } from 'express';
+import { asMock } from '../helpers/asMock.js'; // <-- explicit .js for node16/nodenext
 
 let AdminController: typeof import('../../src/controllers/AdminController.js');
 let Repo: typeof import('../../src/repositories/QuestionRepository.js');
@@ -16,7 +17,76 @@ let slugUtils: typeof import('../../src/utils/slug.js');
 let Service: typeof import('../../src/services/QuestionService.js');
 
 // prisma alias will be assigned after dynamic import inside beforeAll
-let prisma: { topics: { findMany: jest.Mock } };
+let prisma: any;
+const setTopics = (rows: any[]) =>
+  (prisma.topics.findMany as unknown as jest.Mock<any>).mockResolvedValue(
+    rows as any,
+  );
+
+// typed Express Response stub to avoid TS2322 on Send<...>
+function mockRes(): Response {
+  const res = {
+    status: jest.fn().mockReturnThis(),
+    json: jest.fn().mockReturnThis(),
+    location: jest.fn().mockReturnThis(),
+    get: jest.fn(),
+    setHeader: jest.fn(),
+  };
+  return res as unknown as Response;
+}
+
+/** ---------- Small factories to keep mocks consistent ---------- */
+function dbRow(overrides: Partial<Record<string, any>> = {}) {
+  return {
+    id: 'test',
+    title: 'Test',
+    body_md: 'Body',
+    difficulty: 'Easy' as const,
+    status: 'draft' as const,
+    topics: [] as string[],
+    attachments: [] as any[],
+    version: 1,
+    rand_key: 0.123,
+    created_at: new Date(),
+    updated_at: new Date(),
+    ...overrides,
+  };
+}
+
+function publicView(overrides: Partial<Record<string, any>> = {}) {
+  return {
+    id: 'test',
+    title: 'Test',
+    body_md: 'Body',
+    body_html: '<p>Body</p>',
+    difficulty: 'Easy' as const,
+    status: 'draft' as const,
+    topics: [] as Array<{ slug: string; display: string; color_hex: string }>,
+    attachments: [] as any[],
+    version: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+function bundle(overrides: Partial<Record<string, any>> = {}) {
+  return {
+    question_id: 'test',
+    status: 'draft',
+    starter_code: '', // string (not a language map)
+    test_cases: [] as Array<{
+      name: string;
+      visibility: string;
+      input_data: string;
+      expected_output: string;
+      ordinal: number;
+    }>,
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
+/** ---------------------------------------------------------------- */
 
 beforeAll(async () => {
   await jest.unstable_mockModule('../../src/utils/slug.js', () => ({
@@ -34,11 +104,7 @@ beforeAll(async () => {
     () => ({
       __esModule: true,
       finalizeStagedAttachments: jest.fn(),
-      signViewUrl: jest.fn().mockResolvedValue({
-        object_key: 'dummy/key.png',
-        view_url: 'https://example.com/signed-url',
-        expires_at: new Date(Date.now() + 900_000).toISOString(),
-      }),
+      signViewUrl: jest.fn(),
       signUploadUrl: jest.fn(),
       buildObjectKey: jest.fn(),
     }),
@@ -58,16 +124,17 @@ beforeAll(async () => {
     }),
   );
 
-  // ⬇️ Mock the Service layer so getById uses getQuestionWithHtml
+  // Mock the Service layer so getById uses getQuestionWithHtml
   await jest.unstable_mockModule(
     '../../src/services/QuestionService.js',
     () => ({
       __esModule: true,
       getQuestionWithHtml: jest.fn(),
-      listAll: jest.fn(), // present if any test later wants to use it
+      listAll: jest.fn(),
     }),
   );
 
+  // IMPORTANT: mock prisma BEFORE importing code that uses it
   await jest.unstable_mockModule('../../src/repositories/prisma.js', () => ({
     __esModule: true,
     prisma: { topics: { findMany: jest.fn() } },
@@ -81,8 +148,8 @@ beforeAll(async () => {
   slugUtils = await import('../../src/utils/slug.js');
   Service = await import('../../src/services/QuestionService.js');
 
-  // Get the mocked prisma AFTER import, avoiding top-level deref
-  ({ prisma } = await import('../../src/repositories/prisma.js'));
+  // Get the mocked prisma AFTER import
+  ({ prisma } = (await import('../../src/repositories/prisma.js')) as any);
 });
 
 describe('AdminController - Unit Tests', () => {
@@ -95,22 +162,18 @@ describe('AdminController - Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockJson = jest.fn();
-    mockStatus = jest.fn().mockReturnThis();
-    mockLocation = jest.fn().mockReturnThis();
+    const res = mockRes();
+    mockResponse = res;
 
-    mockResponse = {
-      json: mockJson,
-      status: mockStatus,
-      location: mockLocation,
-    };
+    mockJson = res.json as unknown as jest.Mock;
+    mockStatus = res.status as unknown as jest.Mock;
+    mockLocation = res.location as unknown as jest.Mock;
 
     mockRequest = {
       params: {},
       body: {},
       query: {},
-      // avoid crashes from controller logs that call req.get('user-agent')
-      get: jest.fn().mockImplementation((_name: string) => undefined),
+      get: jest.fn().mockReturnValue(undefined) as unknown as Request['get'],
     } as Partial<Request>;
   });
 
@@ -203,34 +266,31 @@ describe('AdminController - Unit Tests', () => {
           difficulty: 'easy',
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test-question');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
-        (Repo.createDraft as jest.Mock).mockResolvedValue({
-          id: 'test-question',
-          title: 'Test Question',
-          body_md: 'Test body',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue({
-          id: 'test-question',
-          title: 'Test Question',
-          body_md: 'Test body',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
-        });
+        asMock(slugUtils.slugify).mockReturnValue('test-question');
+        setTopics([]);
+        asMock(Repo.createDraft).mockResolvedValue(
+          dbRow({
+            id: 'test-question',
+            title: 'Test Question',
+            body_md: 'Test body',
+            difficulty: 'Easy',
+          }),
+        );
+        asMock(Repo.updateWithResources).mockResolvedValue(
+          dbRow({
+            id: 'test-question',
+            title: 'Test Question',
+            body_md: 'Test body',
+            difficulty: 'Easy',
+          }),
+        );
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
 
         await AdminController.create(
           mockRequest as Request,
@@ -252,9 +312,7 @@ describe('AdminController - Unit Tests', () => {
           topics: ['arrays', 'non-existent-topic'],
         };
 
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([
-          { slug: 'arrays' },
-        ]);
+        setTopics([{ slug: 'arrays' }]);
 
         await AdminController.create(
           mockRequest as Request,
@@ -276,8 +334,8 @@ describe('AdminController - Unit Tests', () => {
           difficulty: 'Easy',
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
+        asMock(slugUtils.slugify).mockReturnValue('');
+        setTopics([]);
 
         await AdminController.create(
           mockRequest as Request,
@@ -293,8 +351,8 @@ describe('AdminController - Unit Tests', () => {
 
     describe('successful creation', () => {
       beforeEach(() => {
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test-question');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
+        asMock(slugUtils.slugify).mockReturnValue('test-question');
+        setTopics([]);
       });
 
       it('should create a basic question without optional fields', async () => {
@@ -304,23 +362,27 @@ describe('AdminController - Unit Tests', () => {
           difficulty: 'Easy',
         };
 
-        const mockDraft = {
+        const mockDraft = dbRow({
           id: 'test-question',
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Easy' as const,
           status: 'draft' as const,
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        };
+        });
 
-        (Repo.createDraft as jest.Mock).mockResolvedValue(mockDraft);
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(mockDraft);
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
+        asMock(Repo.createDraft).mockResolvedValue(mockDraft);
+        asMock(Repo.updateWithResources).mockResolvedValue(mockDraft);
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
+        asMock(AttachmentService.signViewUrl).mockResolvedValue({
+          object_key: 'dummy/key.png',
+          view_url: 'https://example.com/signed-url',
+          expires_at: new Date(Date.now() + 900_000).toISOString(),
         });
 
         await AdminController.create(
@@ -336,7 +398,7 @@ describe('AdminController - Unit Tests', () => {
           expect.objectContaining({
             id: 'test-question',
             title: 'Test Question',
-            starter_code: {},
+            starter_code: '',
             test_cases: [],
           }),
         );
@@ -350,28 +412,30 @@ describe('AdminController - Unit Tests', () => {
           topics: ['arrays', 'hash-table'],
         };
 
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([
-          { slug: 'arrays' },
-          { slug: 'hash-table' },
-        ]);
+        setTopics([{ slug: 'arrays' }, { slug: 'hash-table' }]);
 
-        const mockDraft = {
+        const mockDraft = dbRow({
           id: 'test-question',
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Medium' as const,
           status: 'draft' as const,
           topics: ['arrays', 'hash-table'],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        };
+        });
 
-        (Repo.createDraft as jest.Mock).mockResolvedValue(mockDraft);
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(mockDraft);
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
+        asMock(Repo.createDraft).mockResolvedValue(mockDraft);
+        asMock(Repo.updateWithResources).mockResolvedValue(mockDraft);
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
+        asMock(AttachmentService.signViewUrl).mockResolvedValue({
+          object_key: 'dummy/key.png',
+          view_url: 'https://example.com/signed-url',
+          expires_at: new Date(Date.now() + 900_000).toISOString(),
         });
 
         await AdminController.create(
@@ -409,23 +473,35 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        const mockDraft = {
+        const mockDraft = dbRow({
           id: 'test-question',
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Hard' as const,
           status: 'draft' as const,
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        };
+        });
 
-        (Repo.createDraft as jest.Mock).mockResolvedValue(mockDraft);
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(mockDraft);
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: { python: 'def solution():\n    pass' },
-          test_cases: mockRequest.body.test_cases,
+        asMock(Repo.createDraft).mockResolvedValue(mockDraft);
+        asMock(Repo.updateWithResources).mockResolvedValue(mockDraft);
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: 'def solution():\n    pass',
+            test_cases: mockRequest.body.test_cases.map(
+              (tc: any, i: number) => ({
+                name: `tc-${i + 1}`,
+                visibility: tc.visibility,
+                input_data: tc.input_data,
+                expected_output: tc.expected_output,
+                ordinal: tc.ordinal ?? i + 1,
+              }),
+            ),
+          }),
+        );
+        asMock(AttachmentService.signViewUrl).mockResolvedValue({
+          object_key: 'dummy/key.png',
+          view_url: 'https://example.com/signed-url',
+          expires_at: new Date(Date.now() + 900_000).toISOString(),
         });
 
         await AdminController.create(
@@ -457,17 +533,13 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        const mockDraft = {
+        const mockDraft = dbRow({
           id: 'test-question',
           title: 'Test Question',
           body_md: 'Image: ![test](pp://staging/abc123.png)',
           difficulty: 'Easy' as const,
           status: 'draft' as const,
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        };
+        });
 
         const finalizedAtts = [
           {
@@ -477,17 +549,28 @@ describe('AdminController - Unit Tests', () => {
           },
         ];
 
-        (Repo.createDraft as jest.Mock).mockResolvedValue(mockDraft);
-        (
-          AttachmentService.finalizeStagedAttachments as jest.Mock
-        ).mockResolvedValue(finalizedAtts);
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue({
-          ...mockDraft,
-          attachments: finalizedAtts,
-        });
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
+        asMock(Repo.createDraft).mockResolvedValue(mockDraft);
+        asMock(AttachmentService.finalizeStagedAttachments).mockResolvedValue(
+          finalizedAtts,
+        );
+        asMock(Repo.updateWithResources).mockResolvedValue(
+          dbRow({
+            ...mockDraft,
+            attachments: finalizedAtts,
+            body_md: 'Image: ![test](pp://questions/test-question/abc123.png)',
+          }),
+        );
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
+        asMock(AttachmentService.signViewUrl).mockResolvedValue({
+          object_key: 'dummy/key.png',
+          view_url: 'https://example.com/signed-url',
+          expires_at: new Date(Date.now() + 900_000).toISOString(),
         });
 
         await AdminController.create(
@@ -510,8 +593,8 @@ describe('AdminController - Unit Tests', () => {
 
     describe('error handling', () => {
       beforeEach(() => {
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test-question');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
+        asMock(slugUtils.slugify).mockReturnValue('test-question');
+        setTopics([]);
       });
 
       it('should return 500 when updateWithResources returns null', async () => {
@@ -521,18 +604,15 @@ describe('AdminController - Unit Tests', () => {
           difficulty: 'Easy',
         };
 
-        (Repo.createDraft as jest.Mock).mockResolvedValue({
-          id: 'test-question',
-          title: 'Test Question',
-          body_md: 'Test body',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(null);
+        asMock(Repo.createDraft).mockResolvedValue(
+          dbRow({
+            id: 'test-question',
+            title: 'Test Question',
+            body_md: 'Test body',
+            difficulty: 'Easy',
+          }),
+        );
+        asMock(Repo.updateWithResources).mockResolvedValue(null as any);
 
         await AdminController.create(
           mockRequest as Request,
@@ -551,9 +631,7 @@ describe('AdminController - Unit Tests', () => {
           difficulty: 'Easy',
         };
 
-        (Repo.createDraft as jest.Mock).mockRejectedValue(
-          new Error('Database error'),
-        );
+        asMock(Repo.createDraft).mockRejectedValue(new Error('Database error'));
 
         await AdminController.create(
           mockRequest as Request,
@@ -607,7 +685,7 @@ describe('AdminController - Unit Tests', () => {
 
         expect(mockStatus).toHaveBeenCalledWith(400);
         expect(mockJson).toHaveBeenCalledWith({
-          error: 'difficulty must be one of: draft, published, archived',
+          error: 'status must be one of: draft, published, archived',
         });
       });
 
@@ -630,9 +708,7 @@ describe('AdminController - Unit Tests', () => {
         mockRequest.params = { id: 'test-question' };
         mockRequest.body = { topics: ['arrays', 'missing-topic'] };
 
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([
-          { slug: 'arrays' },
-        ]);
+        setTopics([{ slug: 'arrays' }]);
 
         await AdminController.update(
           mockRequest as Request,
@@ -685,23 +761,22 @@ describe('AdminController - Unit Tests', () => {
         mockRequest.params = { id: 'test-question' };
         mockRequest.body = { title: 'Updated Title' };
 
-        const mockUpdated = {
+        const mockUpdated = dbRow({
           id: 'test-question',
           title: 'Updated Title',
           body_md: 'Original body',
           difficulty: 'Easy' as const,
           status: 'draft' as const,
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        };
-
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(mockUpdated);
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
         });
+
+        asMock(Repo.updateWithResources).mockResolvedValue(mockUpdated);
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
 
         await AdminController.update(
           mockRequest as Request,
@@ -726,23 +801,22 @@ describe('AdminController - Unit Tests', () => {
           status: 'published',
         };
 
-        const mockUpdated = {
+        const mockUpdated = dbRow({
           id: 'test-question',
           title: 'New Title',
           body_md: 'Body',
           difficulty: 'Hard' as const,
           status: 'published' as const,
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        };
-
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(mockUpdated);
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
         });
+
+        asMock(Repo.updateWithResources).mockResolvedValue(mockUpdated);
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
 
         await AdminController.update(
           mockRequest as Request,
@@ -772,23 +846,30 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        const mockUpdated = {
+        const mockUpdated = dbRow({
           id: 'test-question',
           title: 'Title',
           body_md: 'Body',
           difficulty: 'Easy' as const,
           status: 'draft' as const,
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        };
-
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(mockUpdated);
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: { javascript: 'function solve() {}' },
-          test_cases: mockRequest.body.test_cases,
         });
+
+        asMock(Repo.updateWithResources).mockResolvedValue(mockUpdated);
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: 'function solve() {}',
+            test_cases: [
+              {
+                name: 'tc-1',
+                visibility: 'sample',
+                input_data: 'test',
+                expected_output: 'result',
+                ordinal: 1,
+              },
+            ],
+          }),
+        );
 
         await AdminController.update(
           mockRequest as Request,
@@ -825,24 +906,27 @@ describe('AdminController - Unit Tests', () => {
           },
         ];
 
-        (
-          AttachmentService.finalizeStagedAttachments as jest.Mock
-        ).mockResolvedValue(finalizedAtts);
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue({
-          id: 'test-question',
-          title: 'Title',
-          body_md: 'Updated ![img](pp://questions/test-question/new.png)',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: finalizedAtts,
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
-        });
+        asMock(AttachmentService.finalizeStagedAttachments).mockResolvedValue(
+          finalizedAtts,
+        );
+        asMock(Repo.updateWithResources).mockResolvedValue(
+          dbRow({
+            id: 'test-question',
+            title: 'Title',
+            body_md: 'Updated ![img](pp://questions/test-question/new.png)',
+            difficulty: 'Easy' as const,
+            status: 'draft' as const,
+            topics: [],
+            attachments: finalizedAtts,
+          }),
+        );
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
 
         await AdminController.update(
           mockRequest as Request,
@@ -864,7 +948,7 @@ describe('AdminController - Unit Tests', () => {
         mockRequest.params = { id: 'non-existent' };
         mockRequest.body = { title: 'New Title' };
 
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue(null);
+        asMock(Repo.updateWithResources).mockResolvedValue(null as any);
 
         await AdminController.update(
           mockRequest as Request,
@@ -879,7 +963,7 @@ describe('AdminController - Unit Tests', () => {
         mockRequest.params = { id: 'test-question' };
         mockRequest.body = { title: 'New Title' };
 
-        (Repo.updateWithResources as jest.Mock).mockRejectedValue(
+        asMock(Repo.updateWithResources).mockRejectedValue(
           new Error('DB error'),
         );
 
@@ -911,25 +995,31 @@ describe('AdminController - Unit Tests', () => {
     it('should successfully publish a question', async () => {
       mockRequest.params = { id: 'test-question' };
 
-      const mockPublished = {
+      const mockPublished = dbRow({
         id: 'test-question',
         title: 'Test Question',
         body_md: 'Body',
         difficulty: 'Easy' as const,
         status: 'published' as const,
-        topics: [],
-        attachments: [],
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
-
-      (Repo.publish as jest.Mock).mockResolvedValue(mockPublished);
-      (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-        starter_code: { python: 'def solve():' },
-        test_cases: [
-          { visibility: 'sample', input_data: '1', expected_output: '2' },
-        ],
       });
+
+      asMock(Repo.publish).mockResolvedValue(mockPublished);
+      asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+        bundle({
+          question_id: 'test-question',
+          status: 'published',
+          starter_code: 'def solve():',
+          test_cases: [
+            {
+              name: 'tc-1',
+              visibility: 'sample',
+              input_data: '1',
+              expected_output: '2',
+              ordinal: 1,
+            },
+          ],
+        }),
+      );
 
       await AdminController.publish(
         mockRequest as Request,
@@ -941,7 +1031,7 @@ describe('AdminController - Unit Tests', () => {
         expect.objectContaining({
           id: 'test-question',
           status: 'published',
-          starter_code: expect.any(Object),
+          starter_code: expect.any(String),
           test_cases: expect.any(Array),
         }),
       );
@@ -950,7 +1040,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 404 when question not found', async () => {
       mockRequest.params = { id: 'non-existent' };
 
-      (Repo.publish as jest.Mock).mockResolvedValue(null);
+      asMock(Repo.publish).mockResolvedValue(null as any);
 
       await AdminController.publish(
         mockRequest as Request,
@@ -964,9 +1054,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 500 on error', async () => {
       mockRequest.params = { id: 'test-question' };
 
-      (Repo.publish as jest.Mock).mockRejectedValue(
-        new Error('Publish failed'),
-      );
+      asMock(Repo.publish).mockRejectedValue(new Error('Publish failed'));
 
       await AdminController.publish(
         mockRequest as Request,
@@ -985,17 +1073,17 @@ describe('AdminController - Unit Tests', () => {
 
       const mockResult = {
         items: [
-          {
+          publicView({
             id: 'q1',
             title: 'Question 1',
             difficulty: 'Easy' as const,
             status: 'published' as const,
-          },
+          }),
         ],
         total: 1,
       };
 
-      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
+      asMock(Service.listAll).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
@@ -1015,11 +1103,11 @@ describe('AdminController - Unit Tests', () => {
       mockRequest.query = { difficulty: 'Hard' };
 
       const mockResult = {
-        rows: [],
+        items: [],
         total: 0,
       };
 
-      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
+      asMock(Service.listAll).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
@@ -1035,11 +1123,11 @@ describe('AdminController - Unit Tests', () => {
       mockRequest.query = { topics: 'arrays,hash-table' };
 
       const mockResult = {
-        rows: [],
+        items: [],
         total: 0,
       };
 
-      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
+      asMock(Service.listAll).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
@@ -1055,11 +1143,11 @@ describe('AdminController - Unit Tests', () => {
       mockRequest.query = { q: 'two sum' };
 
       const mockResult = {
-        rows: [],
+        items: [],
         total: 0,
       };
 
-      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
+      asMock(Service.listAll).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
@@ -1079,7 +1167,7 @@ describe('AdminController - Unit Tests', () => {
         total: 100,
       };
 
-      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
+      asMock(Service.listAll).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
@@ -1108,11 +1196,11 @@ describe('AdminController - Unit Tests', () => {
       };
 
       const mockResult = {
-        rows: [],
+        items: [],
         total: 25,
       };
 
-      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
+      asMock(Service.listAll).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
@@ -1129,14 +1217,14 @@ describe('AdminController - Unit Tests', () => {
     });
 
     it('should handle topics as array in query', async () => {
-      mockRequest.query = { topics: ['arrays', 'strings'] };
+      mockRequest.query = { topics: ['arrays', 'strings'] as any };
 
       const mockResult = {
-        rows: [],
+        items: [],
         total: 0,
       };
 
-      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
+      asMock(Service.listAll).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
@@ -1146,6 +1234,45 @@ describe('AdminController - Unit Tests', () => {
       expect(Service.listAll).toHaveBeenCalledWith({
         topics: ['arrays', 'strings'],
       });
+    });
+
+    it('should handle invalid page number', async () => {
+      mockRequest.query = { page: 'not-a-number' } as any;
+
+      asMock(Service.listAll).mockResolvedValue({ items: [], total: 0 });
+
+      await AdminController.list(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(Service.listAll).toHaveBeenCalledWith({});
+    });
+
+    it('should handle invalid page_size', async () => {
+      mockRequest.query = { page_size: 'invalid' } as any;
+
+      asMock(Service.listAll).mockResolvedValue({ items: [], total: 0 });
+
+      await AdminController.list(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(Service.listAll).toHaveBeenCalledWith({});
+    });
+
+    it('should handle empty topics string', async () => {
+      mockRequest.query = { topics: '' } as any;
+
+      asMock(Service.listAll).mockResolvedValue({ items: [], total: 0 });
+
+      await AdminController.list(
+        mockRequest as Request,
+        mockResponse as Response,
+      );
+
+      expect(Service.listAll).toHaveBeenCalledWith({ topics: [] });
     });
   });
 
@@ -1177,19 +1304,15 @@ describe('AdminController - Unit Tests', () => {
     it('should successfully archive a question', async () => {
       mockRequest.params = { id: 'test-question' };
 
-      const mockArchived = {
+      const mockArchived = dbRow({
         id: 'test-question',
         title: 'Test Question',
         body_md: 'Body',
         difficulty: 'Easy' as const,
         status: 'archived' as const,
-        topics: [],
-        attachments: [],
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+      });
 
-      (Repo.archive as jest.Mock).mockResolvedValue(mockArchived);
+      asMock(Repo.archive).mockResolvedValue(mockArchived);
 
       await AdminController.archive(
         mockRequest as Request,
@@ -1203,7 +1326,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 404 when question not found or not published', async () => {
       mockRequest.params = { id: 'non-existent' };
 
-      (Repo.archive as jest.Mock).mockResolvedValue(null);
+      asMock(Repo.archive).mockResolvedValue(null as any);
 
       await AdminController.archive(
         mockRequest as Request,
@@ -1245,7 +1368,7 @@ describe('AdminController - Unit Tests', () => {
     it('should successfully get question by id with resources', async () => {
       mockRequest.params = { id: 'test-question' };
 
-      const mockQuestion = {
+      const mockQuestion = publicView({
         id: 'test-question',
         title: 'Test Question',
         body_md: 'Body',
@@ -1253,33 +1376,31 @@ describe('AdminController - Unit Tests', () => {
         difficulty: 'Medium' as const,
         status: 'draft' as const,
         topics: ['arrays'],
-        attachments: [],
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+      });
 
-      const mockBundle = {
-        starter_code: { python: 'def solve():' },
+      const mockBundle = bundle({
+        question_id: 'test-question',
+        starter_code: 'def solve():',
         test_cases: [
           {
-            visibility: 'sample' as const,
+            name: 'sample-1',
+            visibility: 'sample',
             input_data: '[1,2]',
             expected_output: '3',
+            ordinal: 1,
           },
           {
-            visibility: 'hidden' as const,
+            name: 'hidden-1',
+            visibility: 'hidden',
             input_data: '[4,5]',
             expected_output: '9',
+            ordinal: 2,
           },
         ],
-      };
+      });
 
-      (Service.getQuestionWithHtml as jest.Mock).mockResolvedValue(
-        mockQuestion,
-      );
-      (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue(
-        mockBundle,
-      );
+      asMock(Service.getQuestionWithHtml).mockResolvedValue(mockQuestion);
+      asMock(Repo.getInternalResourcesBundle).mockResolvedValue(mockBundle);
 
       await AdminController.getById(
         mockRequest as Request,
@@ -1300,7 +1421,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return empty resources when bundle is null', async () => {
       mockRequest.params = { id: 'test-question' };
 
-      const mockQuestion = {
+      const mockQuestion = publicView({
         id: 'test-question',
         title: 'Test Question',
         body_md: 'Body',
@@ -1308,15 +1429,10 @@ describe('AdminController - Unit Tests', () => {
         difficulty: 'Easy' as const,
         status: 'published' as const,
         topics: [],
-        attachments: [],
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+      });
 
-      (Service.getQuestionWithHtml as jest.Mock).mockResolvedValue(
-        mockQuestion,
-      );
-      (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue(null);
+      asMock(Service.getQuestionWithHtml).mockResolvedValue(mockQuestion);
+      asMock(Repo.getInternalResourcesBundle).mockResolvedValue(null);
 
       await AdminController.getById(
         mockRequest as Request,
@@ -1333,7 +1449,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 404 when question not found', async () => {
       mockRequest.params = { id: 'non-existent' };
 
-      (Service.getQuestionWithHtml as jest.Mock).mockResolvedValue(null);
+      asMock(Service.getQuestionWithHtml).mockResolvedValue(undefined as any);
 
       await AdminController.getById(
         mockRequest as Request,
@@ -1347,7 +1463,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 500 on unexpected error', async () => {
       mockRequest.params = { id: 'test-question' };
 
-      (Service.getQuestionWithHtml as jest.Mock).mockRejectedValue(
+      asMock(Service.getQuestionWithHtml).mockRejectedValue(
         new Error('Database error'),
       );
 
@@ -1378,8 +1494,8 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
+        asMock(slugUtils.slugify).mockReturnValue('test');
+        setTopics([]);
 
         await AdminController.create(
           mockRequest as Request,
@@ -1399,12 +1515,12 @@ describe('AdminController - Unit Tests', () => {
               visibility: 'sample',
               input_data: 'test',
               // missing expected_output
-            },
+            } as any,
           ],
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
+        asMock(slugUtils.slugify).mockReturnValue('test');
+        setTopics([]);
 
         await AdminController.create(
           mockRequest as Request,
@@ -1429,34 +1545,36 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
-        (Repo.createDraft as jest.Mock).mockResolvedValue({
-          id: 'test',
-          title: 'Test',
-          body_md: 'Body',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue({
-          id: 'test',
-          title: 'Test',
-          body_md: 'Body',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: mockRequest.body.test_cases,
-        });
+        asMock(slugUtils.slugify).mockReturnValue('test');
+        setTopics([]);
+        asMock(Repo.createDraft).mockResolvedValue(
+          dbRow({
+            id: 'test',
+            title: 'Test',
+            body_md: 'Body',
+          }),
+        );
+        asMock(Repo.updateWithResources).mockResolvedValue(
+          dbRow({
+            id: 'test',
+            title: 'Test',
+            body_md: 'Body',
+          }),
+        );
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test',
+            test_cases: [
+              {
+                name: 'tc-1',
+                visibility: 'sample',
+                input_data: 'test',
+                expected_output: 'result',
+                ordinal: 1,
+              },
+            ],
+          }),
+        );
 
         await AdminController.create(
           mockRequest as Request,
@@ -1486,8 +1604,8 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
+        asMock(slugUtils.slugify).mockReturnValue('test');
+        setTopics([]);
 
         await AdminController.create(
           mockRequest as Request,
@@ -1512,8 +1630,8 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
+        asMock(slugUtils.slugify).mockReturnValue('test');
+        setTopics([]);
 
         await AdminController.create(
           mockRequest as Request,
@@ -1538,11 +1656,9 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
-        (
-          AttachmentService.finalizeStagedAttachments as jest.Mock
-        ).mockResolvedValue([
+        asMock(slugUtils.slugify).mockReturnValue('test');
+        setTopics([]);
+        asMock(AttachmentService.finalizeStagedAttachments).mockResolvedValue([
           {
             object_key: 'questions/test/test.png',
             filename: 'test.png',
@@ -1550,32 +1666,27 @@ describe('AdminController - Unit Tests', () => {
             alt: 'Test image',
           },
         ]);
-        (Repo.createDraft as jest.Mock).mockResolvedValue({
-          id: 'test',
-          title: 'Test',
-          body_md: 'Body',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue({
-          id: 'test',
-          title: 'Test',
-          body_md: 'Body',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
-        });
+        asMock(Repo.createDraft).mockResolvedValue(
+          dbRow({
+            id: 'test',
+            title: 'Test',
+            body_md: 'Body',
+          }),
+        );
+        asMock(Repo.updateWithResources).mockResolvedValue(
+          dbRow({
+            id: 'test',
+            title: 'Test',
+            body_md: 'Body',
+          }),
+        );
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
 
         await AdminController.create(
           mockRequest as Request,
@@ -1593,21 +1704,20 @@ describe('AdminController - Unit Tests', () => {
           body_md: 'Regular markdown without images',
         };
 
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue({
-          id: 'test-question',
-          title: 'Test',
-          body_md: 'Regular markdown without images',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
-        });
+        asMock(Repo.updateWithResources).mockResolvedValue(
+          dbRow({
+            id: 'test-question',
+            title: 'Test',
+            body_md: 'Regular markdown without images',
+          }),
+        );
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test-question',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
 
         await AdminController.update(
           mockRequest as Request,
@@ -1642,22 +1752,16 @@ describe('AdminController - Unit Tests', () => {
           ],
         };
 
-        (slugUtils.slugify as jest.Mock).mockReturnValue('test');
-        (prisma.topics.findMany as jest.Mock).mockResolvedValue([]);
-        (Repo.createDraft as jest.Mock).mockResolvedValue({
-          id: 'test',
-          title: 'Test',
-          body_md: mockRequest.body.body_md,
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (
-          AttachmentService.finalizeStagedAttachments as jest.Mock
-        ).mockResolvedValue([
+        asMock(slugUtils.slugify).mockReturnValue('test');
+        setTopics([]);
+        asMock(Repo.createDraft).mockResolvedValue(
+          dbRow({
+            id: 'test',
+            title: 'Test',
+            body_md: mockRequest.body.body_md,
+          }),
+        );
+        asMock(AttachmentService.finalizeStagedAttachments).mockResolvedValue([
           {
             object_key: 'questions/test/img1.png',
             filename: 'img1.png',
@@ -1669,22 +1773,21 @@ describe('AdminController - Unit Tests', () => {
             mime: 'image/png',
           },
         ]);
-        (Repo.updateWithResources as jest.Mock).mockResolvedValue({
-          id: 'test',
-          title: 'Test',
-          body_md:
-            '![img1](pp://questions/test/img1.png) and ![img2](pp://questions/test/img2.png)',
-          difficulty: 'Easy',
-          status: 'draft',
-          topics: [],
-          attachments: [],
-          created_at: new Date(),
-          updated_at: new Date(),
-        });
-        (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue({
-          starter_code: {},
-          test_cases: [],
-        });
+        asMock(Repo.updateWithResources).mockResolvedValue(
+          dbRow({
+            id: 'test',
+            title: 'Test',
+            body_md:
+              '![img1](pp://questions/test/img1.png) and ![img2](pp://questions/test/img2.png)',
+          }),
+        );
+        asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+          bundle({
+            question_id: 'test',
+            starter_code: '',
+            test_cases: [],
+          }),
+        );
 
         await AdminController.create(
           mockRequest as Request,
@@ -1701,14 +1804,11 @@ describe('AdminController - Unit Tests', () => {
       });
     });
 
-    describe('query parameter parsing', () => {
+    describe('query parameter parsing (extra edges)', () => {
       it('should handle invalid page number', async () => {
-        mockRequest.query = { page: 'not-a-number' };
+        mockRequest.query = { page: 'not-a-number' } as any;
 
-        (Service.listAll as jest.Mock).mockResolvedValue({
-          rows: [],
-          total: 0,
-        });
+        asMock(Service.listAll).mockResolvedValue({ items: [], total: 0 });
 
         await AdminController.list(
           mockRequest as Request,
@@ -1719,12 +1819,9 @@ describe('AdminController - Unit Tests', () => {
       });
 
       it('should handle invalid page_size', async () => {
-        mockRequest.query = { page_size: 'invalid' };
+        mockRequest.query = { page_size: 'invalid' } as any;
 
-        (Service.listAll as jest.Mock).mockResolvedValue({
-          rows: [],
-          total: 0,
-        });
+        asMock(Service.listAll).mockResolvedValue({ items: [], total: 0 });
 
         await AdminController.list(
           mockRequest as Request,
@@ -1735,12 +1832,9 @@ describe('AdminController - Unit Tests', () => {
       });
 
       it('should handle empty topics string', async () => {
-        mockRequest.query = { topics: '' };
+        mockRequest.query = { topics: '' } as any;
 
-        (Service.listAll as jest.Mock).mockResolvedValue({
-          rows: [],
-          total: 0,
-        });
+        asMock(Service.listAll).mockResolvedValue({ items: [], total: 0 });
 
         await AdminController.list(
           mockRequest as Request,

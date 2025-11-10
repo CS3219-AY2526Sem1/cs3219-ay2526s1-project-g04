@@ -337,7 +337,7 @@ export async function update(req: Request, res: Response) {
       const stat = normalizeStatus(req.body.status);
       if (!stat) {
         return res.status(400).json({
-          error: 'difficulty must be one of: draft, published, archived',
+          error: 'status must be one of: draft, published, archived',
         });
       }
       newStatus = stat;
