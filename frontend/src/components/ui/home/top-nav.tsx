@@ -162,7 +162,6 @@ export default function TopNavigationBar({
         }}
       >
         <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
-        <MenuItem onClick={handleSettingsClick}>Account Settings</MenuItem>
         <MenuItem onClick={handleLogoutClick}>
           <Logout sx={{ mr: 1, color: 'action.active' }} />
           Logout
