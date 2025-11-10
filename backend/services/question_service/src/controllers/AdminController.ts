@@ -148,6 +148,14 @@ async function findMissingTopics(slugs: string[]): Promise<string[]> {
   return slugs.filter((s) => !have.has(s));
 }
 
+function hasNonEmptyString(x: unknown): x is string {
+  return typeof x === 'string' && x.trim().length > 0;
+}
+
+function hasAtLeastOneTestCase(cases: IncomingTestCase[] | undefined): boolean {
+  return Array.isArray(cases) && cases.length > 0;
+}
+
 /**
  * POST /admin/questions
  *
@@ -212,15 +220,23 @@ export async function create(req: Request, res: Response) {
       ? attachments
       : [];
 
-    // execution resources validation
-    const starterCodeStr =
-      typeof starter_code === 'string' ? starter_code : undefined;
+    // execution resources validation (REQUIRED)
+    if (typeof starter_code !== 'string' || !starter_code.trim()) {
+      return res.status(400).json({
+        error: 'starter_code_required',
+        message: 'starter_code must be a non-empty string.',
+      });
+    }
+    const starterCodeStr = starter_code;
 
-    const testCasesList: IncomingTestCase[] | undefined = isTestCaseArray(
-      test_cases,
-    )
-      ? test_cases
-      : undefined;
+    if (!isTestCaseArray(test_cases) || !hasAtLeastOneTestCase(test_cases)) {
+      return res.status(400).json({
+        error: 'test_cases_required',
+        message: 'test_cases must be a non-empty array of valid test cases.',
+      });
+    }
+
+    const testCasesList: IncomingTestCase[] = test_cases;
 
     // allocate canonical slug/id by creating an empty draft first
     const slugId = slugify(title);
@@ -252,28 +268,15 @@ export async function create(req: Request, res: Response) {
     );
 
     // patch the draft with finalized data + execution resources
-    const patchForCreate: {
-      title?: string;
-      body_md?: string;
-      difficulty?: Difficulty;
-      topics?: string[];
-      attachments?: AttachmentInput[];
-      starter_code?: string;
-      test_cases?: IncomingTestCase[];
-    } = {
+    const patchForCreate = {
       title,
       body_md: rewrittenMd,
       difficulty: diff,
       topics: topicList,
       attachments: finalizedAtts,
+      starter_code: starterCodeStr, // required
+      test_cases: testCasesList, // required
     };
-
-    if (starterCodeStr !== undefined) {
-      patchForCreate.starter_code = starterCodeStr;
-    }
-    if (testCasesList !== undefined) {
-      patchForCreate.test_cases = testCasesList;
-    }
 
     const saved = await Repo.updateWithResources(draft.id, patchForCreate);
     if (!saved) {
@@ -391,19 +394,31 @@ export async function update(req: Request, res: Response) {
       }
     }
 
-    // execution resources
-    const starterCodeStr =
-      typeof req.body?.starter_code === 'string'
-        ? req.body.starter_code
-        : undefined;
+    // execution resources (cannot be emptied)
+    let starterCodeStr: string | undefined;
+    if ('starter_code' in req.body) {
+      if (
+        typeof req.body.starter_code !== 'string' ||
+        !req.body.starter_code.trim()
+      ) {
+        return res.status(400).json({
+          error: 'starter_code_nonempty',
+          message: 'starter_code must be a non-empty string when provided.',
+        });
+      }
+      starterCodeStr = req.body.starter_code;
+    }
 
     let newTestCases: IncomingTestCase[] | undefined;
     if ('test_cases' in req.body) {
-      // If client explicitly sent test_cases (even []), we respect it.
-      if (!isTestCaseArray(req.body.test_cases)) {
+      if (
+        !isTestCaseArray(req.body.test_cases) ||
+        !hasAtLeastOneTestCase(req.body.test_cases)
+      ) {
         return res.status(400).json({
-          error:
-            'test_cases must be an array of { visibility, input_data, expected_output, [ordinal] }',
+          error: 'test_cases_nonempty',
+          message:
+            'test_cases must be a non-empty array of valid test cases when provided.',
         });
       }
       newTestCases = req.body.test_cases;
@@ -460,10 +475,34 @@ export async function publish(req: Request, res: Response) {
     const { id } = req.params;
     if (!id) return res.status(400).json({ error: 'id param required' });
 
-    const published = await Repo.publish(id);
-    if (!published) return res.status(404).json({ error: 'not_found' });
+    const exists = await Service.getQuestionWithHtml(id);
+    if (!exists) return res.status(404).json({ error: 'not_found' });
 
     // Include execution resources in publish response
+    const bundlePre = await Repo.getInternalResourcesBundle(id);
+    const hasStarter =
+      typeof (bundlePre?.starter_code ?? '') === 'string' &&
+      (bundlePre!.starter_code ?? '').trim().length > 0;
+    const hasAnyCase =
+      Array.isArray(bundlePre?.test_cases) && bundlePre!.test_cases.length > 0;
+
+    if (!hasStarter || !hasAnyCase) {
+      log.warn('[POST /admin/questions/:id/publish] missing resources', {
+        id,
+        hasStarter,
+        test_cases_len: Array.isArray(bundlePre?.test_cases)
+          ? bundlePre!.test_cases.length
+          : 0,
+      });
+      return res.status(400).json({
+        error: 'missing_resources',
+        message:
+          'Cannot publish: starter_code and at least one test case are required.',
+      });
+    }
+
+    const published = await Repo.publish(id);
+    if (!published) return res.status(404).json({ error: 'not_found' });
     const bundle = await Repo.getInternalResourcesBundle(id);
     const starter_code = bundle?.starter_code ?? '';
     const test_cases = bundle?.test_cases ?? [];

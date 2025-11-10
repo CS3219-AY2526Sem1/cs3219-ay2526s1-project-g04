@@ -489,7 +489,7 @@ ON CONFLICT DO NOTHING;
 -- Python starter code for each question
 -- ==============================================================
 
-INSERT INTO question_python_starter (question_id, starter_code) VALUES
+INSERT INTO question_python_starter (question_id, starter_code, entry_point) VALUES
   (
     'reverse-a-string',
     'class Solution:
@@ -498,14 +498,16 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
         Return a new reversed array. Do not mutate `s`.
         """
         pass
-'
+',
+    'Solution.reverseString'
   ),
   (
     'linked-list-cycle-detection',
     'class Solution:
     def hasCycle(self, head: "ListNode | None") -> bool:
         pass
-'
+',
+    'Solution.hasCycle'
   ),
   (
     'rotate-image',
@@ -516,14 +518,16 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
         Do not mutate `matrix`.
         """
         pass
-'
+',
+    'Solution.rotate'
   ),
   (
     'validate-binary-search-tree',
     'class Solution:
     def isValidBST(self, root: "TreeNode | None") -> bool:
         pass
-'
+',
+    'Solution.isValidBST'
   ),
   (
     'lru-cache',
@@ -536,21 +540,24 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
 
     def put(self, key: int, value: int) -> None:
         pass
-'
+',
+    'LRUCache'
   ),
   (
     'longest-common-subsequence',
     'class Solution:
     def longestCommonSubsequence(self, text1: str, text2: str) -> int:
         pass
-'
+',
+    'Solution.longestCommonSubsequence'
   ),
   (
     'sliding-window-maximum',
     'class Solution:
     def maxSlidingWindow(self, nums: list[int], k: int) -> list[int]:
         pass
-'
+',
+    'Solution.maxSlidingWindow'
   ),
   (
     'serialize-and-deserialize-binary-tree',
@@ -560,17 +567,20 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
 
     def deserialize(self, data: str) -> "TreeNode | None":
         pass
-'
+',
+    'Codec'
   ),
   (
     'n-queens',
     'class Solution:
     def solveNQueens(self, n: int) -> list[list[str]]:
         pass
-'
+',
+    'Solution.solveNQueens'
   )
 ON CONFLICT (question_id) DO UPDATE
-  SET starter_code = EXCLUDED.starter_code;
+  SET starter_code = EXCLUDED.starter_code,
+      entry_point  = EXCLUDED.entry_point;
 
 -- ==============================================================
 -- Test cases (ordinals now 1..n)
