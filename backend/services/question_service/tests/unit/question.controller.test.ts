@@ -1,7 +1,8 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import type { Request, Response } from 'express';
 
-// 1) Install ESM-safe mocks *before* importing the modules under test.
+type AsyncMock = jest.Mock<any>;
+
 await jest.unstable_mockModule('../../src/services/QuestionService.js', () => ({
   __esModule: true,
   getPublishedWithHtml: jest.fn(),
@@ -35,7 +36,6 @@ await jest.unstable_mockModule('../../src/utils/logger.js', () => ({
   },
 }));
 
-// 2) Now dynamically import the mocked modules and the controller.
 const Service = await import('../../src/services/QuestionService.js');
 const Repo = await import('../../src/repositories/QuestionRepository.js');
 const Sel = await import('../../src/services/SelectionService.js');
@@ -43,34 +43,35 @@ const QuestionController = await import(
   '../../src/controllers/QuestionController.js'
 );
 
-// 3) (Optional) typed handles so TS knows these are Jest mocks.
 const mockService = Service as unknown as {
-  getPublishedWithHtml: jest.Mock;
-  listPublished: jest.Mock;
-  getPublishedBatch: jest.Mock;
+  getPublishedWithHtml: AsyncMock;
+  listPublished: AsyncMock;
+  getPublishedBatch: AsyncMock;
 };
 const mockRepo = Repo as unknown as {
-  getPublicResourcesBundle: jest.Mock;
+  getPublicResourcesBundle: AsyncMock;
 };
-const selectOne = Sel.selectOne as unknown as jest.Mock;
+const selectOne = Sel.selectOne as unknown as AsyncMock;
 
 describe('QuestionController', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let jsonMock: jest.Mock;
-  let statusMock: jest.Mock;
+  let jsonMock: AsyncMock;
+  let statusMock: AsyncMock;
 
   beforeEach(() => {
     // Reset mocks
     jest.resetAllMocks();
 
     // Setup response mock
-    jsonMock = jest.fn();
-    statusMock = jest.fn().mockReturnThis();
+    jsonMock = jest.fn() as any;
+    statusMock = jest.fn(function (this: Response) {
+      return this;
+    }) as any;
 
     mockResponse = {
-      json: jsonMock,
-      status: statusMock,
+      json: jsonMock as unknown as Response['json'],
+      status: statusMock as unknown as Response['status'],
     };
 
     // Setup request mock
@@ -79,7 +80,7 @@ describe('QuestionController', () => {
       query: {},
       body: {},
       ip: '127.0.0.1',
-      get: jest.fn().mockReturnValue('test-user-agent'),
+      get: ((name: string) => 'test-user-agent') as unknown as Request['get'],
       user: {
         role: 'user',
         sub: 'user-123',
