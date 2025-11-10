@@ -5,8 +5,9 @@
     "rootDirs": ["./src", "./scripts", "./prisma"],
 
     "module": "nodenext",
+    "moduleResolution": "nodenext",
     "target": "esnext",
-    "types": ["node"],
+    "types": ["node", "jest"],
 
     "sourceMap": true,
     "declaration": true,
@@ -25,7 +26,14 @@
     "moduleDetection": "force",
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "scripts/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "jest.setup.ts",
+    "jest.global-setup.ts",
+    "jest.global-teardown.ts"
+  ],
   "exclude": [
     "dist",
     "node_modules",

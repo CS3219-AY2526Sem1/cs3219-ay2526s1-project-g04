@@ -1,4 +1,6 @@
-export const TEST_QUESTION_LIST = [
+import { Question } from '../question-service';
+
+export const TEST_QUESTION_LIST: Question[] = [
   {
     id: 'reverse-a-string',
     title: 'Reverse a String',

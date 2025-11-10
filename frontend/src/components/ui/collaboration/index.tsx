@@ -77,9 +77,8 @@ export const Collaboration = (p: CollaborationProps) => {
         if (value && value.senderId.toString() !== getUserId()!.toString()) {
           alert(value.message);
           router.push('/home/dashboard');
+          notifications.delete(key);
         }
-
-        notifications.delete(key);
       }
     });
   };
