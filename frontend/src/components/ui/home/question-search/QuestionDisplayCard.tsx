@@ -36,7 +36,7 @@ export default function QuestionDisplayCard({ userRole, question }: props) {
 
   const topics: Topic[] = question.topics;
 
-  const snippet = question.snippet ?? '';
+  const snippet = question.snippet_html ?? '';
 
   const handleClick = () => {
     router.push(`/home/question-view/${question_id}`);
@@ -103,7 +103,10 @@ export default function QuestionDisplayCard({ userRole, question }: props) {
           </div>
         </div>
 
-        <p className="text-sm text-gray-500">{snippet}</p>
+        <div
+          className="text-sm text-gray-500 overflow-hidden line-clamp-2 text-left"
+          dangerouslySetInnerHTML={{ __html: snippet }}
+        />
       </button>
     </Tooltip>
   );

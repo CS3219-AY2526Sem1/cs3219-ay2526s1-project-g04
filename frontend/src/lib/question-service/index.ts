@@ -51,7 +51,7 @@ export type Question = {
   body_html?: string;
   starter_code?: string;
   test_cases?: TestCase[];
-  snippet?: string;
+  snippet_html?: string;
 };
 
 export type TestCase = {
