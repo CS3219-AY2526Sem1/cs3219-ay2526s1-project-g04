@@ -220,7 +220,7 @@ export default function DashboardPage() {
         // --- UPDATED: "Stitch" the data together, including isSolved ---
         const enrichedSessions = rawSessions.map((session) => {
           const peerId = session.userIds.find((id) => id !== currentUserId);
-          const peer = peerMap.get(peerId!) || { username: 'Unknown' };
+          const peer = peerMap.get(peerId!) || { username: '[deleted_user]' };
           const question = questionMap.get(session.questionId) || {
             title: 'Unknown Question',
             difficulty: 'Easy',
