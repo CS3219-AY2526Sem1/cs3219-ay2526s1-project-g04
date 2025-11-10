@@ -30,7 +30,7 @@ export default async () => {
       'postgresql://postgres@localhost:5430/qs_test';
   }
 
-  const pubPath = path.join(process.cwd(), 'public.pem');
+  const pubPath = path.join(process.cwd(), '.public.test.pem');
   const privPath = path.join(process.cwd(), '.private.test.pem');
 
   if (!fs.existsSync(pubPath) || !fs.existsSync(privPath)) {
