@@ -7,7 +7,8 @@ import {
   beforeAll,
 } from '@jest/globals';
 
-type MockFn = jest.Mock<any, any>;
+type MockFn = jest.Mock;
+const jm = () => jest.fn() as unknown as jest.Mock<any>;
 
 // Will be set after dynamic import
 let Repo: typeof import('../../src/repositories/QuestionRepository.js');
@@ -162,7 +163,8 @@ describe('listPublished (FTS path)', () => {
 
     expect(out.total).toBe(2);
     expect(out.rows).toHaveLength(1);
-    expect(out.rows[0].id).toBe('q2');
+    expect(out).toBeDefined();
+    expect(out!.rows[0]!.id).toBe('q2');
   });
 });
 
@@ -202,7 +204,8 @@ describe('listAll (FTS path)', () => {
     expect(ssql).toMatch(/WITH qmatch AS \(/);
     expect(sparams).toEqual(['binary search', 10, 0]);
     expect(out.total).toBe(1);
-    expect(out.rows[0].id).toBe('q10');
+    expect(out).toBeDefined();
+    expect(out!.rows[0]!.id).toBe('q10');
   });
 });
 
@@ -382,9 +385,11 @@ describe('publish', () => {
     prisma.$transaction.mockImplementation(async (cb: any) =>
       cb({
         questions: {
-          findUnique: jest
-            .fn()
-            .mockResolvedValue({ id: 'q1', status: 'published', version: 1 }),
+          findUnique: jm().mockResolvedValue({
+            id: 'q1',
+            status: 'published',
+            version: 1,
+          }),
         },
       }),
     );
@@ -396,7 +401,7 @@ describe('publish', () => {
   it('promotes draft to published, bumps version, snapshots to question_versions', async () => {
     const tx = {
       questions: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: jm().mockResolvedValue({
           id: 'q1',
           status: 'draft',
           version: 1,
@@ -407,7 +412,7 @@ describe('publish', () => {
           attachments: [],
         }),
       },
-      $queryRawUnsafe: jest.fn().mockResolvedValue([
+      $queryRawUnsafe: jm().mockResolvedValue([
         {
           id: 'q1',
           title: 'T',
@@ -422,7 +427,7 @@ describe('publish', () => {
         },
       ]),
       question_versions: {
-        create: jest.fn(),
+        create: jm(),
       },
     };
 
@@ -454,12 +459,12 @@ describe('archive', () => {
 
     const tx = {
       questions: {
-        findUnique: jest.fn().mockResolvedValue({
+        findUnique: jm().mockResolvedValue({
           id: 'q9',
           status: 'published',
           version: 4,
         }),
-        update: jest.fn().mockResolvedValue({
+        update: jm().mockResolvedValue({
           id: 'q9',
           title: 'T',
           body_md: 'B',
@@ -474,7 +479,7 @@ describe('archive', () => {
         }),
       },
       question_versions: {
-        create: jest.fn(),
+        create: jm(),
       },
     };
 
@@ -499,9 +504,7 @@ describe('archive', () => {
     prisma.$transaction.mockImplementation(async (cb: any) =>
       cb({
         questions: {
-          findUnique: jest
-            .fn()
-            .mockResolvedValue({ id: 'q0', status: 'draft' }),
+          findUnique: jm().mockResolvedValue({ id: 'q0', status: 'draft' }),
         },
       }),
     );
@@ -542,7 +545,8 @@ describe('pickRandomEligible', () => {
     expect(sql).toMatch(/ORDER BY rand_key\s+LIMIT 1/i);
     // Param order must match the appending order in the repo
     expect(params).toEqual(['Medium', ['arrays', 'dp'], ['a'], ['b', 'c']]);
-    expect(out.id).toBe('pick-1');
+    expect(out).toBeDefined();
+    expect(out!.id).toBe('pick-1');
   });
 });
 
@@ -589,8 +593,9 @@ describe('getPublicResourcesBundle', () => {
         updated_at: updatedAt.toISOString(),
       }),
     );
-    expect(out.test_cases).toHaveLength(2);
-    expect(out.test_cases[0]).toEqual(
+    expect(out).not.toBeNull();
+    expect(out!.test_cases).toHaveLength(2);
+    expect(out!.test_cases[0]).toEqual(
       expect.objectContaining({ visibility: 'sample', name: 'case-1' }),
     );
   });
