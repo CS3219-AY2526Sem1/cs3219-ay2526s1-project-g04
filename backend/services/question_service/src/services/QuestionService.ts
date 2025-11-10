@@ -8,6 +8,11 @@ import {
 import { toPublicQuestion } from './ResponseMapper.js';
 import type { QuestionRecordFromRepo } from './ResponseMapper.js';
 
+type ListResult<T> = {
+  items: T[];
+  total: number;
+};
+
 export async function getPublishedWithHtml(id: string) {
   const row = await Repo.getPublishedById(id);
 
@@ -31,21 +36,24 @@ export async function listPublished(opts: {
   q?: string;
   page?: number;
   page_size?: number;
-}) {
+  highlight?: boolean;
+}): Promise<ListResult<ReturnType<typeof toPublicQuestion>>> {
   const { rows, total } = await Repo.listPublished(opts);
 
-  // rows (plural) needs to ALSO come back in the same select shape from Repo.listPublished
-  // i.e. listPublished in the repo should mirror getPublishedById's select,
-  // including question_topics/topics.slug/color_hex etc.
   const items = await Promise.all(
     rows.map(async (row) => {
       const attachments = (row.attachments ?? []) as AttachmentLike[];
       const body_html = await renderQuestionMarkdown(row.body_md, attachments);
 
-      return toPublicQuestion({
+      const base = toPublicQuestion({
         row: row as QuestionRecordFromRepo,
         body_html,
       });
+
+      if (opts.highlight && (row as any).snippet_html) {
+        (base as any).snippet_html = (row as any).snippet_html;
+      }
+      return base;
     }),
   );
 
@@ -87,20 +95,24 @@ export async function listAll(opts: {
   q?: string;
   page?: number;
   page_size?: number;
-}) {
-  // Fetch raw rows from the repository (handles both Prisma + FTS branches)
+  highlight?: boolean;
+}): Promise<ListResult<ReturnType<typeof toPublicQuestion>>> {
   const { rows, total } = await Repo.listAll(opts);
 
-  // Enrich each row: render sanitized HTML and map to the public response shape
   const items = await Promise.all(
     rows.map(async (row) => {
       const attachments = (row.attachments ?? []) as AttachmentLike[];
       const body_html = await renderQuestionMarkdown(row.body_md, attachments);
 
-      return toPublicQuestion({
+      const base = toPublicQuestion({
         row: row as QuestionRecordFromRepo,
         body_html,
       });
+
+      if (opts.highlight && (row as any).snippet_html) {
+        (base as any).snippet_html = (row as any).snippet_html;
+      }
+      return base;
     }),
   );
 

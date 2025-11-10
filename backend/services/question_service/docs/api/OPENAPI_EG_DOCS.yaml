@@ -82,7 +82,10 @@ components:
     Highlight:
       name: highlight
       in: query
-      description: Include short snippet highlighting matches (only applies if `q` is provided)
+      description: |
+        When `true`, and a full-text search (`q`) is provided, each item
+        includes a `snippet_html` field containing a short excerpt of the
+        matched text with `<mark>` tags around matches.
       schema:
         type: boolean
         default: false
@@ -535,10 +538,13 @@ components:
               type: string
               nullable: true
               description: body_md may be truncated or omitted in list responses.
-            snippet:
+            snippe_html:
               type: string
               nullable: true
-              description: Highlighted excerpt if `q` and `highlight=true`.
+              description: |
+                Short HTML excerpt (with `<mark>` tags) if `q` and
+                `highlight=true` were supplied.
+                Safe to render directly in clients.
 
     QuestionListResponse:
       type: object
@@ -558,6 +564,16 @@ components:
         - page_size
         - total
         - items
+      example:
+        page: 1
+        page_size: 20
+        total: 1
+        items:
+          - id: palindrome-linked-list
+            title: Palindrome Linked List
+            difficulty: Easy
+            snippet_html: >
+              Check if a singly <mark>linked</mark> list is palindrome by reversing the second half.
 
     QuestionResourcesPublic:
       type: object
