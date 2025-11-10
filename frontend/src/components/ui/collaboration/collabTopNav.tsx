@@ -23,7 +23,7 @@ import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
 import { useRouter } from 'next/navigation';
-import { removeCollabProvider } from './collabSingleton';
+import { getCollabProvider, removeCollabProvider } from './collabSingleton';
 import { getUserId } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
@@ -122,8 +122,20 @@ export default function CollabNavigationBar({
         getUserId()!.toString(),
       );
       if (terminated) {
-        removeCollabProvider();
-        router.push('/home/dashboard');
+        const providers = getCollabProvider(sessionId, getUserId()!.toString());
+        if (providers && providers.yCodeDoc) {
+          console.log('SENDING MESSAGE');
+          const yNotifications = providers.yCodeDoc.getMap('notifications');
+          const messagePayload = {
+            senderId: getUserId(),
+            message:
+              'your coding buddy has left, you will be redirected to the home page',
+            timestamp: Date.now(),
+          };
+          yNotifications.set(Date.now().toString(), messagePayload);
+          removeCollabProvider();
+          router.push('/home/dashboard');
+        }
       }
     } catch (error) {
       console.error('Failed to end session:', error);
