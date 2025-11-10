@@ -41,7 +41,8 @@ export async function registerMatchRoutes(
             `[POST /match/request] User ${userId} already has a pending match request.`,
           );
           return res.status(400).json({
-            message: 'User already has a pending match request',
+            message:
+              'Use already has a pending match request. Please try again in a few minutes.',
           });
         }
 
