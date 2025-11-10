@@ -106,3 +106,20 @@ export async function listAll(opts: {
 
   return { items, total };
 }
+
+export async function getQuestionWithHtml(id: string) {
+  const row = await Repo.getQuestionById(id);
+
+  if (!row) return undefined;
+
+  const attachments = (row.attachments ?? []) as AttachmentLike[];
+
+  const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+
+  const view = toPublicQuestion({
+    row: row as QuestionRecordFromRepo,
+    body_html,
+  });
+
+  return view;
+}

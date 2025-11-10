@@ -579,7 +579,7 @@ export async function getById(req: Request, res: Response) {
       userId: req.user?.sub ?? req.user?.userId,
     });
 
-    const view = await Service.getPublishedWithHtml(id);
+    const view = await Service.getQuestionWithHtml(id);
     if (!view) {
       log.warn('[GET /questions/:id] not found', {
         id,
