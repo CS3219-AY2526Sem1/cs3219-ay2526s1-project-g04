@@ -28,9 +28,8 @@ const s3Client = new S3Client({
 const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size (e.g., 5MB)
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    // Filter for allowed image types
     if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
       cb(null, true);
     } else {
@@ -248,19 +247,27 @@ const authenticateToken = (
   });
 };
 
-const authorizeAdmin = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction,
-) => {
-  if (!req.user) {
-    return res.status(401).json({ message: 'Authentication required.' });
+/**
+ * Middleware for Internal-Only Utility Endpoints
+ * Checks for a static secret key in the headers.
+ */
+const authorizeInternal = (req: Request, res: Response, next: NextFunction) => {
+  const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
+  const requestSecret = req.headers['x-internal-secret'];
+
+  if (!internalSecret) {
+    console.error(
+      'FATAL: INTERNAL_ADMIN_SECRET is not set. Internal endpoints are disabled.',
+    );
+    return res
+      .status(500)
+      .json({ message: 'Internal server misconfiguration.' });
   }
 
-  if (req.user.role !== Role.ADMIN) {
-    return res
-      .status(403)
-      .json({ message: 'Forbidden: Admin privileges required.' });
+  if (!requestSecret || requestSecret !== internalSecret) {
+    return res.status(403).json({
+      message: 'Forbidden: Invalid or missing internal secret token.',
+    });
   }
 
   next();
@@ -428,12 +435,14 @@ app.post('/user/auth/signup', async (req, res) => {
 // 2. LOG IN (for user or admin)
 app.post('/user/auth/login', async (req, res) => {
   try {
+    console.log(11);
     const { email, password } = loginSchema.parse(req.body);
     const user = await prisma.user.findUnique({ where: { email } });
-
+    console.log(11);
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }
+    console.log(11);
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
@@ -471,6 +480,7 @@ app.post('/user/auth/login', async (req, res) => {
 
     res.status(200).json({ message: 'Login successful.', token, refreshToken });
   } catch (error) {
+    console.log(error);
     res.status(400).json({ message: 'Invalid request', details: error });
   }
 });
@@ -800,6 +810,7 @@ app.post('/user/auth/verify-email', async (req, res) => {
       refreshToken,
     });
   } catch (error) {
+    console.log('error at verify', error);
     res.status(500).json({ message: 'Internal server error', error });
   }
 });
@@ -1077,14 +1088,12 @@ app.post('/user/auth/forgot-password', async (req, res) => {
     // Check if user exists
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // Don't reveal if email exists or not for security
       return res.status(200).json({
         message:
           'If an account with this email exists, you will receive a password reset code.',
       });
     }
 
-    // Check if user is verified
     if (!user.isVerified) {
       return res.status(400).json({
         message:
@@ -1092,7 +1101,6 @@ app.post('/user/auth/forgot-password', async (req, res) => {
       });
     }
 
-    // Check OTP cooldown
     if (
       user.otpLastSentAt &&
       new Date().getTime() - user.otpLastSentAt.getTime() <
@@ -1103,7 +1111,6 @@ app.post('/user/auth/forgot-password', async (req, res) => {
       });
     }
 
-    // Generate and store OTP
     const otp = crypto.randomInt(100000, 999999).toString();
     const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     const now = new Date();
@@ -1148,17 +1155,14 @@ app.post('/user/auth/reset-password', async (req, res) => {
       return res.status(400).json({ message: 'Reset code has expired.' });
     }
 
-    // Hash new password
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update password and clear OTP
     await prisma.user.update({
       where: { email },
       data: {
         password: hashedNewPassword,
         verificationOtp: null,
         otpExpiresAt: null,
-        // Invalidate all refresh tokens for security
         refreshToken: null,
       },
     });
@@ -1171,58 +1175,6 @@ app.post('/user/auth/reset-password', async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 });
-
-app.patch(
-  '/user/:id/promote',
-  authenticateToken,
-  authorizeAdmin,
-  async (req: AuthRequest, res: Response) => {
-    try {
-      const targetUserId = parseInt(req.params.id, 10);
-      if (isNaN(targetUserId)) {
-        return res.status(400).json({ message: 'Invalid user ID format.' });
-      }
-
-      const adminUserId = req.user!.userId;
-
-      if (targetUserId === adminUserId) {
-        return res
-          .status(400)
-          .json({ message: 'Admins cannot change their own role.' });
-      }
-
-      const userToPromote = await prisma.user.findUnique({
-        where: { id: targetUserId },
-      });
-
-      if (!userToPromote) {
-        return res.status(404).json({ message: 'User not found.' });
-      }
-
-      if (userToPromote.role === Role.ADMIN) {
-        return res.status(200).json({
-          message: 'User is already an admin.',
-          user: userToPromote,
-        });
-      }
-
-      const updatedUser = await prisma.user.update({
-        where: { id: targetUserId },
-        data: {
-          role: Role.ADMIN,
-        },
-      });
-
-      res.status(200).json({
-        message: 'User successfully promoted to admin.',
-        user: updatedUser,
-      });
-    } catch (error) {
-      console.error('Promote User Error:', error);
-      res.status(500).json({ message: 'Internal server error.' });
-    }
-  },
-);
 
 // username availability check
 app.get('/user/check-username', async (req: Request, res: Response) => {
@@ -1309,6 +1261,103 @@ app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 });
+
+app.post(
+  '/user/utility/promote-admin',
+  authorizeInternal,
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res
+        .status(400)
+        .json({ message: 'A valid email is required in the body.' });
+    }
+
+    try {
+      const userToPromote = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!userToPromote) {
+        return res
+          .status(404)
+          .json({ message: 'User not found with that email.' });
+      }
+
+      if (userToPromote.role === Role.ADMIN) {
+        return res.status(200).json({
+          message: 'User is already an admin.',
+          user: userToPromote,
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { email },
+        data: {
+          role: Role.ADMIN,
+          isVerified: true,
+        },
+      });
+
+      res.status(200).json({
+        message: 'User successfully promoted to admin.',
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error('Promote User Error:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+);
+
+app.post(
+  '/user/utility/demote-admin',
+  authorizeInternal, // Protects with your new secret key
+  async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    if (!email || typeof email !== 'string') {
+      return res
+        .status(400)
+        .json({ message: 'A valid email is required in the body.' });
+    }
+
+    try {
+      const userToDemote = await prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!userToDemote) {
+        return res
+          .status(404)
+          .json({ message: 'User not found with that email.' });
+      }
+
+      if (userToDemote.role === Role.USER) {
+        return res.status(200).json({
+          message: 'User is already a regular user.',
+          user: userToDemote,
+        });
+      }
+
+      const updatedUser = await prisma.user.update({
+        where: { email },
+        data: {
+          role: Role.USER,
+        },
+      });
+
+      res.status(200).json({
+        message: 'User successfully demoted to user.',
+        user: updatedUser,
+      });
+    } catch (error) {
+      console.error('Demote User Error:', error);
+      res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+);
 
 /**
  * Temporary utility endpoints

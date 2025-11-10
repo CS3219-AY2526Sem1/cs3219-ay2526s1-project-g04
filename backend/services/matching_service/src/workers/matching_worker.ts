@@ -624,8 +624,11 @@ export class MatchingWorker {
 
       await Promise.all([
         this.matchingRedis.statusHash.updateMatchingId(userAId, matchingId),
-        this.matchingRedis.statusHash.updateUserStatus(userAId, 'matched'),
         this.matchingRedis.statusHash.updateMatchingId(userBId, matchingId),
+      ]);
+
+      await Promise.all([
+        this.matchingRedis.statusHash.updateUserStatus(userAId, 'matched'),
         this.matchingRedis.statusHash.updateUserStatus(userBId, 'matched'),
       ]);
 

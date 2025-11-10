@@ -11,9 +11,10 @@ import {
 import { Question, TestCase } from '@/lib/question-service';
 import QuestionViewBox from '@/components/ui/home/question-view/QuestionViewBox';
 import TestCaseBox from '@/components/ui/home/question-view/TestCaseBox';
+import { getRole } from '@/lib/utils/jwt';
 // import { TEST_QUESTION_VIEW } from '@/lib/test-data/TestQuestionView'; // for test
 // import { TEST_TEST_CASES } from '@/lib/test-data/TestTestCases'; // for test
-import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 
 export default function QuestionViewPage() {
   const params = useParams();
@@ -21,13 +22,20 @@ export default function QuestionViewPage() {
   const [questionData, setQuestionData] = useState<Question | null>(null);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // get the role of user
+  useEffect(() => {
+    const role = getRole();
+    setUserRole(role);
+  }, []);
 
   // get question details
   useEffect(() => {
     if (!questionId) return;
 
     setLoading(true);
-    if (TEST_USER.role === 'admin') {
+    if (userRole === 'ADMIN') {
       getAdminQuestionById(questionId.toString())
         .then((res) => {
           if (!res.success) {
@@ -39,7 +47,7 @@ export default function QuestionViewPage() {
         })
         .catch((err) => console.error(err))
         .finally(() => setLoading(false));
-    } else if (TEST_USER.role === 'user') {
+    } else if (userRole === 'USER') {
       getQuestionById(questionId.toString())
         .then((res) => {
           if (!res.success) {
@@ -47,19 +55,20 @@ export default function QuestionViewPage() {
             return;
           }
 
+          console.log(`got question successfully: ${JSON.stringify(res.data)}`);
           setQuestionData(res.data);
         })
         .catch((err) => console.error(err))
         .finally(() => setLoading(false));
     }
-  }, [questionId]);
+  }, [questionId, userRole]);
 
   // get test cases
   useEffect(() => {
     if (!questionId) return;
 
     setLoading(true);
-    if (TEST_USER.role === 'admin') {
+    if (userRole === 'ADMIN') {
       getAdminQuestionsResources(questionId.toString())
         .then((res) => {
           if (!res.success) {
@@ -71,7 +80,7 @@ export default function QuestionViewPage() {
         })
         .catch((err) => console.error(err))
         .finally(() => setLoading(false));
-    } else if (TEST_USER.role === 'user') {
+    } else if (userRole === 'USER') {
       getQuestionsResources(questionId.toString())
         .then((res) => {
           if (!res.success) {
@@ -83,10 +92,20 @@ export default function QuestionViewPage() {
         .catch((err) => console.error(err))
         .finally(() => setLoading(false));
     }
-  }, [questionId]);
+  }, [questionId, userRole]);
 
   // const questionData = TEST_QUESTION_VIEW; // for test
   // const testCases = TEST_TEST_CASES; // for test
+
+  if (!userRole) {
+    return (
+      <div className="flex justify-center items-center h-full w-full">
+        <p className="text-gray-500">
+          You must be logged in to view this page.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -95,10 +114,7 @@ export default function QuestionViewPage() {
           <p>Loading...</p>
         ) : (
           <div className="flex flex-col flex-1 gap-6">
-            <QuestionViewBox
-              questionData={questionData}
-              userRole={TEST_USER.role}
-            />
+            <QuestionViewBox questionData={questionData} userRole={userRole} />
             <TestCaseBox testCases={testCases} />
           </div>
         )

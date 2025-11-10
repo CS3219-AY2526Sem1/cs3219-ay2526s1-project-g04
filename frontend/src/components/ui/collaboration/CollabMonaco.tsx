@@ -64,6 +64,7 @@ export default function CollabMonaco(p: props) {
   const handleEditorDidMount: OnMount = async (editor, monaco) => {
     if (!yCodeDoc || !codeProvider) return;
     const model = editor.getModel();
+    const placeholderText = '// Collaborative Monaco with Yjs';
     if (!model) return;
 
     const mod = await import('y-monaco');
@@ -71,6 +72,18 @@ export default function CollabMonaco(p: props) {
 
     const yText = yCodeDoc.getText('monaco');
     yTextRef.current = yText;
+    const currentText = yText.toString();
+
+    if (currentText.trim() === placeholderText.trim()) {
+      console.log('Setting Y.Text with default code...');
+      const initialCode = code;
+
+      // Use a transaction for the change
+      yCodeDoc.transact(() => {
+        yText.insert(0, initialCode);
+      });
+    }
+
     bindingRef.current = new MonacoBinding(
       yText,
       model,

@@ -7,12 +7,20 @@ import TopicFilterBar from '@/components/ui/home/question-bank/TopicFilterBar';
 import AddQuestionButton from '@/components/ui/home/question-bank/AddQuestionButton';
 import QuestionBankTable from '@/components/ui/home/question-bank/QuestionBankTable';
 import { Topic } from '@/lib/question-service';
+import { getRole } from '@/lib/utils/jwt';
 // import { TEST_TOPICS } from '@/lib/test-data/TestTopics'; // for test
-import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 
 export default function Page() {
   const [topicFilter, setTopicFilter] = useState('All Topics'); // topic filter for table
   const [topicList, setTopicList] = useState<Topic[]>([]); // list of topics
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // get the role of user
+  useEffect(() => {
+    const role = getRole();
+    setUserRole(role);
+  }, []);
 
   // get the list of topics from the question service
   useEffect(() => {
@@ -36,12 +44,22 @@ export default function Page() {
       .catch((err) => console.error(err));
   }, []);
 
+  if (!userRole) {
+    return (
+      <div className="flex justify-center items-center h-full w-full">
+        <p className="text-gray-500">
+          You must be logged in to view this page.
+        </p>
+      </div>
+    );
+  }
+
   // ui
   return (
     <div className="flex flex-col gap-y-6">
       <div className="flex items-center justify-between">
         <h1>Question Bank</h1>
-        {TEST_USER.role === 'admin' && <AddQuestionButton />}
+        {userRole === 'ADMIN' && <AddQuestionButton />}
       </div>
 
       <TopicFilterBar
@@ -50,7 +68,7 @@ export default function Page() {
         topicFilter={topicFilter}
         setTopicFilter={setTopicFilter}
       />
-      <QuestionBankTable topicFilter={topicFilter} userRole={TEST_USER.role} />
+      <QuestionBankTable topicFilter={topicFilter} userRole={userRole} />
     </div>
   );
 }

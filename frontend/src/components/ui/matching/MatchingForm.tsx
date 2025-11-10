@@ -5,10 +5,11 @@ import { ChevronRightIcon } from '@heroicons/react/24/outline';
 import { getTopicsByDifficulty } from '@/services/questionServiceApi';
 import { Topic } from '@/lib/question-service/index';
 import { DIFFICULTY_LEVELS } from '@/lib/constants/DifficultyLevels';
-import { MatchCriteria, MatchRequestBody } from '@/lib/matching-service';
+import { MatchCriteria } from '@/lib/matching-service';
 import { postMatchRequest } from '@/services/matchingServiceApi';
 import { getUserId } from '@/lib/utils/jwt';
 import { type MatchState } from '@/lib/constants/MatchTypes';
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for test
 // import { TEST_TOPICS } from '@/lib/test-data/TestTopics'; // for test
 
 interface FormProps {
@@ -167,13 +168,8 @@ export default function MatchingForm({ setMatchState }: FormProps) {
       topics,
     };
 
-    const reqPayload: MatchRequestBody = {
-      userId: getUserId()!.toString(),
-      criteria: reqCriteria,
-    };
-
     try {
-      const res = await postMatchRequest(reqPayload);
+      const res = await postMatchRequest(reqCriteria);
       if (!res.success) {
         return alert(res.message);
       } else {

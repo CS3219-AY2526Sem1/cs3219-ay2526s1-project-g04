@@ -31,7 +31,7 @@ import {
 
 interface QuestionBankTableProps {
   topicFilter: string;
-  userRole: 'admin' | 'user'; // logic to be implemented later on
+  userRole: string | null;
 }
 
 export default function QuestionBankTable({
@@ -50,7 +50,7 @@ export default function QuestionBankTable({
 
   const handleRowDoubleClick = (params: GridRowParams) => {
     const questionId = params.row.id;
-    router.push(`/home/question-view/${questionId}?userRole=${userRole}`);
+    router.push(`/home/question-view/${questionId}`);
   };
 
   const handleDeleteClick = async (id: string) => {
@@ -89,9 +89,9 @@ export default function QuestionBankTable({
 
   useEffect(() => {
     setLoading(true);
-    if (userRole === 'user') {
+    if (userRole === 'USER') {
       const params: getQuestionsRequestParams = {
-        page: paginationModel.page,
+        page: paginationModel.page + 1,
         page_size: paginationModel.pageSize,
         topics: topicFilter,
       };
@@ -110,9 +110,9 @@ export default function QuestionBankTable({
         .finally(() => setLoading(false));
     }
 
-    if (userRole === 'admin') {
+    if (userRole === 'ADMIN') {
       const params: getQuestionsRequestParams = {
-        page: paginationModel.page,
+        page: paginationModel.page + 1,
         page_size: paginationModel.pageSize,
         topics: topicFilter,
       };
@@ -124,6 +124,10 @@ export default function QuestionBankTable({
           }
           const data = res.data;
           const items = data.items;
+
+          console.log(
+            `[Question Bank Table] retrieved items: ${JSON.stringify(items)}`,
+          );
 
           setQuestions(items);
           setRowCount(data.total || items.length);
@@ -299,7 +303,7 @@ export default function QuestionBankTable({
                   color: t.color_hex,
                 }}
               >
-                {t.slug}
+                {t.display}
               </span>
             ))}
           </div>
@@ -309,7 +313,7 @@ export default function QuestionBankTable({
   ];
 
   // define table columns
-  const columns = userRole === 'admin' ? adminColumns : userColumns;
+  const columns = userRole === 'ADMIN' ? adminColumns : userColumns;
 
   return (
     <div className="w-full bg-[var(--background)] rounded-xl shadow-xl">

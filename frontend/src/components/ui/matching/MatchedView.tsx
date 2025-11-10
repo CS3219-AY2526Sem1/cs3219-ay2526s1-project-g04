@@ -26,7 +26,9 @@ export default function MatchedView({
 
     const pollStatus = async () => {
       try {
-        const { sessionId, created, ready } = await sessionIsReady(matchingId);
+        const { sessionId, created, ready } = await sessionIsReady(
+          `matched:${matchingId}`,
+        );
         console.log(sessionId, created, createProcessIsDone);
         if (created && sessionId && !createProcessIsDone) {
           getCollabProvider(sessionId, getUserId()!.toString());

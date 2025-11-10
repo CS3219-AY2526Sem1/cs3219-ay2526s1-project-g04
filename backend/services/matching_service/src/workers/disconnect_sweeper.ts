@@ -15,7 +15,7 @@ export class DisconnectSweeper {
   }
 
   public start(): void {
-    logger.info(`[DisconnectSweeper] Disconnect sweeper started.`);
+    // logger.info(`[DisconnectSweeper] Disconnect sweeper started.`);
     setInterval(() => this.sweepDisconnectedUsers(), INTERVAL);
   }
 
@@ -27,7 +27,7 @@ export class DisconnectSweeper {
       return;
     }
 
-    logger.info(`[DisconnectSweeper] Sweeping starting.`);
+    // logger.info(`[DisconnectSweeper] Sweeping starting.`);
     this.isSweeping = true;
     try {
       const allUsers = await this.matchingRedis.statusHash.getAllUsers();
@@ -67,7 +67,7 @@ export class DisconnectSweeper {
       logger.error('[DisconnectSweeper] Error during sweep:', err);
     } finally {
       this.isSweeping = false;
-      logger.info(`[DisconnectSweeper] Sweeping completed.`);
+      // logger.info(`[DisconnectSweeper] Sweeping completed.`);
     }
   }
 }

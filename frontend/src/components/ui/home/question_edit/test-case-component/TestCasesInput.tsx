@@ -13,7 +13,7 @@ interface props {
 }
 
 export default function TestCasesInput({ testCases, setTestCases }: props) {
-  const [mode, setMode] = React.useState<MODES>('editing');
+  const [mode, setMode] = React.useState<MODES>('creating');
   const [selectedIndex, setSelectedIndex] = React.useState(0);
 
   return (

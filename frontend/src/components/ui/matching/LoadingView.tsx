@@ -5,9 +5,11 @@ import Image from 'next/image';
 import { getMatchStatus } from '@/services/matchingServiceApi';
 import { getUserId } from '@/lib/utils/jwt';
 import { type MatchState, TOTAL_MATCH_TIME } from '@/lib/constants/MatchTypes';
+// import { TEST_USER } from '@/lib/test-data/TestUser'; // for testing
 
 interface LoadingViewProps {
   setMatchState: React.Dispatch<React.SetStateAction<MatchState>>;
+  isCancelling: boolean;
 }
 
 interface ProgressBarProps {
@@ -25,13 +27,17 @@ function ProgressBar({ progressPercent }: ProgressBarProps) {
   );
 }
 
-export default function LoadingView({ setMatchState }: LoadingViewProps) {
+export default function LoadingView({
+  setMatchState,
+  isCancelling,
+}: LoadingViewProps) {
   const [remainingTime, setRemainingTime] = React.useState(TOTAL_MATCH_TIME);
 
   // poll match status every 1 second
   const fetchStatus = async () => {
+    if (isCancelling) return;
     try {
-      const res = await getMatchStatus(getUserId()!.toString());
+      const res = await getMatchStatus();
       if (!res.success) return;
 
       const status = res.data?.status;
@@ -39,7 +45,8 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
 
       setRemainingTime(timeLeft);
 
-      if (status === 'matched') {
+      if (status === 'matched' && res.data?.matchingId) {
+        console.log(11111, res.data);
         setMatchState({
           status: 'matched',
           matchingId: res.data?.matchingId ?? '',
@@ -47,9 +54,11 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
       } else if (status === 'timeout') {
         setMatchState({ status: 'timeout' });
       } else if (status === 'cancelled' || status === 'disconnected') {
-        alert(
-          'Looks like there was an error. The server has detected you have disconnected.',
-        );
+        if (!isCancelling) {
+          alert(
+            'Looks like there was an error. The server has detected you have disconnected.',
+          );
+        }
         setMatchState({ status: 'requesting' });
         return;
       }
@@ -59,6 +68,7 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
   };
 
   React.useEffect(() => {
+    if (isCancelling) return;
     fetchStatus();
 
     const intervalId = setInterval(fetchStatus, 1000);
@@ -66,7 +76,7 @@ export default function LoadingView({ setMatchState }: LoadingViewProps) {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, []);
+  }, [isCancelling]);
 
   const progressPercentage =
     ((TOTAL_MATCH_TIME - remainingTime) / TOTAL_MATCH_TIME) * 100;

@@ -46,7 +46,9 @@ export default function TestCaseBox({ testCases }: TestCaseBoxProps) {
             <pre>{selectedTestCase.expected_output}</pre>
           </div>
         ) : (
-          <p>No test cases available.</p>
+          <div className="flex w-full h-full justify-center items-center">
+            <p className="text-gray-500">No test cases available.</p>
+          </div>
         )}
       </div>
     </div>

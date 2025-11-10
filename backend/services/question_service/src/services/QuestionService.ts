@@ -80,3 +80,46 @@ export async function getPublishedBatch(ids: string[]) {
 
   return enriched;
 }
+
+export async function listAll(opts: {
+  difficulty?: 'Easy' | 'Medium' | 'Hard';
+  topics?: string[];
+  q?: string;
+  page?: number;
+  page_size?: number;
+}) {
+  // Fetch raw rows from the repository (handles both Prisma + FTS branches)
+  const { rows, total } = await Repo.listAll(opts);
+
+  // Enrich each row: render sanitized HTML and map to the public response shape
+  const items = await Promise.all(
+    rows.map(async (row) => {
+      const attachments = (row.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+
+      return toPublicQuestion({
+        row: row as QuestionRecordFromRepo,
+        body_html,
+      });
+    }),
+  );
+
+  return { items, total };
+}
+
+export async function getQuestionWithHtml(id: string) {
+  const row = await Repo.getQuestionById(id);
+
+  if (!row) return undefined;
+
+  const attachments = (row.attachments ?? []) as AttachmentLike[];
+
+  const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+
+  const view = toPublicQuestion({
+    row: row as QuestionRecordFromRepo,
+    body_html,
+  });
+
+  return view;
+}
