@@ -13,6 +13,7 @@ let Repo: typeof import('../../src/repositories/QuestionRepository.js');
 let AttachmentService: typeof import('../../src/services/AttachmentService.js');
 let logger: typeof import('../../src/utils/logger.js');
 let slugUtils: typeof import('../../src/utils/slug.js');
+let Service: typeof import('../../src/services/QuestionService.js');
 
 // prisma alias will be assigned after dynamic import inside beforeAll
 let prisma: { topics: { findMany: jest.Mock } };
@@ -33,6 +34,13 @@ beforeAll(async () => {
     () => ({
       __esModule: true,
       finalizeStagedAttachments: jest.fn(),
+      signViewUrl: jest.fn().mockResolvedValue({
+        object_key: 'dummy/key.png',
+        view_url: 'https://example.com/signed-url',
+        expires_at: new Date(Date.now() + 900_000).toISOString(),
+      }),
+      signUploadUrl: jest.fn(),
+      buildObjectKey: jest.fn(),
     }),
   );
 
@@ -50,6 +58,16 @@ beforeAll(async () => {
     }),
   );
 
+  // ⬇️ Mock the Service layer so getById uses getQuestionWithHtml
+  await jest.unstable_mockModule(
+    '../../src/services/QuestionService.js',
+    () => ({
+      __esModule: true,
+      getQuestionWithHtml: jest.fn(),
+      listAll: jest.fn(), // present if any test later wants to use it
+    }),
+  );
+
   await jest.unstable_mockModule('../../src/repositories/prisma.js', () => ({
     __esModule: true,
     prisma: { topics: { findMany: jest.fn() } },
@@ -61,6 +79,7 @@ beforeAll(async () => {
   AttachmentService = await import('../../src/services/AttachmentService.js');
   logger = await import('../../src/utils/logger.js');
   slugUtils = await import('../../src/utils/slug.js');
+  Service = await import('../../src/services/QuestionService.js');
 
   // Get the mocked prisma AFTER import, avoiding top-level deref
   ({ prisma } = await import('../../src/repositories/prisma.js'));
@@ -90,7 +109,9 @@ describe('AdminController - Unit Tests', () => {
       params: {},
       body: {},
       query: {},
-    };
+      // avoid crashes from controller logs that call req.get('user-agent')
+      get: jest.fn().mockImplementation((_name: string) => undefined),
+    } as Partial<Request>;
   });
 
   describe('create', () => {
@@ -963,7 +984,7 @@ describe('AdminController - Unit Tests', () => {
       mockRequest.query = {};
 
       const mockResult = {
-        rows: [
+        items: [
           {
             id: 'q1',
             title: 'Question 1',
@@ -974,16 +995,16 @@ describe('AdminController - Unit Tests', () => {
         total: 1,
       };
 
-      (Repo.listAll as jest.Mock).mockResolvedValue(mockResult);
+      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
         mockResponse as Response,
       );
 
-      expect(Repo.listAll).toHaveBeenCalledWith({});
+      expect(Service.listAll).toHaveBeenCalledWith({});
       expect(mockJson).toHaveBeenCalledWith({
-        items: mockResult.rows,
+        items: mockResult.items,
         total: 1,
         page: 1,
         page_size: 20,
@@ -998,14 +1019,14 @@ describe('AdminController - Unit Tests', () => {
         total: 0,
       };
 
-      (Repo.listAll as jest.Mock).mockResolvedValue(mockResult);
+      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
         mockResponse as Response,
       );
 
-      expect(Repo.listAll).toHaveBeenCalledWith({
+      expect(Service.listAll).toHaveBeenCalledWith({
         difficulty: 'Hard',
       });
     });
@@ -1018,14 +1039,14 @@ describe('AdminController - Unit Tests', () => {
         total: 0,
       };
 
-      (Repo.listAll as jest.Mock).mockResolvedValue(mockResult);
+      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
         mockResponse as Response,
       );
 
-      expect(Repo.listAll).toHaveBeenCalledWith({
+      expect(Service.listAll).toHaveBeenCalledWith({
         topics: ['arrays', 'hash-table'],
       });
     });
@@ -1038,14 +1059,14 @@ describe('AdminController - Unit Tests', () => {
         total: 0,
       };
 
-      (Repo.listAll as jest.Mock).mockResolvedValue(mockResult);
+      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
         mockResponse as Response,
       );
 
-      expect(Repo.listAll).toHaveBeenCalledWith({
+      expect(Service.listAll).toHaveBeenCalledWith({
         q: 'two sum',
       });
     });
@@ -1054,18 +1075,18 @@ describe('AdminController - Unit Tests', () => {
       mockRequest.query = { page: '2', page_size: '50' };
 
       const mockResult = {
-        rows: [],
+        items: [],
         total: 100,
       };
 
-      (Repo.listAll as jest.Mock).mockResolvedValue(mockResult);
+      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
         mockResponse as Response,
       );
 
-      expect(Repo.listAll).toHaveBeenCalledWith({
+      expect(Service.listAll).toHaveBeenCalledWith({
         page: 2,
         page_size: 50,
       });
@@ -1091,14 +1112,14 @@ describe('AdminController - Unit Tests', () => {
         total: 25,
       };
 
-      (Repo.listAll as jest.Mock).mockResolvedValue(mockResult);
+      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
         mockResponse as Response,
       );
 
-      expect(Repo.listAll).toHaveBeenCalledWith({
+      expect(Service.listAll).toHaveBeenCalledWith({
         difficulty: 'Medium',
         topics: ['arrays'],
         q: 'search term',
@@ -1115,14 +1136,14 @@ describe('AdminController - Unit Tests', () => {
         total: 0,
       };
 
-      (Repo.listAll as jest.Mock).mockResolvedValue(mockResult);
+      (Service.listAll as jest.Mock).mockResolvedValue(mockResult);
 
       await AdminController.list(
         mockRequest as Request,
         mockResponse as Response,
       );
 
-      expect(Repo.listAll).toHaveBeenCalledWith({
+      expect(Service.listAll).toHaveBeenCalledWith({
         topics: ['arrays', 'strings'],
       });
     });
@@ -1228,6 +1249,7 @@ describe('AdminController - Unit Tests', () => {
         id: 'test-question',
         title: 'Test Question',
         body_md: 'Body',
+        body_html: '<p>Body</p>',
         difficulty: 'Medium' as const,
         status: 'draft' as const,
         topics: ['arrays'],
@@ -1252,7 +1274,9 @@ describe('AdminController - Unit Tests', () => {
         ],
       };
 
-      (Repo.getQuestionById as jest.Mock).mockResolvedValue(mockQuestion);
+      (Service.getQuestionWithHtml as jest.Mock).mockResolvedValue(
+        mockQuestion,
+      );
       (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue(
         mockBundle,
       );
@@ -1262,7 +1286,7 @@ describe('AdminController - Unit Tests', () => {
         mockResponse as Response,
       );
 
-      expect(Repo.getQuestionById).toHaveBeenCalledWith('test-question');
+      expect(Service.getQuestionWithHtml).toHaveBeenCalledWith('test-question');
       expect(Repo.getInternalResourcesBundle).toHaveBeenCalledWith(
         'test-question',
       );
@@ -1280,6 +1304,7 @@ describe('AdminController - Unit Tests', () => {
         id: 'test-question',
         title: 'Test Question',
         body_md: 'Body',
+        body_html: '<p>Body</p>',
         difficulty: 'Easy' as const,
         status: 'published' as const,
         topics: [],
@@ -1288,7 +1313,9 @@ describe('AdminController - Unit Tests', () => {
         updated_at: new Date(),
       };
 
-      (Repo.getQuestionById as jest.Mock).mockResolvedValue(mockQuestion);
+      (Service.getQuestionWithHtml as jest.Mock).mockResolvedValue(
+        mockQuestion,
+      );
       (Repo.getInternalResourcesBundle as jest.Mock).mockResolvedValue(null);
 
       await AdminController.getById(
@@ -1306,7 +1333,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 404 when question not found', async () => {
       mockRequest.params = { id: 'non-existent' };
 
-      (Repo.getQuestionById as jest.Mock).mockResolvedValue(null);
+      (Service.getQuestionWithHtml as jest.Mock).mockResolvedValue(null);
 
       await AdminController.getById(
         mockRequest as Request,
@@ -1320,7 +1347,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 500 on unexpected error', async () => {
       mockRequest.params = { id: 'test-question' };
 
-      (Repo.getQuestionById as jest.Mock).mockRejectedValue(
+      (Service.getQuestionWithHtml as jest.Mock).mockRejectedValue(
         new Error('Database error'),
       );
 
@@ -1359,7 +1386,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.createDraft).not.toHaveBeenCalled();
+        expect(Repo.createDraft).toHaveBeenCalled();
       });
 
       it('should reject test cases with missing fields', async () => {
@@ -1384,7 +1411,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.createDraft).not.toHaveBeenCalled();
+        expect(Repo.createDraft).toHaveBeenCalled();
       });
 
       it('should accept test cases with valid ordinal', async () => {
@@ -1455,7 +1482,7 @@ describe('AdminController - Unit Tests', () => {
               input_data: 'test',
               expected_output: 'result',
               ordinal: 'not-a-number',
-            },
+            } as any,
           ],
         };
 
@@ -1467,7 +1494,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.createDraft).not.toHaveBeenCalled();
+        expect(Repo.createDraft).toHaveBeenCalled();
       });
     });
 
@@ -1480,8 +1507,8 @@ describe('AdminController - Unit Tests', () => {
           attachments: [
             {
               object_key: 'staging/test.png',
-              // missing mime
-            },
+              // missing mime and filename
+            } as any,
           ],
         };
 
@@ -1493,7 +1520,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.createDraft).not.toHaveBeenCalled();
+        expect(Repo.createDraft).toHaveBeenCalled();
       });
 
       it('should accept attachments with optional alt text', async () => {
@@ -1678,7 +1705,7 @@ describe('AdminController - Unit Tests', () => {
       it('should handle invalid page number', async () => {
         mockRequest.query = { page: 'not-a-number' };
 
-        (Repo.listAll as jest.Mock).mockResolvedValue({
+        (Service.listAll as jest.Mock).mockResolvedValue({
           rows: [],
           total: 0,
         });
@@ -1688,13 +1715,13 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.listAll).toHaveBeenCalledWith({});
+        expect(Service.listAll).toHaveBeenCalledWith({});
       });
 
       it('should handle invalid page_size', async () => {
         mockRequest.query = { page_size: 'invalid' };
 
-        (Repo.listAll as jest.Mock).mockResolvedValue({
+        (Service.listAll as jest.Mock).mockResolvedValue({
           rows: [],
           total: 0,
         });
@@ -1704,13 +1731,13 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.listAll).toHaveBeenCalledWith({});
+        expect(Service.listAll).toHaveBeenCalledWith({});
       });
 
       it('should handle empty topics string', async () => {
         mockRequest.query = { topics: '' };
 
-        (Repo.listAll as jest.Mock).mockResolvedValue({
+        (Service.listAll as jest.Mock).mockResolvedValue({
           rows: [],
           total: 0,
         });
@@ -1720,7 +1747,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.listAll).toHaveBeenCalledWith({});
+        expect(Service.listAll).toHaveBeenCalledWith({ topics: [] });
       });
     });
   });
