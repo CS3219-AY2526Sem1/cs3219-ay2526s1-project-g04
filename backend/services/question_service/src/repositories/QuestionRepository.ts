@@ -2,6 +2,7 @@
 
 import { prisma } from './prisma.js';
 import { Prisma } from '@prisma/client';
+import DOMPurify from 'isomorphic-dompurify';
 import type {
   questions as Question,
   question_test_cases as QuestionTestCase,
@@ -128,6 +129,7 @@ export async function listPublished(opts: {
   q?: string;
   page?: number;
   page_size?: number;
+  highlight?: boolean;
 }) {
   const page = Math.max(1, opts.page ?? 1);
   const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
@@ -168,6 +170,7 @@ export async function listPublished(opts: {
       question_topics: Array<{
         topics: { slug: string; display: string; color_hex: string };
       }>;
+      snippet_html?: string | null;
     };
 
     // Dynamic SQL parts
@@ -209,11 +212,23 @@ export async function listPublished(opts: {
     const offsetIdx = paramIdx++;
     params.push(page_size, offset);
 
+    // Snippet (only if highlight=true)
+    const snippetSql = opts.highlight
+      ? `ts_headline(
+            'english',
+            coalesce(q.title, '') || ' ' || coalesce(q.body_md, ''),
+            websearch_to_tsquery('english', $1),
+            'StartSel=<mark>,StopSel=</mark>,MaxFragments=2,MinWords=10,MaxWords=22,ShortWord=2,FragmentDelimiter= … '
+         ) as snippet_html,`
+      : '';
+
     const sql = `
       WITH qmatch AS (
         SELECT
           q.*,
-          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank
+          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank,
+          ${snippetSql}
+          1 as dummy
         FROM questions q
         WHERE ${whereClauses.join(' AND ')}
       )
@@ -227,6 +242,7 @@ export async function listPublished(opts: {
         qm.attachments,
         qm.created_at,
         qm.updated_at,
+        ${opts.highlight ? 'qm.snippet_html,' : ''}
         COALESCE(
           json_agg(
             json_build_object(
@@ -243,15 +259,26 @@ export async function listPublished(opts: {
       LEFT JOIN question_topics qt ON qt.question_id = qm.id
       LEFT JOIN topics t ON t.slug = qt.topic_slug
       GROUP BY
-        qm.id, qm.title, qm.body_md, qm.difficulty, qm.status, qm.version, qm.attachments, qm.created_at, qm.updated_at, qm.rank
-      ORDER BY
-        qm.rank DESC,
-        qm.updated_at DESC
+        qm.id, qm.title, qm.body_md, qm.difficulty,
+        qm.status, qm.version, qm.attachments,
+        qm.created_at, qm.updated_at, qm.rank ${opts.highlight ? ', qm.snippet_html' : ''}
+      ORDER BY qm.rank DESC, qm.updated_at DESC
       LIMIT $${limitIdx}
       OFFSET $${offsetIdx};
     `;
 
-    const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+    const rowsRaw = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+    // sanitize snippets
+    const rows = rowsRaw.map((r) =>
+      r.snippet_html
+        ? {
+            ...r,
+            snippet_html: DOMPurify.sanitize(r.snippet_html, {
+              ALLOWED_TAGS: ['mark'],
+            }),
+          }
+        : r,
+    );
     return { rows, total };
   }
 
@@ -284,6 +311,7 @@ export async function listAll(opts: {
   q?: string;
   page?: number;
   page_size?: number;
+  highlight?: boolean;
 }) {
   const page = Math.max(1, opts.page ?? 1);
   const page_size = Math.min(100, Math.max(1, opts.page_size ?? 20));
@@ -304,6 +332,7 @@ export async function listAll(opts: {
       question_topics: Array<{
         topics: { slug: string; display?: string; color_hex: string };
       }>;
+      snippet_html?: string | null;
     };
 
     const whereClauses: string[] = [
@@ -341,11 +370,23 @@ export async function listAll(opts: {
     const offsetIdx = i++;
     params.push(page_size, offset);
 
+    // Snippet (only if highlight=true)
+    const snippetSql = opts.highlight
+      ? `ts_headline(
+            'english',
+            coalesce(q.title, '') || ' ' || coalesce(q.body_md, ''),
+            websearch_to_tsquery('english', $1),
+            'StartSel=<mark>,StopSel=</mark>,MaxFragments=2,MinWords=10,MaxWords=22,ShortWord=2,FragmentDelimiter= … '
+         ) as snippet_html,`
+      : '';
+
     const sql = `
       WITH qmatch AS (
         SELECT
           q.*,
-          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank
+          ts_rank_cd(q.tsv_en, websearch_to_tsquery('english', $1)) AS rank,
+          ${snippetSql}
+          1 as dummy
         FROM questions q
         WHERE ${whereClauses.join(' AND ')}
       )
@@ -359,6 +400,7 @@ export async function listAll(opts: {
         qm.attachments,
         qm.created_at,
         qm.updated_at,
+        ${opts.highlight ? 'qm.snippet_html,' : ''}
         COALESCE(
           json_agg(
             json_build_object(
@@ -375,7 +417,8 @@ export async function listAll(opts: {
       LEFT JOIN question_topics qt ON qt.question_id = qm.id
       LEFT JOIN topics t ON t.slug = qt.topic_slug
       GROUP BY
-        qm.id, qm.title, qm.body_md, qm.difficulty, qm.status, qm.version, qm.attachments, qm.created_at, qm.updated_at, qm.rank
+        qm.id, qm.title, qm.body_md, qm.difficulty, qm.status, qm.version, 
+        qm.attachments, qm.created_at, qm.updated_at, qm.rank ${opts.highlight ? ', qm.snippet_html' : ''}
       ORDER BY
         qm.rank DESC,
         qm.updated_at DESC
@@ -383,7 +426,20 @@ export async function listAll(opts: {
       OFFSET $${offsetIdx};
     `;
 
-    const rows = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+    const rowsRaw = await prisma.$queryRawUnsafe<Row[]>(sql, ...params);
+
+    // sanitize snippets
+    const rows = rowsRaw.map((r) =>
+      r.snippet_html
+        ? {
+            ...r,
+            snippet_html: DOMPurify.sanitize(r.snippet_html, {
+              ALLOWED_TAGS: ['mark'],
+            }),
+          }
+        : r,
+    );
+
     return { rows, total };
   }
 
