@@ -15,12 +15,12 @@ import {
 import QuestionTitleInput from '../QuestionTitleInput';
 import DifficultySelect from '../DifficultySelect';
 import AttachmentsSection from '../file-attachment-components/AttachmentsSection';
-import TopicAutocomplete from '../topic-select-component/TopicAutocomplete';
 import QuestionBodyInput from '../QuestionBodyInput';
 import SubmitButton from '../SubmitButton';
 import StarterCodeInput from '../StarterCodeInput';
-// import { TEST_QUESTION_VIEW } from '@/lib/test-data/TestQuestionView';
 import TestCasesInput from '../test-case-component/TestCasesInput';
+import TopicInputSection from '../topic-select-component/TopicInputSection';
+// import { TEST_QUESTION_VIEW } from '@/lib/test-data/TestQuestionView';
 
 interface QuestionFormProps {
   mode: 'create' | 'edit';
@@ -155,7 +155,7 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
         {/* Question Title */}
         <QuestionTitleInput title={title} setTitle={setTitle} />
 
-        <div className="grid grid-cols-2 gap-x-5">
+        <div className="grid grid-cols-2 gap-x-5 items-start">
           {/* Difficulty */}
           <DifficultySelect
             difficulty={difficulty}
@@ -163,7 +163,10 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
           />
 
           {/* Topics */}
-          <TopicAutocomplete topics={topics} setTopics={setTopics} />
+          <TopicInputSection
+            selectedTopicSlugs={topics}
+            setSelectedTopicSlugs={setTopics}
+          />
         </div>
 
         <AttachmentsSection
