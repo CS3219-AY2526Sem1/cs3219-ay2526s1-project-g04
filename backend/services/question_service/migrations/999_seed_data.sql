@@ -34,9 +34,9 @@ WITH seed(id, title, difficulty, topics, full_markdown) AS (
     'Reverse a String',
     'Easy',
     '["strings","algorithms"]',
-    'Write a function that reverses an array of characters in-place using O(1) extra memory.
+    'Write a function that returns a **new** array of characters in reversed order.
 
-You are given a character array s. Modify s so that it becomes reversed. Do not allocate extra arrays for another copy; you must do it in-place.
+You are given a character array `s`. **Do not modify `s` in place**; return a new reversed array (or string).
 
 Example 1:
 Input:  s = ["h","e","l","l","o"]
@@ -51,7 +51,7 @@ Constraints:
 - s[i] is a printable ASCII character.
 
 Follow-up:
-- Can you do it with two pointers without recursion?'
+- Can you do it in O(n) time using two pointers without mutating the input?'
   ),
 
   (
@@ -262,7 +262,9 @@ dp[i][j] = LCS length of text1[i:] and text2[j:].'
     'Rotate Image',
     'Medium',
     '["arrays","algorithms"]',
-    'You are given an n x n matrix. Rotate it 90 degrees clockwise in-place.
+    'You are given an n x n matrix. Return a **new** matrix that is the 90° clockwise rotation of the input.
+
+**Do not modify the input matrix in place.**
 
 Example:
 Input:
@@ -278,9 +280,8 @@ Output:
  [9,6,3]
 ]
 
-You must do this in-place:
-- transpose
-- then reverse each row.'
+Hint:
+- You can compose transpose and reverse on a copy, or build the result by index mapping.'
   ),
 
   (
@@ -492,9 +493,9 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
   (
     'reverse-a-string',
     'class Solution:
-    def reverseString(self, s: list[str]) -> None:
+    def reverseString(self, s: list[str]) -> list[str]:
         """
-        Do not return anything, modify s in-place instead.
+        Return a new reversed array. Do not mutate `s`.
         """
         pass
 '
@@ -509,9 +510,10 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
   (
     'rotate-image',
     'class Solution:
-    def rotate(self, matrix: list[list[int]]) -> None:
+    def rotate(self, matrix: list[list[int]]) -> list[list[int]]:
         """
-        Do not return anything, modify matrix in-place instead.
+        Return a new matrix rotated 90 degrees clockwise.
+        Do not mutate `matrix`.
         """
         pass
 '
