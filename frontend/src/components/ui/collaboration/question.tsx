@@ -41,6 +41,14 @@ export const QuestionCard = (p: questionProps) => {
       setQuestionMd(question?.body_html ?? '');
       setQuestionTitle(question?.title ?? '');
       setQuestionTopics(question?.topics ?? []);
+      const testCases = question.test_cases?.map((testcase, idx) => {
+        return {
+          input: JSON.parse(testcase.input_data),
+          expectedOutput: JSON.parse(testcase.expected_output),
+        };
+      });
+
+      console.log('tc', testCases);
     };
     fetchQuestion();
   }, []);

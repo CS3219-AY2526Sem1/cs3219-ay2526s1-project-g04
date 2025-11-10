@@ -2,7 +2,6 @@ import * as Types from '@/lib/question-service';
 import { fetchWithAuth } from '@/lib/utils/apiClient';
 
 const QUESTION_SERVICE_URL = process.env.NEXT_PUBLIC_API_QUESTION_SERVICE!;
-// const QUESTION_SERVICE_URL = 'http://localhost:3001';
 
 /** ========================================================================
  * ADMIN

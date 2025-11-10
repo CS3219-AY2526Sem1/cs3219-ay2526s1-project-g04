@@ -1,9 +1,12 @@
 'use client';
 
-import React, { createContext, useContext } from 'react';
+import { Question } from '@/lib/question-service';
+import { getQuestionIdBySessId } from '@/services/collaborationServiceApi';
+import { getQuestionById } from '@/services/questionServiceApi';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface TestCase {
-  input: (number | string | boolean | object)[];
+  input: string;
   expectedOutput: string;
 }
 
@@ -34,13 +37,53 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguage] = React.useState<string>('python');
   const [results, setResults] = React.useState<ExecutionResult[]>([]);
   const [sessionId, setSessionId] = React.useState<string>();
-  const testCases: TestCase[] = [
-    { input: [[2, 7, 11, 15], 9], expectedOutput: '[0, 1]' },
-    { input: [[3, 2, 4], 6], expectedOutput: '[1, 2]' },
-    { input: [[3, 3], 6], expectedOutput: '[0, 1]' },
-    { input: [[1, 5, 3, 7], 8], expectedOutput: '[1, 2]' },
-    { input: [[10, 20, 30, 40, 50], 90], expectedOutput: '[3, 4]' },
-  ];
+  const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [starterCode, setStarterCode] = useState<string>('');
+  // let testCases: TestCase[] = [
+  // { input: [[2, 7, 11, 15], 9], expectedOutput: '[0, 1]' },
+  // { input: [[3, 2, 4], 6], expectedOutput: '[1, 2]' },
+  // { input: [[3, 3], 6], expectedOutput: '[0, 1]' },
+  // { input: [[1, 5, 3, 7], 8], expectedOutput: '[1, 2]' },
+  // { input: [[10, 20, 30, 40, 50], 90], expectedOutput: '[3, 4]' },
+  // ];
+  useEffect(() => {
+    if (!sessionId) {
+      return;
+    }
+    const fetchQuestion = async () => {
+      const questionId: string | null = await getQuestionIdBySessId(sessionId);
+      console.log(1, questionId);
+
+      if (!questionId) return;
+
+      const res = await getQuestionById(questionId);
+      if (!res.success) {
+        alert(`⚠️ Error fetching question: ${res.message}`);
+        return;
+      }
+
+      const question: Question = res.data;
+      console.log(question);
+      console.log(question.starter_code);
+      const quesTestCases = question.test_cases;
+      const quesStarterCode = question.starter_code;
+      const testCases = quesTestCases?.map((testcase, idx) => {
+        return {
+          input: testcase.input_data,
+          expectedOutput: testcase.expected_output,
+        };
+      });
+      if (testCases) {
+        setTestCases(testCases);
+      }
+      if (quesStarterCode) {
+        setCode(quesStarterCode);
+      }
+
+      console.log('tc', quesTestCases);
+    };
+    fetchQuestion();
+  }, [sessionId]);
 
   return (
     <CodeContext.Provider
