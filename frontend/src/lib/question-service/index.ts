@@ -174,3 +174,7 @@ export function isValidS3SignResponse(
     typeof o.max_bytes === 'number'
   );
 }
+
+export interface QuestionBatchResponse {
+  items: Question[];
+}
