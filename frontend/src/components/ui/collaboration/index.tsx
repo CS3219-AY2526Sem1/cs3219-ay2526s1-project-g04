@@ -15,13 +15,15 @@ import { getUserId } from '@/lib/utils/jwt';
 import { useCodeContext } from './CodeContext';
 import { YMapEvent } from 'yjs';
 import Image from 'next/image';
+import { useSnackbar } from '../notifContext';
 
 interface CollaborationProps {
   sessionId: string;
 }
 
 interface NotificationMessage {
-  senderId: 'user-left';
+  type?: string;
+  senderId: string;
   message: string;
   timestamp?: number;
 }
@@ -31,6 +33,7 @@ export const Collaboration = (p: CollaborationProps) => {
   const userId = getUserId()!.toString();
 
   const { setSessionId } = useCodeContext();
+  const { showNotification } = useSnackbar();
   const [providers, setProviders] = useState<ReturnType<
     typeof getCollabProvider
   > | null>(null);
@@ -62,7 +65,6 @@ export const Collaboration = (p: CollaborationProps) => {
       }
     })();
   }, []);
-
   if (loading) {
     return (
       <Box className="w-full h-full flex justify-center">
@@ -101,10 +103,14 @@ export const Collaboration = (p: CollaborationProps) => {
       if (change.action === 'add') {
         const value = notifications.get(key);
         if (value && value.senderId.toString() !== getUserId()!.toString()) {
-          alert(value.message);
-          router.push('/home/dashboard');
+          showNotification(value.message);
           notifications.delete(key);
-          removeCollabProvider();
+          if (value?.type === 'end') {
+            setTimeout(() => {
+              removeCollabProvider();
+              router.push('/home/dashboard');
+            }, 10000);
+          }
         }
       }
     });

@@ -638,3 +638,40 @@ export async function getQuestionsResources(
     };
   }
 }
+
+/**
+ * GET /questions/{id}/resources
+ * Get execution resources for a published question
+ */
+export async function getQuestionsInternalResources(
+  id: string,
+): Promise<Types.ApiResponse<Types.getQuestionResourcesResponse>> {
+  try {
+    const url = `${QUESTION_SERVICE_URL}/questions/${id}/internal-resources`;
+
+    const res = await fetchWithAuth(url);
+
+    const resData = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const message =
+        (resData as Types.errorResponse)?.message ??
+        `Request failed with status ${res.status} ${res.statusText}`;
+      return {
+        success: false,
+        message: message,
+      };
+    }
+
+    return {
+      success: true,
+      data: resData as Types.getQuestionResourcesResponse,
+    };
+  } catch (error) {
+    console.error(`Error fetching /questions/${id}/resources: ${error}`);
+    return {
+      success: false,
+      message: 'Server-side or unexpected error occurred.',
+    };
+  }
+}

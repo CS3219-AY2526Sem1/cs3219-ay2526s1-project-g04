@@ -39,50 +39,21 @@ app.get(
       if (!userId) {
         return res.status(400).json({ error: 'Invalid userId' });
       }
-      // const sessions = await db.getPastSessionsByUser(Number(userId));
-      const sessions = [
-        {
-          id: 1,
-          questionId: 'q_math_001',
-          endedAt: '2025-11-10T10:05:20.000Z',
-          solved: true,
-          UserAId: 101,
-          UserBId: 102,
-        },
-        {
-          id: 2,
-          questionId: 'q_chem_045',
-          endedAt: null,
-          solved: false,
-          UserAId: 103,
-          UserBId: 101,
-        },
-        {
-          id: 3,
-          questionId: 'q_hist_120',
-          endedAt: '2025-11-10T10:35:10.000Z',
-          solved: true,
-          UserAId: 102,
-          UserBId: 104,
-        },
-        {
-          id: 4,
-          questionId: 'q_cs_211',
-          endedAt: '2025-11-10T10:42:00.000Z',
-          solved: false,
-          UserAId: 105,
-          UserBId: 103,
-        },
-        {
-          id: 5,
-          questionId: 'q_phys_008',
-          endedAt: '2025-11-10T10:55:45.000Z',
-          solved: true,
-          UserAId: 101,
-          UserBId: 106,
-        },
-      ];
-      res.json(sessions);
+      const sessions = await db.getPastSessionsByUser(Number(userId));
+      const toRet = sessions.map((session) => {
+        const userAId = session.users?.UserAId ?? null;
+        const userBId = session.users?.UserBId ?? null;
+
+        return {
+          id: session.id,
+          questionId: session.questionId,
+          solved: session.solved,
+          endedAt: session.endedAt,
+          UserAId: userAId,
+          UserBId: userBId,
+        };
+      });
+      res.json(toRet);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -99,7 +70,6 @@ app.get(
       if (!userId) {
         return res.status(400).json({ error: 'Invalid userId' });
       }
-      // const sessions = await db.getPastSessionsByUser(Number(userId));
       const sessionManager = SessionManager.getInstance();
       const activeSessionId =
         sessionManager.getActiveSessionForUser(Number(userId)) ?? 1;
@@ -120,9 +90,28 @@ app.get(
         questionId: questionId,
         partnerId: buddyId,
       };
-      res.send(activeSession);
+      res.json(activeSession);
     } catch (error) {
       console.error('Error fetching sessions:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
+
+app.post(
+  '/sessions/passed/:sessionId',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const sessionId = Number(req.params['sessionId']);
+      if (!sessionId) {
+        return res.status(400).json({ error: 'Invalid sessionId' });
+      }
+      const sessionManager = SessionManager.getInstance();
+      sessionManager.setCodePassedSession(sessionId);
+      res.status(204).end();
+    } catch (error) {
+      console.error('Error saving code in sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },

@@ -159,3 +159,29 @@ export async function sessionIsAlive(sessId: string): Promise<boolean> {
     return false;
   }
 }
+
+export async function sessionCodeIsPassed(sessId: string): Promise<boolean> {
+  try {
+    const url = `${COLLAB_SERVICE_URL}/sessions/passed/${sessId}`;
+    console.log('Get session status URL:', url);
+    console.log('Making request...');
+
+    const res = await fetchWithAuth(url, { method: 'POST' });
+
+    console.log('Response status:', res.status);
+    console.log('Response ok:', res.ok);
+
+    if (!res.ok) {
+      console.log('opopo');
+      const errorText = await res.text();
+      console.log('Error response body:', errorText);
+      throw new Error(
+        `Failed to set code is passed state: ${res.status} ${res.statusText}`,
+      );
+    }
+    return true;
+  } catch (err) {
+    console.error('set code state error:', err);
+    return false;
+  }
+}

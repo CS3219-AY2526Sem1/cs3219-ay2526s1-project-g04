@@ -4,6 +4,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/styles/theme';
 import '@/styles/globals.css';
+import { SnackbarProvider } from '@/components/ui/notifContext';
 
 export const metadata: Metadata = {
   title: 'PeerPrep',
@@ -23,7 +24,9 @@ export default function RootLayout({
         className={`${openSans.variable} ${sourceCodePro.variable} antialiased`}
       >
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-          <ThemeProvider theme={theme}>{children}</ThemeProvider>
+          <ThemeProvider theme={theme}>
+            <SnackbarProvider>{children}</SnackbarProvider>
+          </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

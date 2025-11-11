@@ -157,6 +157,7 @@ export interface getQuestionResourcesResponse {
   test_cases: TestCase[];
   entry_point: string;
   updated_at: string;
+  entry_point?: string;
 }
 
 // helper type guard
