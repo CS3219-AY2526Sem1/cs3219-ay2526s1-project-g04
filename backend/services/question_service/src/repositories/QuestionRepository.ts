@@ -17,17 +17,41 @@ function isoOrNow(v: Date | string | null | undefined): string {
   return new Date().toISOString();
 }
 
-async function upsertStarterCode(
+async function upsertStarter(
   questionId: string,
-  starterCode: string | undefined,
+  fields: { starter_code?: string; entry_point?: string },
 ) {
-  if (starterCode === undefined) return; // means caller didnt mention it
+  if (fields.starter_code === undefined && fields.entry_point === undefined)
+    return;
 
-  // if explicitly send empty string, we persist empty string
-  await prisma.question_python_starter.upsert({
+  const existing = await prisma.question_python_starter.findUnique({
     where: { question_id: questionId },
-    update: { starter_code: starterCode },
-    create: { question_id: questionId, starter_code: starterCode },
+  });
+
+  if (!existing) {
+    // Only create when BOTH are provided (table has NOT NULL + non-empty check)
+    if (fields.starter_code === undefined || fields.entry_point === undefined)
+      return;
+    await prisma.question_python_starter.create({
+      data: {
+        question_id: questionId,
+        starter_code: fields.starter_code,
+        entry_point: fields.entry_point,
+      },
+    });
+    return;
+  }
+
+  await prisma.question_python_starter.update({
+    where: { question_id: questionId },
+    data: {
+      ...(fields.starter_code !== undefined
+        ? { starter_code: fields.starter_code }
+        : {}),
+      ...(fields.entry_point !== undefined
+        ? { entry_point: fields.entry_point }
+        : {}),
+    },
   });
 }
 
@@ -518,8 +542,9 @@ export async function createDraftWithResources(q: {
   difficulty: 'Easy' | 'Medium' | 'Hard';
   topics: string[];
   attachments: AttachmentInput[];
-  starter_code?: string;
-  test_cases?: IncomingTestCase[];
+  starter_code: string;
+  entry_point: string;
+  test_cases: IncomingTestCase[];
 }) {
   // create base draft question
   const created = await createDraft({
@@ -533,7 +558,10 @@ export async function createDraftWithResources(q: {
   const questionId = created.id;
 
   // upsert starter code
-  await upsertStarterCode(questionId, q.starter_code);
+  await upsertStarter(questionId, {
+    starter_code: q.starter_code,
+    entry_point: q.entry_point,
+  });
 
   // insert test cases
   await replaceTestCases(questionId, q.test_cases);
@@ -568,6 +596,7 @@ export async function updateWithResources(
     topics?: string[];
     attachments?: AttachmentInput[];
     starter_code?: string;
+    entry_point?: string;
     test_cases?: IncomingTestCase[];
   },
 ) {
@@ -588,7 +617,13 @@ export async function updateWithResources(
   if (!updated) return undefined;
 
   // 2. upsert starter code if included in payload
-  await upsertStarterCode(id, patch.starter_code);
+   const starterPatch: { starter_code?: string; entry_point?: string } = {};
+   if (patch.starter_code !== undefined)
+     starterPatch.starter_code = patch.starter_code;
+   if (patch.entry_point !== undefined)
+     starterPatch.entry_point = patch.entry_point;
+
+   await upsertStarter(id, starterPatch);
 
   // 3. replace test cases if included in payload
   await replaceTestCases(id, patch.test_cases);
@@ -837,6 +872,7 @@ export async function getPublicResourcesBundle(questionId: string) {
   return {
     question_id: q.id,
     starter_code: starterRow?.starter_code,
+    entry_point: starterRow?.entry_point,
     test_cases: sampleCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility,
@@ -880,6 +916,7 @@ export async function getInternalResourcesBundle(questionId: string) {
     question_id: q.id,
     status: q.status,
     starter_code: starterRow?.starter_code,
+    entry_point: starterRow?.entry_point,
     test_cases: allCases.map((tc) => ({
       name: `case-${tc.ordinal}`,
       visibility: tc.visibility, // includes 'hidden'

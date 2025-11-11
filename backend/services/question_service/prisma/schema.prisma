@@ -68,6 +68,7 @@ model topics {
 model question_python_starter {
   question_id  String    @id
   starter_code String
+  entry_point  String
   questions    questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
@@ -78,9 +79,10 @@ model question_test_cases {
   visibility      String
   input_data      String
   expected_output String
-  ordinal         Int       @default(0)
+  ordinal         Int       @default(1)
   questions       questions @relation(fields: [question_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@unique([question_id, ordinal], map: "ux_qtc_question_ordinal")
   @@index([question_id, visibility, ordinal], map: "idx_qtc_question")
 }
 
