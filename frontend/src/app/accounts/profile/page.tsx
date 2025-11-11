@@ -442,10 +442,9 @@ export default function Page() {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       router.push('/accounts/login?message=Account deleted successfully');
-    } catch (err: any) {
-      // eslint-disable-next-line no-console
-      console.error('Delete Account Error:', err);
-      setDeleteError(err.message || 'Failed to delete account.');
+    } catch (e) {
+      console.error('Delete Account Error:', e);
+      setDeleteError('Failed to delete account.');
     } finally {
       setIsDeleting(false);
     }
