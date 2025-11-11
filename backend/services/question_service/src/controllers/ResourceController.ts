@@ -192,3 +192,84 @@ export async function getAdminQuestionResources(
     return res.status(500).json({ error: 'internal_error' });
   }
 }
+
+/**
+ * GET /questions/:id/internal-resources
+ * Public: no auth required. Returns the full resources bundle (starter + ALL test cases)
+ * but only for PUBLISHED questions. This mirrors the admin endpoint's payload shape
+ * while remaining safe for public consumption by ensuring the question is published.
+ */
+export async function getInternalQuestionResources(
+  req: AuthRequest,
+  res: Response,
+) {
+  const id = readIdParam(req);
+  const role = req.user?.role;
+  const userId = req.user?.userId;
+
+  if (!id) {
+    log.warn('[GET /questions/:id/resources/full] missing id', {
+      ip: req.ip,
+      ua: req.get('user-agent'),
+      role,
+      userId,
+    });
+    return res.status(400).json({ error: 'id param required' });
+  }
+
+  log.info('[GET /questions/:id/resources/full] request', {
+    id,
+    ip: req.ip,
+    ua: req.get('user-agent'),
+    role,
+    userId,
+  });
+
+  try {
+    const payload = await getInternalResourcesBundle(id);
+
+    if (!payload || payload.status !== 'published') {
+      // either not found or not published
+      log.warn('[GET /questions/:id/resources/full] not_found_or_unpublished', {
+        id,
+        role,
+        userId,
+      });
+      return res.status(404).json({ error: 'not_found' });
+    }
+
+    // Count sample vs hidden
+    let hiddenCount = 0;
+    let sampleCount = 0;
+    if (Array.isArray(payload.test_cases)) {
+      for (const tc of payload.test_cases) {
+        if (tc.visibility === 'hidden') hiddenCount += 1;
+        else if (tc.visibility === 'sample') sampleCount += 1;
+      }
+    }
+    const totalCases = hiddenCount + sampleCount;
+
+    const { has, len } = starterMeta(
+      (payload as { starter_code?: unknown }).starter_code,
+    );
+
+    log.info('[GET /questions/:id/resources/full] success', {
+      id,
+      totalCases,
+      sampleCount,
+      hiddenCount,
+      has_starter_code: has,
+      starter_code_len: len,
+    });
+
+    return res.json(payload);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error('[GET /questions/:id/resources/full] error', {
+      id,
+      error: msg,
+      stack: err instanceof Error ? err.stack : undefined,
+    });
+    return res.status(500).json({ error: 'internal_error' });
+  }
+}
