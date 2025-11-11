@@ -127,12 +127,6 @@ export default function TopNavigationBar({
 
           {/* Top Navigation Bar right elements */}
           <div className="flex flex-row space-x-2">
-            <Tooltip title="settings">
-              <IconButton className="text-[var(--foreground)]">
-                <SettingsOutlined />
-              </IconButton>
-            </Tooltip>
-
             <Tooltip title="notifications">
               <IconButton className="text-[var(--foreground)]">
                 <NotificationsOutlined />
@@ -168,7 +162,6 @@ export default function TopNavigationBar({
         }}
       >
         <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
-        <MenuItem onClick={handleSettingsClick}>Account Settings</MenuItem>
         <MenuItem onClick={handleLogoutClick}>
           <Logout sx={{ mr: 1, color: 'action.active' }} />
           Logout

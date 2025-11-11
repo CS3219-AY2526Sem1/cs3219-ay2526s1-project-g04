@@ -303,6 +303,49 @@ export async function patchAdminQuestions(
 }
 
 /**
+ * GET /questions?ids=...
+ * Get a batch of questions by their IDs.
+ * This is the function your dashboard and history page will use.
+ */
+export async function getQuestionsBatch(
+  ids: string[],
+): Promise<Types.ApiResponse<Types.QuestionBatchResponse>> {
+  try {
+    const url = `${QUESTION_SERVICE_URL}/questions?ids=${ids.join(',')}`;
+    const res = await fetchWithAuth(url);
+    const resData = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      const errorMessage =
+        (resData as Types.errorResponse)?.message ??
+        `Request failed with status ${res.status} ${res.statusText}`;
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+
+    if (!resData.items || !Array.isArray(resData.items)) {
+      return {
+        success: false,
+        message: "Invalid API response format: 'items' array not found.",
+      };
+    }
+
+    return {
+      success: true,
+      data: resData as Types.QuestionBatchResponse,
+    };
+  } catch (error) {
+    console.error(`Error getting from /questions: ${error}`);
+    return {
+      success: false,
+      message: 'A client-side error occurred.',
+    };
+  }
+}
+
+/**
  * DELETE /admin/questions/{id}
  * Archive a published question
  */

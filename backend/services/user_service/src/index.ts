@@ -201,6 +201,14 @@ const updatePasswordSchema = z.object({
     }),
 });
 
+const requestDeleteAccountSchema = z.object({
+  password: z.string(),
+});
+
+const verifyDeleteAccountSchema = z.object({
+  otp: z.string().length(6),
+});
+
 // --- JWT Payload Interface ---
 interface JwtPayload {
   userId: number;
@@ -353,6 +361,44 @@ async function sendPasswordResetOtpEmail(email: string, otp: string) {
             </p>
             <p><strong>If you did not request this password reset, please ignore this email and your password will remain unchanged.</strong></p>
             <p>For security reasons, this code will expire in 10 minutes.</p>
+          </div>
+          <style>
+            .main { background-color: white; }
+            a:hover { border-left-width: 1em; min-height: 2em; }
+          </style>
+        </body>
+      </html>
+    `,
+  });
+}
+
+async function sendDeleteAccountEmail(email: string, otp: string) {
+  const productIconUrl =
+    'https://s3.ap-southeast-2.amazonaws.com/peerprep.prep/peerprep_banner.png';
+
+  await transporter.sendMail({
+    from: '"PeerPrep" <no-reply@peerprep.com>',
+    to: email,
+    subject: 'Confirm Your Account Deletion Request',
+    text: `Your PeerPrep account deletion confirmation code is: ${otp}. It will expire in 10 minutes.`,
+    html: `
+      <!doctype html>
+      <html>
+        <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        </head>
+        <body style="font-family: sans-serif;">
+          <div style="display: block; margin: auto; max-width: 600px;" class="main">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <img alt="PeerPrep Banner" src="${productIconUrl}" style="width: 400px; display: inline-block;">
+            </div>
+            <h1 style="font-size: 18px; font-weight: bold; margin-top: 20px">Your PeerPrep Verification Code</h1>
+              <p>We have received a request to delete your PeerPrep account. Once confirmed, your account and all associated data including submissions and progress will be permanently deleted and cannot be recovered.</p>
+            <p>Please use the following code to confirm this action. The code is valid for 10 minutes.</p>
+            <p style="font-size: 24px; font-weight: bold; letter-spacing: 2px; background: #f2f2f2; padding: 10px 20px; text-align: center;">
+              ${otp}
+            </p>
+            <p>If you did not request this, please ignore this email. Your account will remain active.</p>
           </div>
           <style>
             .main { background-color: white; }
@@ -1355,6 +1401,105 @@ app.post(
     } catch (error) {
       console.error('Demote User Error:', error);
       res.status(500).json({ message: 'Internal server error.' });
+    }
+  },
+);
+
+app.post(
+  '/user/me/delete/request-otp',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { password } = requestDeleteAccountSchema.parse(req.body);
+      const userId = req.user!.userId;
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // 1. Verify current password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: 'Incorrect password.' });
+      }
+
+      // 2. Check OTP cooldown
+      if (
+        user.otpLastSentAt &&
+        new Date().getTime() - user.otpLastSentAt.getTime() <
+          OTP_COOLDOWN_SECONDS * 1000
+      ) {
+        return res.status(429).json({
+          message: `Please wait ${OTP_COOLDOWN_SECONDS} seconds before requesting another OTP.`,
+        });
+      }
+
+      // 3. Generate and send OTP
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+      const now = new Date();
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { verificationOtp: otp, otpExpiresAt, otpLastSentAt: now },
+      });
+
+      await sendDeleteAccountEmail(user.email, otp);
+
+      res.status(200).json({
+        message: 'OTP sent to your email address. Please check your inbox.',
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ message: 'Invalid input', details: error.issues });
+      }
+      console.error('Request Delete OTP Error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  },
+);
+
+app.delete(
+  '/user/me/account',
+  authenticateToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { otp } = verifyDeleteAccountSchema.parse(req.body);
+      const userId = req.user!.userId;
+
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+
+      // 1. Verify OTP
+      if (user.verificationOtp !== otp) {
+        return res.status(400).json({ message: 'Invalid OTP.' });
+      }
+      if (new Date() > user.otpExpiresAt!) {
+        return res.status(400).json({ message: 'OTP has expired.' });
+      }
+
+      // 2. --- PERMANENTLY DELETE USER ---
+      // This will cascade and delete related profile data, etc.
+      await prisma.user.delete({
+        where: { id: userId },
+      });
+
+      // (Note: You may also want to queue a job to delete their S3 files)
+
+      res.status(200).json({ message: 'Account deleted successfully.' });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res
+          .status(400)
+          .json({ message: 'Invalid input', details: error.issues });
+      }
+      console.error('Delete Account Error:', error);
+      res.status(500).json({ message: 'Internal server error' });
     }
   },
 );

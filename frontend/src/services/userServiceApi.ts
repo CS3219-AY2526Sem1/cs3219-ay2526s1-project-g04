@@ -2,7 +2,7 @@ import * as Types from '@/lib/user-service';
 import { fetchWithAuth } from '@/lib/utils/apiClient';
 import { UpdatePictureResponse } from '@/lib/user-service';
 const USER_SERVICE_URL = process.env.NEXT_PUBLIC_API_USER_SERVICE!;
-
+// const USER_SERVICE_URL = 'http://localhost:3005';
 /**
  * A utility function to handle API responses and throw errors
  */
@@ -258,5 +258,35 @@ export async function verifyPasswordChange(
       body: JSON.stringify(data),
     },
   );
+  return handleResponse(response);
+}
+
+/**
+ * Step 1: Requests an OTP to delete the user's account.
+ * Requires the user's current password.
+ */
+export async function requestDeleteAccountOtp(
+  password: string,
+): Promise<{ message: string }> {
+  const response = await fetchWithAuth(
+    `${USER_SERVICE_URL}/user/me/delete/request-otp`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    },
+  );
+  return handleResponse(response);
+}
+
+/**
+ * Step 2: Verifies the OTP and permanently deletes the user's account.
+ */
+export async function verifyDeleteAccount(
+  otp: string,
+): Promise<{ message: string }> {
+  const response = await fetchWithAuth(`${USER_SERVICE_URL}/user/me/account`, {
+    method: 'DELETE', // Use DELETE method for destructive actions
+    body: JSON.stringify({ otp }),
+  });
   return handleResponse(response);
 }

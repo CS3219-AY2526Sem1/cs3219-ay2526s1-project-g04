@@ -1,6 +1,40 @@
+import { RawSession } from '@/lib/collaboration-service';
 import { fetchWithAuth } from '@/lib/utils/apiClient';
 
+/**
+ * A utility function to handle API responses and throw errors
+ */
+async function handleResponse(response: Response) {
+  if (!response.ok) {
+    let errorMessage = `An API error occurred: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      // Response was not JSON
+    }
+    throw new Error(errorMessage);
+  }
+
+  // Handle successful but empty responses
+  const contentType = response.headers.get('content-type');
+  if (
+    response.status === 204 ||
+    !contentType ||
+    !contentType.includes('application/json')
+  ) {
+    return null;
+  }
+
+  return response.json();
+}
+
 const COLLAB_SERVICE_URL = process.env.NEXT_PUBLIC_API_COLLAB_SERVICE!;
+
+export async function getMySessions(): Promise<RawSession[]> {
+  const response = await fetchWithAuth(`${COLLAB_SERVICE_URL}/sessions/me`);
+  return handleResponse(response);
+}
 
 export async function getQuestionIdBySessId(
   sessId: string,
