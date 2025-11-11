@@ -29,6 +29,10 @@ r.get(
   '/questions/:id/resources',
   ResourcesController.getPublicQuestionResources,
 );
+r.get(
+  '/questions/:id/internal-resources',
+  ResourcesController.getInternalQuestionResources,
+);
 r.get('/questions/:id', QuestionController.getById);
 r.get('/questions', QuestionController.list);
 r.get('/topics', TopicController.list);
