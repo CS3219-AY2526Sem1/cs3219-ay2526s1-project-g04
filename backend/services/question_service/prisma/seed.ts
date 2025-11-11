@@ -152,10 +152,12 @@ async function main() {
     where: { question_id: 'reverse-string' },
     update: {
       starter_code: 'def solve(s):\n    return "".join(reversed(s))\n',
+      entry_point: 'solve',
     },
     create: {
       question_id: 'reverse-string',
       starter_code: 'def solve(s):\n    return "".join(reversed(s))\n',
+      entry_point: 'solve',
     },
   });
 }
