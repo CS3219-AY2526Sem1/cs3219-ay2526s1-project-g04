@@ -22,9 +22,21 @@ const config: JestConfigWithTsJest = {
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@shared/(.*)/src/(.*)$': path.resolve(
+    // '^@shared/(.*)/src/(.*)$': path.resolve(
+    //   __dirname,
+    //   '../../shared/$1/dist/$2',
+    // ),
+
+    // Redis mapping (dist root)
+    '^@shared/redis/src/(.*)$': path.resolve(
       __dirname,
-      '../../shared/$1/dist/$2',
+      '../../shared/redis/dist/$1',
+    ),
+
+    // Messaging mapping (dist/src)
+    '^@shared/messaging/src/(.*)$': path.resolve(
+      __dirname,
+      '../../shared/messaging/dist/src/$1',
     ),
   },
   transformIgnorePatterns: ['/node_modules/'],
