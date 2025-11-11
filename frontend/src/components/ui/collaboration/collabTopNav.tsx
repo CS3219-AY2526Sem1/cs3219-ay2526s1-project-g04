@@ -23,7 +23,11 @@ import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
 import { useRouter } from 'next/navigation';
-import { getCollabProvider, removeCollabProvider } from './collabSingleton';
+import {
+  getCollabProvider,
+  removeCollabProvider,
+  removeCommsProvider,
+} from './collabSingleton';
 import { getUserId } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
@@ -134,6 +138,7 @@ export default function CollabNavigationBar({
           };
           yNotifications.set(Date.now().toString(), messagePayload);
           removeCollabProvider();
+          removeCommsProvider();
           router.push('/home/dashboard');
         }
       }

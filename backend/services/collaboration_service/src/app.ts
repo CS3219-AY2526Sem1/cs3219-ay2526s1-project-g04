@@ -28,6 +28,7 @@ app.use(express.json());
 
 app.get('/', (req, res) => {
   res.status(200).send('Collab service is alive');
+  console.log('testpoop');
 });
 
 app.get(

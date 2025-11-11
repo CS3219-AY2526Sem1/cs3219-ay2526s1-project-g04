@@ -39,7 +39,12 @@ export class CommunicationManager {
 
     this.sessions.set(sessionId, { matchedId, ydoc });
 
+    // console.log('sessions: ', this.sessions);
+
     this.redis.setCommunicationState(matchedId, COMMUNICATION_STATE.active);
+    console.log(
+      `Created new doc with matchedId: ${matchedId} and sessId: ${sessionId}`,
+    );
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
@@ -51,6 +56,12 @@ export class CommunicationManager {
     const params = urlObj.searchParams;
     const userId = params.get('userId');
     const sessionId = urlObj.pathname.slice(1);
+
+    console.log(
+      `Handling connection for user ${userId} for session ${sessionId}`,
+    );
+
+    // console.log('sessions: ', this.sessions);
 
     if (!this.sessions.has(sessionId)) {
       console.log(
@@ -67,10 +78,6 @@ export class CommunicationManager {
       return;
     }
 
-    if (this.redis.isSessionDead(matchedId)) {
-      console.log(`session ${sessionId} has ended`);
-      return;
-    }
     // Setup y-websocket
     setupWSConnection(ws, req, { doc: ydoc });
     console.log(

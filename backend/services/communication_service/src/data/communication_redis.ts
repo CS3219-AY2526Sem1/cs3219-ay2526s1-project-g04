@@ -43,9 +43,22 @@ export class CommunicationRedis {
     await this.redis.setDictValueByKey(matchedId, matchedRedisData);
   }
 
-  public async isSessionDead(matchedId: string): Promise<void> {
+  // public async isSessionDead(matchedId: string): Promise<boolean> {
+  //   const matchedRedisData: Record<string, string> =
+  //     await this.redis.getDictValueByKey(matchedId);
+  //   console.log(matchedRedisData['session_state']);
+  //   return matchedRedisData['session_state'] == SESSIONSTATE.end;
+  // }
+
+  public async addCommunicationState(matchedId: string): Promise<void> {
+    const commsData = {
+      communication_state: SESSIONSTATE.notCreated,
+    };
     const matchedRedisData: Record<string, string> =
       await this.redis.getDictValueByKey(matchedId);
-    matchedRedisData['session_state'] = SESSIONSTATE.end;
+    this.redis.setDictValueByKey(matchedId, {
+      ...matchedRedisData,
+      ...commsData,
+    });
   }
 }

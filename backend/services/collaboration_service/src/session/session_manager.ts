@@ -104,12 +104,16 @@ export class SessionManager {
     // const sessionId = await this.db.createSessionDataModel(...);
     const ydoc = new Y.Doc();
     const yText = ydoc.getText('monaco');
-    const questionUrl = process.env['QUESTIONURL'];
-    const res = await fetch(
-      `${questionUrl}/questions/${matchedData['questionId']}`,
-    );
-    const resJson: QuestionResponse = await res.json();
-    if (resJson['starter_code']) yText.insert(0, resJson['starter_code']);
+    try {
+      const questionUrl = process.env['QUESTIONURL'];
+      const res = await fetch(
+        `${questionUrl}/questions/${matchedData['questionId']}`,
+      );
+      const resJson: QuestionResponse = await res.json();
+      if (resJson['starter_code']) yText.insert(0, resJson['starter_code']);
+    } catch (error) {
+      console.log(`ERROR ERROR ERROR:`, error);
+    }
 
     const docName = sessionId.toString();
 

@@ -1,10 +1,12 @@
+import { Commmunication } from './communication';
+
 /**
  * Entry point for collab service
  */
 async function main() {
-  //   const collab = new Collab();
+  const communication = new Commmunication();
   try {
-    // await collab.start();
+    await communication.start();
     console.log('Communication service is running');
   } catch (err) {
     console.error('Failed to start Com service:', err);
