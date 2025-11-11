@@ -37,9 +37,8 @@ export default function CollabNavigationBar({
   const appBarRef = useRef<HTMLDivElement>(null);
 
   const { code, language, testCases, setResults, sessionId } = useCodeContext();
-  console.log('code in nav', code);
   const router = useRouter();
-  const CODEEXEURL = process.env.NEXT_PUBLIC_CODE_EXE_SERVICE;
+  const CODEEXEURL = process.env.NEXT_PUBLIC_API_CODE_EXE_SERVICE;
 
   useEffect(() => {
     if (appBarRef.current && onHeightChange) {
