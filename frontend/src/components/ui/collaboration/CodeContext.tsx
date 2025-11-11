@@ -89,6 +89,8 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
 
       if (entryCode) {
         setEntryPoint(entryCode);
+      } else {
+        setEntryPoint('Solution.reverseString');
       }
 
       console.log('tc', quesTestCases);

@@ -227,6 +227,10 @@ export class SessionManager {
     }
   }
 
+  public setCodePassedSession(sessionId: number): void {
+    this.db.setCodePassedBySession(sessionId);
+  }
+
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
     console.log('a client connected');
 
