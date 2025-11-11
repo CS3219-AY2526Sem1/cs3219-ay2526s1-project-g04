@@ -103,6 +103,22 @@ components:
       type: string
       enum: [draft, published, archived]
 
+    ExecutionEntryPoint:
+      type: object
+      additionalProperties: false
+      description: How the runner should invoke the user’s code.
+      properties:
+        language:
+          type: string
+          enum: [python] # extend later if you add more languages
+        callable:
+          type: string
+          description: Python callable to invoke (e.g., rotate_image)
+          pattern: '^[A-Za-z_][A-Za-z0-9_]*$'
+      required:
+        - language
+        - callable
+
     Error:
       type: object
       properties:
@@ -392,6 +408,8 @@ components:
             def rotate_image(matrix: list[list[int]]) -> None:
                 # TODO: rotate in place
                 pass
+        entry_point:
+          $ref: '#/components/schemas/ExecutionEntryPoint'
         test_cases:
           type: array
           description: |
@@ -404,6 +422,9 @@ components:
         - title
         - body_md
         - difficulty
+        - starter_code
+        - entry_point
+        - test_cases
 
     QuestionUpdate:
       type: object
@@ -466,6 +487,8 @@ components:
             def rotate_image(matrix):
                 # improved version
                 pass
+        entry_point:
+          $ref: '#/components/schemas/ExecutionEntryPoint'
         test_cases:
           type: array
           items:
@@ -489,6 +512,8 @@ components:
               type: string
               nullable: true
               description: Pulled from `question_python_starter` (Python string).
+            entry_point:
+              $ref: '#/components/schemas/ExecutionEntryPoint'
             test_cases:
               type: array
               description: All test cases, including `hidden`.
@@ -515,6 +540,8 @@ components:
               type: string
               nullable: true
               description: Starter code exposed to candidates (Python string).
+            entry_point:
+              $ref: '#/components/schemas/ExecutionEntryPoint'
             test_cases:
               type: array
               description: |
@@ -578,6 +605,8 @@ components:
             def rotate_image(matrix):
                 # TODO
                 pass
+        entry_point:
+          $ref: '#/components/schemas/ExecutionEntryPoint'
         test_cases:
           type: array
           description: SAMPLE test cases only.
@@ -610,6 +639,7 @@ components:
       required:
         - question_id
         - starter_code
+        - entry_point
         - test_cases
         - updated_at
 
@@ -628,6 +658,8 @@ components:
           type: string
           nullable: true
           description: Starter code (Python string). May be null if not provided.
+        entry_point:
+          $ref: '#/components/schemas/ExecutionEntryPoint'
         test_cases:
           type: array
           description: |
@@ -659,6 +691,7 @@ components:
         - question_id
         - status
         - starter_code
+        - entry_point
         - test_cases
         - updated_at
 

@@ -31,6 +31,7 @@ export default function MatchedView({
         );
         console.log(sessionId, created, createProcessIsDone);
         if (created && sessionId) {
+          console.log('adding user into socket', matchingId);
           getCollabProvider(sessionId, getUserId()!.toString());
           setCreateProcessIsDone(true);
         }

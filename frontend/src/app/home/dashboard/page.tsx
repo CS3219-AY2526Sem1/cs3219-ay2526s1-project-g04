@@ -34,7 +34,9 @@ import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
 import { getAccessToken, getUserId, getUsername } from '@/lib/utils/jwt';
 import {PublicUserProfile} from "@/lib/user-service";
-import {getUserProfileById} from "@/services/userServiceApi";
+import {getUserProfileById, getUsersBatch} from "@/services/userServiceApi";
+import {getQuestionsBatch} from "@/services/questionServiceApi";
+import {Question} from "@/lib/question-service";
 
 // --- Mock Data (Replace with your API data) ---
 interface MockTopic {
@@ -202,10 +204,16 @@ export default function DashboardPage() {
           ),
         ];
 
+        // --- ACTUAL API CALLS ----
         // const [questionRes, peerData] = await Promise.all([
-        //   questionServiceApi.getQuestionsBatch(questionIds),
-        //   userServiceApi.getUsersBatch(peerIds),
+        //   questionIds.length > 0 ? getQuestionsBatch(questionIds) : Promise.resolve({ success: true, data: { items: [] } }),
+        //   peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
         // ]);
+        // if (!questionRes.success) {
+        //   throw new Error("Failed to fetch questions");
+        // }
+        // const questionData: Question[] = questionRes.data.items;
+        // --- END ----
 
         const [questionData, peerData] = await Promise.all([
           fakeFetch(mockQuestionDatabase, questionIds),

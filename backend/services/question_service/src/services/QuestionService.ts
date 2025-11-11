@@ -8,6 +8,12 @@ import {
 import { toPublicQuestion } from './ResponseMapper.js';
 import type { QuestionRecordFromRepo } from './ResponseMapper.js';
 
+type ListResult<T> = {
+  items: T[];
+  total: number;
+};
+type WithSnippetHtml<T> = T & { snippet_html?: string | null };
+
 export async function getPublishedWithHtml(id: string) {
   const row = await Repo.getPublishedById(id);
 
@@ -31,21 +37,24 @@ export async function listPublished(opts: {
   q?: string;
   page?: number;
   page_size?: number;
-}) {
+  highlight?: boolean;
+}): Promise<ListResult<ReturnType<typeof toPublicQuestion>>> {
   const { rows, total } = await Repo.listPublished(opts);
 
-  // rows (plural) needs to ALSO come back in the same select shape from Repo.listPublished
-  // i.e. listPublished in the repo should mirror getPublishedById's select,
-  // including question_topics/topics.slug/color_hex etc.
   const items = await Promise.all(
     rows.map(async (row) => {
-      const attachments = (row.attachments ?? []) as AttachmentLike[];
-      const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+      const r = row as WithSnippetHtml<QuestionRecordFromRepo>;
+      const attachments = (r.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(r.body_md, attachments);
 
-      return toPublicQuestion({
-        row: row as QuestionRecordFromRepo,
+      const base = toPublicQuestion({
+        row: r,
         body_html,
       });
+
+      return opts.highlight && r.snippet_html
+        ? { ...base, snippet_html: r.snippet_html }
+        : base;
     }),
   );
 
@@ -87,20 +96,24 @@ export async function listAll(opts: {
   q?: string;
   page?: number;
   page_size?: number;
-}) {
-  // Fetch raw rows from the repository (handles both Prisma + FTS branches)
+  highlight?: boolean;
+}): Promise<ListResult<ReturnType<typeof toPublicQuestion>>> {
   const { rows, total } = await Repo.listAll(opts);
 
-  // Enrich each row: render sanitized HTML and map to the public response shape
   const items = await Promise.all(
     rows.map(async (row) => {
-      const attachments = (row.attachments ?? []) as AttachmentLike[];
-      const body_html = await renderQuestionMarkdown(row.body_md, attachments);
+      const r = row as WithSnippetHtml<QuestionRecordFromRepo>;
+      const attachments = (r.attachments ?? []) as AttachmentLike[];
+      const body_html = await renderQuestionMarkdown(r.body_md, attachments);
 
-      return toPublicQuestion({
-        row: row as QuestionRecordFromRepo,
+      const base = toPublicQuestion({
+        row: r,
         body_html,
       });
+
+      return opts.highlight && r.snippet_html
+        ? { ...base, snippet_html: r.snippet_html }
+        : base;
     }),
   );
 

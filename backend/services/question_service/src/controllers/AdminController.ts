@@ -100,6 +100,12 @@ function parseNum(x: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function parseBool(x: unknown): boolean {
+  if (typeof x === 'string') return x.toLowerCase() === 'true';
+  if (typeof x === 'boolean') return x;
+  return false;
+}
+
 /**
  * Given original markdown and two attachment lists (pre-finalize and post-finalize),
  * rewrite any pp://staging/... refs to pp://questions/<id>/...
@@ -142,6 +148,10 @@ async function findMissingTopics(slugs: string[]): Promise<string[]> {
   return slugs.filter((s) => !have.has(s));
 }
 
+function hasAtLeastOneTestCase(cases: IncomingTestCase[] | undefined): boolean {
+  return Array.isArray(cases) && cases.length > 0;
+}
+
 /**
  * POST /admin/questions
  *
@@ -171,6 +181,7 @@ export async function create(req: Request, res: Response) {
       attachments,
       starter_code,
       test_cases,
+      entry_point,
     } = req.body ?? {};
 
     if (typeof title !== 'string' || !title.trim()) {
@@ -206,15 +217,32 @@ export async function create(req: Request, res: Response) {
       ? attachments
       : [];
 
-    // execution resources validation
-    const starterCodeStr =
-      typeof starter_code === 'string' ? starter_code : undefined;
+    // execution resources validation (REQUIRED)
+    if (typeof starter_code !== 'string' || !starter_code.trim()) {
+      return res.status(400).json({
+        error: 'starter_code_required',
+        message: 'starter_code must be a non-empty string.',
+      });
+    }
 
-    const testCasesList: IncomingTestCase[] | undefined = isTestCaseArray(
-      test_cases,
-    )
-      ? test_cases
-      : undefined;
+    if (typeof entry_point !== 'string' || !entry_point.trim()) {
+      return res.status(400).json({
+        error: 'entry_point_required',
+        message: 'entry_point must be a non-empty string.',
+      });
+    }
+
+    const starterCodeStr = starter_code;
+    const entryPointStr = entry_point;
+
+    if (!isTestCaseArray(test_cases) || !hasAtLeastOneTestCase(test_cases)) {
+      return res.status(400).json({
+        error: 'test_cases_required',
+        message: 'test_cases must be a non-empty array of valid test cases.',
+      });
+    }
+
+    const testCasesList: IncomingTestCase[] = test_cases;
 
     // allocate canonical slug/id by creating an empty draft first
     const slugId = slugify(title);
@@ -246,28 +274,16 @@ export async function create(req: Request, res: Response) {
     );
 
     // patch the draft with finalized data + execution resources
-    const patchForCreate: {
-      title?: string;
-      body_md?: string;
-      difficulty?: Difficulty;
-      topics?: string[];
-      attachments?: AttachmentInput[];
-      starter_code?: string;
-      test_cases?: IncomingTestCase[];
-    } = {
+    const patchForCreate = {
       title,
       body_md: rewrittenMd,
       difficulty: diff,
       topics: topicList,
       attachments: finalizedAtts,
+      starter_code: starterCodeStr, // required
+      entry_point: entryPointStr,
+      test_cases: testCasesList, // required
     };
-
-    if (starterCodeStr !== undefined) {
-      patchForCreate.starter_code = starterCodeStr;
-    }
-    if (testCasesList !== undefined) {
-      patchForCreate.test_cases = testCasesList;
-    }
 
     const saved = await Repo.updateWithResources(draft.id, patchForCreate);
     if (!saved) {
@@ -385,19 +401,45 @@ export async function update(req: Request, res: Response) {
       }
     }
 
-    // execution resources
-    const starterCodeStr =
-      typeof req.body?.starter_code === 'string'
-        ? req.body.starter_code
-        : undefined;
+    // execution resources (cannot be emptied)
+    let starterCodeStr: string | undefined;
+    if ('starter_code' in req.body) {
+      if (
+        typeof req.body.starter_code !== 'string' ||
+        !req.body.starter_code.trim()
+      ) {
+        return res.status(400).json({
+          error: 'starter_code_nonempty',
+          message: 'starter_code must be a non-empty string when provided.',
+        });
+      }
+      starterCodeStr = req.body.starter_code;
+    }
+
+    let entryPointStr: string | undefined;
+    if ('entry_point' in req.body) {
+      if (
+        typeof req.body.entry_point !== 'string' ||
+        !req.body.entry_point.trim()
+      ) {
+        return res.status(400).json({
+          error: 'entry_point_nonempty',
+          message: 'entry_point must be a non-empty string when provided.',
+        });
+      }
+      entryPointStr = req.body.entry_point;
+    }
 
     let newTestCases: IncomingTestCase[] | undefined;
     if ('test_cases' in req.body) {
-      // If client explicitly sent test_cases (even []), we respect it.
-      if (!isTestCaseArray(req.body.test_cases)) {
+      if (
+        !isTestCaseArray(req.body.test_cases) ||
+        !hasAtLeastOneTestCase(req.body.test_cases)
+      ) {
         return res.status(400).json({
-          error:
-            'test_cases must be an array of { visibility, input_data, expected_output, [ordinal] }',
+          error: 'test_cases_nonempty',
+          message:
+            'test_cases must be a non-empty array of valid test cases when provided.',
         });
       }
       newTestCases = req.body.test_cases;
@@ -412,6 +454,7 @@ export async function update(req: Request, res: Response) {
       topics?: string[];
       attachments?: AttachmentInput[];
       starter_code?: string;
+      entry_point?: string;
       test_cases?: IncomingTestCase[];
     } = {};
 
@@ -424,6 +467,7 @@ export async function update(req: Request, res: Response) {
     if (finalizedAtts !== undefined) patchForUpdate.attachments = finalizedAtts;
     if (starterCodeStr !== undefined)
       patchForUpdate.starter_code = starterCodeStr;
+    if (entryPointStr !== undefined) patchForUpdate.entry_point = entryPointStr;
     if (newTestCases !== undefined) patchForUpdate.test_cases = newTestCases;
 
     const updated = await Repo.updateWithResources(id, patchForUpdate);
@@ -454,15 +498,43 @@ export async function publish(req: Request, res: Response) {
     const { id } = req.params;
     if (!id) return res.status(400).json({ error: 'id param required' });
 
-    const published = await Repo.publish(id);
-    if (!published) return res.status(404).json({ error: 'not_found' });
+    const exists = await Service.getQuestionWithHtml(id);
+    if (!exists) return res.status(404).json({ error: 'not_found' });
 
     // Include execution resources in publish response
+    const bundlePre = await Repo.getInternalResourcesBundle(id);
+    const hasStarter =
+      typeof (bundlePre?.starter_code ?? '') === 'string' &&
+      (bundlePre!.starter_code ?? '').trim().length > 0;
+    const hasEntry =
+      typeof (bundlePre?.entry_point ?? '') === 'string' &&
+      (bundlePre!.entry_point ?? '').trim().length > 0;
+    const hasAnyCase =
+      Array.isArray(bundlePre?.test_cases) && bundlePre!.test_cases.length > 0;
+
+    if (!hasStarter || !hasEntry || !hasAnyCase) {
+      log.warn('[POST /admin/questions/:id/publish] missing resources', {
+        id,
+        hasStarter,
+        hasEntry,
+        test_cases_len: Array.isArray(bundlePre?.test_cases)
+          ? bundlePre!.test_cases.length
+          : 0,
+      });
+      return res.status(400).json({
+        error: 'missing_resources',
+        message:
+          'Cannot publish: starter_code, entry_point, and at least one test case are required.',
+      });
+    }
+
+    const published = await Repo.publish(id);
+    if (!published) return res.status(404).json({ error: 'not_found' });
     const bundle = await Repo.getInternalResourcesBundle(id);
     const starter_code = bundle?.starter_code ?? '';
+    const entry_point = bundle?.entry_point ?? '';
     const test_cases = bundle?.test_cases ?? [];
-
-    return res.json({ ...published, starter_code, test_cases });
+    return res.json({ ...published, starter_code, entry_point, test_cases });
   } catch (err) {
     log.error('AdminController.publish failed:', err);
     return res.status(500).json({ error: 'internal_error' });
@@ -479,6 +551,7 @@ export async function list(req: Request, res: Response) {
     q?: string;
     page?: number;
     page_size?: number;
+    highlight?: boolean;
   } = {};
 
   const d = parseDifficulty(req.query['difficulty']);
@@ -486,12 +559,14 @@ export async function list(req: Request, res: Response) {
   const q = parseStr(req.query['q']);
   const p = parseNum(req.query['page']);
   const s = parseNum(req.query['page_size']);
+  const h = !!q && parseBool(req.query['highlight']);
 
   if (d !== undefined) args.difficulty = d;
   if (t !== undefined) args.topics = t;
   if (q !== undefined) args.q = q;
   if (p !== undefined) args.page = p;
   if (s !== undefined) args.page_size = s;
+  if (h) args.highlight = true;
 
   log.info('[GET /questions] request', {
     ip: req.ip,
@@ -503,6 +578,7 @@ export async function list(req: Request, res: Response) {
     q_len: args.q?.length ?? 0,
     page: args.page,
     page_size: args.page_size,
+    highlight: !!args.highlight,
   });
 
   try {
@@ -515,6 +591,7 @@ export async function list(req: Request, res: Response) {
       topics: args.topics,
       page: args.page,
       page_size: args.page_size,
+      highlight: args.highlight ?? false,
     });
 
     return res.json({
@@ -593,6 +670,7 @@ export async function getById(req: Request, res: Response) {
     const bundle = await Repo.getInternalResourcesBundle(id);
     const starter_code = bundle?.starter_code ?? '';
     const test_cases = bundle?.test_cases ?? [];
+    const entry_point = bundle?.entry_point ?? '';
 
     log.info('[GET /questions/:id] success', {
       id: view.id,
@@ -609,6 +687,7 @@ export async function getById(req: Request, res: Response) {
     return res.json({
       ...view,
       starter_code,
+      entry_point,
       test_cases,
     });
   } catch (err: unknown) {
