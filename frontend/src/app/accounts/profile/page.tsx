@@ -20,7 +20,9 @@ import {
   Fade,
   Container,
   Dialog,
-  DialogContent, DialogActions, DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogTitle,
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -41,11 +43,13 @@ import WarningIcon from '@mui/icons-material/Warning';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
 import {
-  getMyProfile, requestDeleteAccountOtp,
+  getMyProfile,
+  requestDeleteAccountOtp,
   requestEmailChange,
   requestPasswordChange,
   updateMyProfile,
-  updateMyProfilePicture, verifyDeleteAccount,
+  updateMyProfilePicture,
+  verifyDeleteAccount,
   verifyEmailChange,
   verifyPasswordChange,
 } from '@/services/userServiceApi';
@@ -423,7 +427,7 @@ export default function Page() {
       setDeleteStep('otp'); // Move to OTP step
     } catch (err: any) {
       // eslint-disable-next-line no-console
-      console.error("Request Delete OTP Error:", err);
+      console.error('Request Delete OTP Error:', err);
       setDeleteError(err.message || 'Failed to request OTP.');
     } finally {
       setIsDeleting(false);
@@ -441,13 +445,12 @@ export default function Page() {
       router.push('/accounts/login?message=Account deleted successfully');
     } catch (err: any) {
       // eslint-disable-next-line no-console
-      console.error("Delete Account Error:", err);
+      console.error('Delete Account Error:', err);
       setDeleteError(err.message || 'Failed to delete account.');
     } finally {
       setIsDeleting(false);
     }
   };
-
 
   if (isLoading) {
     return (
@@ -1355,33 +1358,43 @@ export default function Page() {
               </CardContent>
             </Card>
             <Card
-                sx={{
-                  mt: 3,
-                  borderRadius: 4,
-                  boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                  overflow: 'hidden',
-                  background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-                  border: 2, // Added
-                  borderColor: 'error.main' // Added
-                }}
+              sx={{
+                mt: 3,
+                borderRadius: 4,
+                boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                overflow: 'hidden',
+                background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+                border: 2, // Added
+                borderColor: 'error.main', // Added
+              }}
             >
               <CardContent sx={{ p: 4 }}>
                 <Stack spacing={2}>
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    alignItems="center"
+                    sx={{ mb: 1 }}
+                  >
                     <WarningIcon color="error" />
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'error.main' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ fontWeight: 600, color: 'error.main' }}
+                    >
                       Danger Zone
                     </Typography>
                   </Stack>
                   <Divider />
                   <Typography variant="body2" color="text.secondary">
-                    Once you delete your account, there is no going back. All your data, including your profile and session history, will be permanently removed.
+                    Once you delete your account, there is no going back. All
+                    your data, including your profile and session history, will
+                    be permanently removed.
                   </Typography>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <Button
-                        variant="contained"
-                        color="error"
-                        onClick={handleOpenDeleteModal}
+                      variant="contained"
+                      color="error"
+                      onClick={handleOpenDeleteModal}
                     >
                       Delete Your Account
                     </Button>
@@ -1389,12 +1402,17 @@ export default function Page() {
                 </Stack>
               </CardContent>
             </Card>
-    </Box>
-</Fade>
-</Container>
+          </Box>
+        </Fade>
+      </Container>
 
       {/* --- NEW: Delete Account Dialog (Modal) --- */}
-      <Dialog open={isDeleteModalOpen} onClose={handleCloseDeleteModal} maxWidth="xs" fullWidth>
+      <Dialog
+        open={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        maxWidth="xs"
+        fullWidth
+      >
         <DialogTitle sx={{ fontWeight: 600, textAlign: 'center' }}>
           {deleteStep === 'initial' ? 'Are you sure?' : 'Enter OTP to Delete'}
         </DialogTitle>
@@ -1403,35 +1421,46 @@ export default function Page() {
             {deleteError && <Alert severity="error">{deleteError}</Alert>}
 
             {deleteStep === 'initial' && (
-                <>
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    This action is **permanent** and cannot be undone. To confirm, please enter your current password to receive a verification code.
-                  </Typography>
-                  <TextField
-                      fullWidth
-                      label="Current Password"
-                      type="password"
-                      value={deletePassword}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                      disabled={isDeleting}
-                  />
-                </>
+              <>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                >
+                  This action is **permanent** and cannot be undone. To confirm,
+                  please enter your current password to receive a verification
+                  code.
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Current Password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  disabled={isDeleting}
+                />
+              </>
             )}
 
             {deleteStep === 'otp' && (
-                <>
-                  <Typography variant="body2" color="text.secondary" textAlign="center">
-                    An OTP has been sent to your email. Enter the 6-digit code below to permanently delete your account.
-                  </Typography>
-                  <TextField
-                      fullWidth
-                      label="Enter OTP"
-                      value={deleteOtp}
-                      onChange={(e) => setDeleteOtp(e.target.value)}
-                      disabled={isDeleting}
-                      inputProps={{ maxLength: 6 }}
-                  />
-                </>
+              <>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  textAlign="center"
+                >
+                  An OTP has been sent to your email. Enter the 6-digit code
+                  below to permanently delete your account.
+                </Typography>
+                <TextField
+                  fullWidth
+                  label="Enter OTP"
+                  value={deleteOtp}
+                  onChange={(e) => setDeleteOtp(e.target.value)}
+                  disabled={isDeleting}
+                  inputProps={{ maxLength: 6 }}
+                />
+              </>
             )}
           </Stack>
         </DialogContent>
@@ -1441,26 +1470,34 @@ export default function Page() {
           </Button>
 
           {deleteStep === 'initial' ? (
-              <Button
-                  variant="contained"
-                  color="error"
-                  onClick={handleRequestDeleteOtp}
-                  disabled={isDeleting || !deletePassword}
-              >
-                {isDeleting ? <CircularProgress size={24} color="inherit" /> : 'Send OTP'}
-              </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleRequestDeleteOtp}
+              disabled={isDeleting || !deletePassword}
+            >
+              {isDeleting ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Send OTP'
+              )}
+            </Button>
           ) : (
-              <Button
-                  variant="contained"
-                  color="error"
-                  onClick={handleDeleteAccountConfirm}
-                  disabled={isDeleting || deleteOtp.length !== 6}
-              >
-                {isDeleting ? <CircularProgress size={24} color="inherit" /> : 'Confirm & Delete'}
-              </Button>
+            <Button
+              variant="contained"
+              color="error"
+              onClick={handleDeleteAccountConfirm}
+              disabled={isDeleting || deleteOtp.length !== 6}
+            >
+              {isDeleting ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Confirm & Delete'
+              )}
+            </Button>
           )}
         </DialogActions>
       </Dialog>
-          </Box>
+    </Box>
   );
 }

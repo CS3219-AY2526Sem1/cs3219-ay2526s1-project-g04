@@ -308,7 +308,7 @@ export async function patchAdminQuestions(
  * This is the function your dashboard and history page will use.
  */
 export async function getQuestionsBatch(
-    ids: string[],
+  ids: string[],
 ): Promise<Types.ApiResponse<Types.QuestionBatchResponse>> {
   try {
     const url = `${QUESTION_SERVICE_URL}/questions?ids=${ids.join(',')}`;
@@ -317,8 +317,8 @@ export async function getQuestionsBatch(
 
     if (!res.ok) {
       const errorMessage =
-          (resData as Types.errorResponse)?.message ??
-          `Request failed with status ${res.status} ${res.statusText}`;
+        (resData as Types.errorResponse)?.message ??
+        `Request failed with status ${res.status} ${res.statusText}`;
       return {
         success: false,
         message: errorMessage,

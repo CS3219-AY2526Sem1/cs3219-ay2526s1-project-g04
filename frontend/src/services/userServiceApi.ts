@@ -265,18 +265,25 @@ export async function verifyPasswordChange(
  * Step 1: Requests an OTP to delete the user's account.
  * Requires the user's current password.
  */
-export async function requestDeleteAccountOtp(password: string): Promise<{ message: string }>  {
-  const response = await fetchWithAuth(`${USER_SERVICE_URL}/user/me/delete/request-otp`, {
-    method: 'POST',
-    body: JSON.stringify({ password }),
-  });
+export async function requestDeleteAccountOtp(
+  password: string,
+): Promise<{ message: string }> {
+  const response = await fetchWithAuth(
+    `${USER_SERVICE_URL}/user/me/delete/request-otp`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ password }),
+    },
+  );
   return handleResponse(response);
 }
 
-    /**
-     * Step 2: Verifies the OTP and permanently deletes the user's account.
-     */
-export async function verifyDeleteAccount(otp: string): Promise<{ message: string }> {
+/**
+ * Step 2: Verifies the OTP and permanently deletes the user's account.
+ */
+export async function verifyDeleteAccount(
+  otp: string,
+): Promise<{ message: string }> {
   const response = await fetchWithAuth(`${USER_SERVICE_URL}/user/me/account`, {
     method: 'DELETE', // Use DELETE method for destructive actions
     body: JSON.stringify({ otp }),

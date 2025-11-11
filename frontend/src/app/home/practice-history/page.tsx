@@ -21,16 +21,22 @@ import {
   TableRow,
   Typography,
   CircularProgress,
-  Pagination, DialogTitle, DialogContent, Alert, Avatar, DialogActions, Dialog,
+  Pagination,
+  DialogTitle,
+  DialogContent,
+  Alert,
+  Avatar,
+  DialogActions,
+  Dialog,
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import { getAccessToken, getUserId } from '@/lib/utils/jwt';
-import {PublicUserProfile} from "@/lib/user-service";
-import {getUserProfileById, getUsersBatch} from "@/services/userServiceApi";
-import {getQuestionsBatch} from "@/services/questionServiceApi";
-import {Question} from "@/lib/question-service";
+import { PublicUserProfile } from '@/lib/user-service';
+import { getUserProfileById, getUsersBatch } from '@/services/userServiceApi';
+import { getQuestionsBatch } from '@/services/questionServiceApi';
+import { Question } from '@/lib/question-service';
 
 // --- MOCK DATABASES (Expanded for pagination) ---
 interface MockTopic {
@@ -50,52 +56,136 @@ interface MockUser {
 }
 
 const mockSessionData = [
-  { id: 1, questionId: 'q_math_001', endedAt: '2025-11-10T10:05:20.000Z', solved: true, UserAId: 1, UserBId: 2 },
-  { id: 2, questionId: 'q_chem_045', endedAt: '2025-11-09T11:00:00Z', solved: true, UserAId: 101, UserBId: 103 },
-  { id: 3, questionId: 'q_algo_002', endedAt: '2025-11-09T14:00:00Z', solved: false, UserAId: 104, UserBId: 101 },
-  { id: 4, questionId: 'q_sys_001', endedAt: '2025-11-08T16:00:00Z', solved: true, UserAId: 101, UserBId: 102 },
-  { id: 5, questionId: 'q_math_001', endedAt: '2025-11-07T12:00:00Z', solved: true, UserAId: 103, UserBId: 101 },
-  { id: 6, questionId: 'q_chem_045', endedAt: '2025-11-06T10:00:00Z', solved: true, UserAId: 101, UserBId: 104 },
-  { id: 7, questionId: 'q_algo_002', endedAt: '2025-11-05T11:00:00Z', solved: true, UserAId: 102, UserBId: 101 },
-  { id: 8, questionId: 'q_sys_001', endedAt: '2025-11-04T14:00:00Z', solved: false, UserAId: 101, UserBId: 103 },
-  { id: 9, questionId: 'q_math_001', endedAt: '2025-11-03T16:00:00Z', solved: true, UserAId: 104, UserBId: 101 },
-  { id: 10, questionId: 'q_chem_045', endedAt: '2025-11-02T12:00:00Z', solved: true, UserAId: 101, UserBId: 102 },
-  { id: 11, questionId: 'q_algo_002', endedAt: '2025-11-01T12:00:00Z', solved: true, UserAId: 103, UserBId: 101 },
+  {
+    id: 1,
+    questionId: 'q_math_001',
+    endedAt: '2025-11-10T10:05:20.000Z',
+    solved: true,
+    UserAId: 1,
+    UserBId: 2,
+  },
+  {
+    id: 2,
+    questionId: 'q_chem_045',
+    endedAt: '2025-11-09T11:00:00Z',
+    solved: true,
+    UserAId: 101,
+    UserBId: 103,
+  },
+  {
+    id: 3,
+    questionId: 'q_algo_002',
+    endedAt: '2025-11-09T14:00:00Z',
+    solved: false,
+    UserAId: 104,
+    UserBId: 101,
+  },
+  {
+    id: 4,
+    questionId: 'q_sys_001',
+    endedAt: '2025-11-08T16:00:00Z',
+    solved: true,
+    UserAId: 101,
+    UserBId: 102,
+  },
+  {
+    id: 5,
+    questionId: 'q_math_001',
+    endedAt: '2025-11-07T12:00:00Z',
+    solved: true,
+    UserAId: 103,
+    UserBId: 101,
+  },
+  {
+    id: 6,
+    questionId: 'q_chem_045',
+    endedAt: '2025-11-06T10:00:00Z',
+    solved: true,
+    UserAId: 101,
+    UserBId: 104,
+  },
+  {
+    id: 7,
+    questionId: 'q_algo_002',
+    endedAt: '2025-11-05T11:00:00Z',
+    solved: true,
+    UserAId: 102,
+    UserBId: 101,
+  },
+  {
+    id: 8,
+    questionId: 'q_sys_001',
+    endedAt: '2025-11-04T14:00:00Z',
+    solved: false,
+    UserAId: 101,
+    UserBId: 103,
+  },
+  {
+    id: 9,
+    questionId: 'q_math_001',
+    endedAt: '2025-11-03T16:00:00Z',
+    solved: true,
+    UserAId: 104,
+    UserBId: 101,
+  },
+  {
+    id: 10,
+    questionId: 'q_chem_045',
+    endedAt: '2025-11-02T12:00:00Z',
+    solved: true,
+    UserAId: 101,
+    UserBId: 102,
+  },
+  {
+    id: 11,
+    questionId: 'q_algo_002',
+    endedAt: '2025-11-01T12:00:00Z',
+    solved: true,
+    UserAId: 103,
+    UserBId: 101,
+  },
   // This one is active and will be filtered out
-  { id: 12, questionId: 'q_sys_001', endedAt: null, solved: false, UserAId: 101, UserBId: 104 },
+  {
+    id: 12,
+    questionId: 'q_sys_001',
+    endedAt: null,
+    solved: false,
+    UserAId: 101,
+    UserBId: 104,
+  },
 ];
 const mockQuestionDatabase: Record<string, MockQuestion> = {
-  'q_math_001': {
+  q_math_001: {
     id: 'q_math_001',
     title: 'Two Sum',
     difficulty: 'Easy',
     topics: [
       { slug: 'array', display: 'Array', color_hex: '#3b82f6' },
-      { slug: 'hash-table', display: 'Hash Table', color_hex: '#10b981' }
+      { slug: 'hash-table', display: 'Hash Table', color_hex: '#10b981' },
     ],
   },
-  'q_chem_045': {
+  q_chem_045: {
     id: 'q_chem_045',
     title: 'Contains Duplicate',
     difficulty: 'Easy',
     topics: [{ slug: 'array', display: 'Array', color_hex: '#3b82f6' }],
   },
-  'q_algo_002': {
+  q_algo_002: {
     id: 'q_algo_002',
     title: 'Add Two Numbers',
     difficulty: 'Medium',
     topics: [
       { slug: 'linked-list', display: 'Linked List', color_hex: '#ec4899' },
-      { slug: 'math', display: 'Math', color_hex: '#f59e0b' }
+      { slug: 'math', display: 'Math', color_hex: '#f59e0b' },
     ],
   },
-  'q_sys_001': {
+  q_sys_001: {
     id: 'q_sys_001',
     title: 'Median of 2 Sorted Arrays',
     difficulty: 'Hard',
     topics: [
       { slug: 'array', display: 'Array', color_hex: '#3b82f6' },
-      { slug: 'binary-search', display: 'Binary Search', color_hex: '#8b5cf6' }
+      { slug: 'binary-search', display: 'Binary Search', color_hex: '#8b5cf6' },
     ],
   },
 };
@@ -162,9 +252,13 @@ export default function PracticeHistoryPage() {
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
 
-  const [selectedPeer, setSelectedPeer] = useState<EnrichedSession['peer'] | null>(null);
+  const [selectedPeer, setSelectedPeer] = useState<
+    EnrichedSession['peer'] | null
+  >(null);
   const [isPeerProfileLoading, setIsPeerProfileLoading] = useState(false);
-  const [peerProfile, setPeerProfile] = useState<PublicUserProfile | null>(null);
+  const [peerProfile, setPeerProfile] = useState<PublicUserProfile | null>(
+    null,
+  );
   const [peerProfileError, setPeerProfileError] = useState('');
 
   // 1. Data Fetching and Orchestration
@@ -183,13 +277,13 @@ export default function PracticeHistoryPage() {
       try {
         // const rawSessions = ;
         const rawSessions: RawSession[] = mockSessionData;
-        const finishedSessions = rawSessions.filter(s => s.endedAt !== null);
+        const finishedSessions = rawSessions.filter((s) => s.endedAt !== null);
         const questionIds = [...new Set(rawSessions.map((s) => s.questionId))];
         const peerIds = [
           ...new Set(
-              finishedSessions
-                  .flatMap((s) => [s.UserAId, s.UserBId])
-                  .filter((id) => id !== currentUserId),
+            finishedSessions
+              .flatMap((s) => [s.UserAId, s.UserBId])
+              .filter((id) => id !== currentUserId),
           ),
         ];
 
@@ -213,8 +307,14 @@ export default function PracticeHistoryPage() {
         const peerMap = new Map(peerData.map((p) => [p.id, p]));
 
         const enrichedSessions = rawSessions.map((session) => {
-          const peerId = session.UserAId === currentUserId ? session.UserBId : session.UserAId;
-          const peer = peerMap.get(peerId!) || { id: -1, username: '[deleted_user]' };
+          const peerId =
+            session.UserAId === currentUserId
+              ? session.UserBId
+              : session.UserAId;
+          const peer = peerMap.get(peerId!) || {
+            id: -1,
+            username: '[deleted_user]',
+          };
           const question = questionMap.get(session.questionId) || {
             title: 'Unknown Question',
             difficulty: 'Easy',
@@ -255,7 +355,7 @@ export default function PracticeHistoryPage() {
         setPeerProfile(data);
       } catch (err: any) {
         // eslint-disable-next-line no-console
-        console.error("Failed to fetch peer profile:", err);
+        console.error('Failed to fetch peer profile:', err);
         setPeerProfileError(err.message || "Could not load peer's profile.");
       } finally {
         setIsPeerProfileLoading(false);
@@ -405,40 +505,40 @@ export default function PracticeHistoryPage() {
                             }}
                           />
                           {row.question.topics.map((topic) => (
-                              <Chip
-                                  key={topic.slug} // Use slug as key
-                                  label={topic.display} // Use display for label
-                                  size="small"
-                                  sx={{
-                                    width: 'fit-content',
-                                    fontWeight: 500,
-                                    fontSize: '0.7rem',
-                                    color: '#5A6372',
-                                    backgroundColor: '#F3F4F6',
-                                    border: 'none',
-                                    height: '20px',
-                                  }}
-                              />
+                            <Chip
+                              key={topic.slug} // Use slug as key
+                              label={topic.display} // Use display for label
+                              size="small"
+                              sx={{
+                                width: 'fit-content',
+                                fontWeight: 500,
+                                fontSize: '0.7rem',
+                                color: '#5A6372',
+                                backgroundColor: '#F3F4F6',
+                                border: 'none',
+                                height: '20px',
+                              }}
+                            />
                           ))}
                         </Stack>
                       </Stack>
                     </TableCell>
                     <TableCell sx={{ color: '#6B7280' }}>
                       <Link
-                          component="button"
-                          variant="body2"
-                          onClick={() => setSelectedPeer(row.peer)}
-                          sx={{
-                            color: '#6B7280',
-                            // textDecoration: 'underline',
-                            cursor: row.peer.id === -1 ? 'default' : 'pointer',
-                            border: 'none',
-                            background: 'none',
-                            padding: 0,
-                            font: 'inherit',
-                            textAlign: 'left',
-                          }}
-                          disabled={row.peer.id === -1}
+                        component="button"
+                        variant="body2"
+                        onClick={() => setSelectedPeer(row.peer)}
+                        sx={{
+                          color: '#6B7280',
+                          // textDecoration: 'underline',
+                          cursor: row.peer.id === -1 ? 'default' : 'pointer',
+                          border: 'none',
+                          background: 'none',
+                          padding: 0,
+                          font: 'inherit',
+                          textAlign: 'left',
+                        }}
+                        disabled={row.peer.id === -1}
                       >
                         {row.peer.username}
                       </Link>
@@ -481,53 +581,59 @@ export default function PracticeHistoryPage() {
         </Paper>
       </Container>
       <Dialog
-          open={!!selectedPeer}
-          onClose={handleClosePeerProfile}
-          maxWidth="xs"
-          fullWidth
-          PaperProps={{ sx: { borderRadius: 3 } }}
+        open={!!selectedPeer}
+        onClose={handleClosePeerProfile}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 3 } }}
       >
         <DialogTitle sx={{ textAlign: 'center', pb: 0, fontWeight: 'bold' }}>
           User Profile
         </DialogTitle>
         <DialogContent sx={{ pt: 2, textAlign: 'center' }}>
           {isPeerProfileLoading ? (
-              <CircularProgress sx={{ my: 4 }} />
+            <CircularProgress sx={{ my: 4 }} />
           ) : peerProfileError ? (
-              <Alert severity="error">{peerProfileError}</Alert>
+            <Alert severity="error">{peerProfileError}</Alert>
           ) : peerProfile ? (
-              <Stack spacing={2} alignItems="center" sx={{ mt: 1 }}>
-                <Avatar
-                    src={peerProfile.profilePictureUrl ?? undefined}
-                    alt={peerProfile.username}
-                    sx={{ width: 100, height: 100, mb: 1 }}
-                />
-                <Typography variant="h5" fontWeight={600}>
-                  {peerProfile.username}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Member since: {new Date(peerProfile.createdAt).toLocaleDateString()}
-                </Typography>
-                <Paper
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      backgroundColor: '#f9fafb',
-                      width: '100%',
-                      borderRadius: 2,
-                      maxHeight: '150px',
-                      overflowY: 'auto'
-                    }}
+            <Stack spacing={2} alignItems="center" sx={{ mt: 1 }}>
+              <Avatar
+                src={peerProfile.profilePictureUrl ?? undefined}
+                alt={peerProfile.username}
+                sx={{ width: 100, height: 100, mb: 1 }}
+              />
+              <Typography variant="h5" fontWeight={600}>
+                {peerProfile.username}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Member since:{' '}
+                {new Date(peerProfile.createdAt).toLocaleDateString()}
+              </Typography>
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: 2,
+                  backgroundColor: '#f9fafb',
+                  width: '100%',
+                  borderRadius: 2,
+                  maxHeight: '150px',
+                  overflowY: 'auto',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ whiteSpace: 'pre-wrap', textAlign: 'left' }}
                 >
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', textAlign: 'left' }}>
-                    {peerProfile.bio || <i>No bio provided.</i>}
-                  </Typography>
-                </Paper>
-              </Stack>
+                  {peerProfile.bio || <i>No bio provided.</i>}
+                </Typography>
+              </Paper>
+            </Stack>
           ) : null}
         </DialogContent>
         <DialogActions sx={{ justifyContent: 'center', pb: 2 }}>
-          <Button onClick={handleClosePeerProfile} variant="outlined">Close</Button>
+          <Button onClick={handleClosePeerProfile} variant="outlined">
+            Close
+          </Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -1,4 +1,12 @@
+import { RawSession } from '@/lib/collaboration-service';
+import { fetchWithAuth } from '@/lib/utils/apiClient';
+
 const COLLAB_SERVICE_URL = process.env.NEXT_PUBLIC_API_COLLAB_SERVICE!;
+
+export async function getMySessions(): Promise<RawSession[]> {
+  const response = await fetchWithAuth(`${COLLAB_SERVICE_URL}/sessions/me`);
+  return await response.json();
+}
 
 export async function getQuestionIdBySessId(
   sessId: string,
