@@ -425,10 +425,9 @@ export default function Page() {
     try {
       await requestDeleteAccountOtp(deletePassword);
       setDeleteStep('otp'); // Move to OTP step
-    } catch (err: any) {
-      // eslint-disable-next-line no-console
-      console.error('Request Delete OTP Error:', err);
-      setDeleteError(err.message || 'Failed to request OTP.');
+    } catch (e) {
+      console.error('Request Delete OTP Error:', e);
+      setDeleteError('Failed to request OTP.');
     } finally {
       setIsDeleting(false);
     }
