@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 
 export const app = express();
-
-app.use(cors({ origin: 'http://localhost:3003' }));
+const PORT = process.env.PORT;
+app.use(cors({ origin: `http://localhost:${PORT}` }));
 app.use(express.json());
 
 app.get('/', (req, res) => {

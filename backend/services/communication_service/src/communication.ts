@@ -20,7 +20,7 @@ export class Commmunication {
   }
 
   private initServer(app: Express) {
-    const PORT = 3003;
+    const PORT = process.env.PORT;
     const server = http.createServer(app);
 
     server.listen(PORT, () => {
