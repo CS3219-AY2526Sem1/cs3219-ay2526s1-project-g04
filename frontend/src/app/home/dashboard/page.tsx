@@ -39,9 +39,9 @@ import { getAccessToken, getUserId, getUsername } from '@/lib/utils/jwt';
 import { PublicUserProfile } from '@/lib/user-service';
 import { getUserProfileById, getUsersBatch } from '@/services/userServiceApi';
 import { getQuestionsBatch } from '@/services/questionServiceApi';
-import {Question, Topic} from '@/lib/question-service';
-import {RawSession} from "@/lib/collaboration-service";
-import {getMySessions} from "@/services/collaborationServiceApi";
+import { Question, Topic } from '@/lib/question-service';
+import { RawSession } from '@/lib/collaboration-service';
+import { getMySessions } from '@/services/collaborationServiceApi';
 
 // --- Mock Data (Replace with your API data) ---
 // interface MockTopic {
@@ -271,11 +271,13 @@ export default function DashboardPage() {
 
         // --- ACTUAL API CALLS ----
         const [questionRes, peerData] = await Promise.all([
-          questionIds.length > 0 ? getQuestionsBatch(questionIds) : Promise.resolve({ success: true, data: { items: [] } }),
+          questionIds.length > 0
+            ? getQuestionsBatch(questionIds)
+            : Promise.resolve({ success: true, data: { items: [] } }),
           peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
         ]);
         if (!questionRes.success) {
-          throw new Error("Failed to fetch questions");
+          throw new Error('Failed to fetch questions');
         }
         const questionData: Question[] = questionRes.data.items;
         // --- END ----

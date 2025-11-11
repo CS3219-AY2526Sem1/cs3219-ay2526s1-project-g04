@@ -18,7 +18,11 @@ async function handleResponse(response: Response) {
 
   // Handle successful but empty responses
   const contentType = response.headers.get('content-type');
-  if (response.status === 204 || !contentType || !contentType.includes('application/json')) {
+  if (
+    response.status === 204 ||
+    !contentType ||
+    !contentType.includes('application/json')
+  ) {
     return null;
   }
 
