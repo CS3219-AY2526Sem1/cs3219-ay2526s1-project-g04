@@ -38,14 +38,7 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
   const [results, setResults] = React.useState<ExecutionResult[]>([]);
   const [sessionId, setSessionId] = React.useState<string>();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
-  const [starterCode, setStarterCode] = useState<string>('');
-  // let testCases: TestCase[] = [
-  // { input: [[2, 7, 11, 15], 9], expectedOutput: '[0, 1]' },
-  // { input: [[3, 2, 4], 6], expectedOutput: '[1, 2]' },
-  // { input: [[3, 3], 6], expectedOutput: '[0, 1]' },
-  // { input: [[1, 5, 3, 7], 8], expectedOutput: '[1, 2]' },
-  // { input: [[10, 20, 30, 40, 50], 90], expectedOutput: '[3, 4]' },
-  // ];
+
   useEffect(() => {
     if (!sessionId) {
       return;

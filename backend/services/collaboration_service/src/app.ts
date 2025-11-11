@@ -104,7 +104,11 @@ app.get(
       const activeSessionId =
         sessionManager.getActiveSessionForUser(Number(userId)) ?? 1;
       if (!activeSessionId) {
-        throw new Error('SessionId not found during active session retrieval');
+        res.send({
+          sessionId: '',
+          questionId: '',
+          partnerId: '',
+        });
       }
       const questionId = sessionManager.getSessionsQuestion(activeSessionId);
       const buddyId = sessionManager.getSessionsOtherUser(
@@ -112,9 +116,9 @@ app.get(
         Number(userId),
       );
       const activeSession = {
-        sessionId: activeSessionId ?? 1,
-        questionId: questionId ?? 'two sums',
-        partnerId: buddyId ?? 3,
+        sessionId: activeSessionId,
+        questionId: questionId,
+        partnerId: buddyId,
       };
       res.send(activeSession);
     } catch (error) {
