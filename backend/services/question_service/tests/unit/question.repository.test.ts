@@ -29,6 +29,8 @@ const makePrismaMock = () => ({
   },
   question_python_starter: {
     upsert: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
     findUnique: jest.fn(),
   },
   question_test_cases: {
@@ -308,17 +310,18 @@ describe('createDraftWithResources', () => {
       topics: [],
       attachments: [],
       starter_code: starter,
+      entry_point: 'main',
       test_cases: tcs as any,
     });
 
     expect(out.id).toBe('qX');
-    expect(prisma.question_python_starter.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { question_id: 'qX' },
-        update: { starter_code: starter },
-        create: { question_id: 'qX', starter_code: starter },
-      }),
-    );
+    expect(prisma.question_python_starter.create).toHaveBeenCalledWith({
+      data: {
+        question_id: 'qX',
+        starter_code: starter,
+        entry_point: 'main',
+      },
+    });
     // delete old then create normalized (ordinal 1..n)
     expect(prisma.question_test_cases.deleteMany).toHaveBeenCalledWith({
       where: { question_id: 'qX' },
@@ -346,6 +349,7 @@ describe('updateWithResources', () => {
     const res = await Repo.updateWithResources('id2', {
       title: 'New',
       starter_code: 'print("hi")',
+      entry_point: 'main',
       test_cases: [
         { visibility: 'sample', input_data: 'a', expected_output: 'b' },
       ],
@@ -354,10 +358,24 @@ describe('updateWithResources', () => {
 
     expect(res).toEqual({ id: 'id2' });
 
-    // starter code upsert
-    expect(prisma.question_python_starter.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { question_id: 'id2' } }),
-    );
+    // starter code write (repo uses create OR update, not upsert)
+    const createCalls = prisma.question_python_starter.create.mock.calls;
+    const updateCalls = prisma.question_python_starter.update.mock.calls;
+    expect(createCalls.length + updateCalls.length).toBeGreaterThan(0);
+    if (createCalls.length) {
+      expect(createCalls[0][0]).toEqual({
+        data: {
+          question_id: 'id2',
+          starter_code: 'print("hi")',
+          entry_point: 'main',
+        },
+      });
+    } else {
+      expect(updateCalls[0][0]).toEqual({
+        where: { question_id: 'id2' },
+        data: { starter_code: 'print("hi")', entry_point: 'main' },
+      });
+    }
 
     // test cases replaced
     expect(prisma.question_test_cases.deleteMany).toHaveBeenCalledWith({

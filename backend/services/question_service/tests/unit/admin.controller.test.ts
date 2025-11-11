@@ -7,7 +7,36 @@ import {
   beforeAll,
 } from '@jest/globals';
 import type { Request, Response } from 'express';
-import { asMock } from '../helpers/asMock.js'; // <-- explicit .js for node16/nodenext
+import { asMock } from '../helpers/asMock.js';
+
+type TestCase = {
+  name: string;
+  visibility: string;
+  input_data: string;
+  expected_output: string;
+  ordinal: number;
+};
+
+type Bundle = {
+  question_id: string;
+  status: string;
+  starter_code: string | undefined;
+  entry_point: string | undefined; // <-- new
+  test_cases: TestCase[];
+  updated_at: string;
+};
+
+function makeBundle(overrides: Partial<Bundle> = {}): Bundle {
+  return {
+    question_id: 'test-question',
+    status: 'draft',
+    starter_code: '',
+    entry_point: 'main',
+    test_cases: [],
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 let AdminController: typeof import('../../src/controllers/AdminController.js');
 let Repo: typeof import('../../src/repositories/QuestionRepository.js');
@@ -285,11 +314,7 @@ describe('AdminController - Unit Tests', () => {
           }),
         );
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
-          bundle({
-            question_id: 'test-question',
-            starter_code: '',
-            test_cases: [],
-          }),
+          makeBundle({ question_id: 'test' }),
         );
 
         await AdminController.create(
