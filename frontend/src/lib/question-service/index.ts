@@ -50,7 +50,7 @@ export type Question = {
   updated_at: string;
   body_html?: string;
   starter_code?: string;
-  test_cases?: TestCase[];
+  test_cases: TestCase[];
   snippet_html?: string;
 };
 

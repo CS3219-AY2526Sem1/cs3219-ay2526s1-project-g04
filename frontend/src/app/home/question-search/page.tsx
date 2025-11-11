@@ -10,7 +10,7 @@ import {
   Question,
 } from '@/lib/question-service';
 import { getAdminQuestions, getQuestions } from '@/services/questionServiceApi';
-// import { TEST_QUESTION_LIST } from '@/lib/test-data/TestQuestionList';
+import { TEST_QUESTION_LIST } from '@/lib/test-data/TestQuestionList';
 
 export default function QuestionSearchPage() {
   const [userRole, setUserRole] = React.useState<string | null>(null);
