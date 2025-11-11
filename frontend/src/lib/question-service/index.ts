@@ -50,7 +50,8 @@ export type Question = {
   updated_at: string;
   body_html?: string;
   starter_code?: string;
-  test_cases: TestCase[];
+  entry_point?: string;
+  test_cases?: TestCase[];
   snippet_html?: string;
 };
 
@@ -122,15 +123,18 @@ export interface postAdminQuestionsRequest {
   difficulty: Difficulty;
   topics: string[];
   attachments?: Attachment[];
-  starter_code?: string;
-  test_cases?: TestCase[];
+  starter_code: string;
+  entry_point: string;
+  test_cases: TestCase[];
 }
 
 export interface getAdminQuestionResourcesResponse {
   question_id: string;
   status: Status;
-  starter_code?: string;
-  test_cases?: TestCase[];
+  starter_code: string;
+  entry_point: string;
+  test_cases: TestCase[];
+  updated_at: string;
 }
 
 export interface getTopicsResponse {
@@ -149,8 +153,9 @@ export interface getQuestionsRequestParams {
 
 export interface getQuestionResourcesResponse {
   question_id: string;
-  starter_code?: string;
-  test_cases?: TestCase[];
+  starter_code: string;
+  test_cases: TestCase[];
+  entry_point: string;
   updated_at: string;
 }
 
