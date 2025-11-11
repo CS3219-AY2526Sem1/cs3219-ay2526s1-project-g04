@@ -349,10 +349,9 @@ export default function PracticeHistoryPage() {
       try {
         const data = await getUserProfileById(selectedPeer.id);
         setPeerProfile(data);
-      } catch (err: any) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to fetch peer profile:', err);
-        setPeerProfileError(err.message || "Could not load peer's profile.");
+      } catch (e) {
+        console.error('Failed to fetch peer profile:', e);
+        setPeerProfileError("Could not load peer's profile.");
       } finally {
         setIsPeerProfileLoading(false);
       }
