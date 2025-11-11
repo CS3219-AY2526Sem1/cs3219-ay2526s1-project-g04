@@ -152,6 +152,7 @@ export interface getQuestionResourcesResponse {
   starter_code?: string;
   test_cases?: TestCase[];
   updated_at: string;
+  starter_code?: string;
 }
 
 // helper type guard

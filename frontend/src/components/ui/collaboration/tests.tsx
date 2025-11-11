@@ -40,28 +40,31 @@ export const TestCases = () => {
           onChange={handleChange}
           TabIndicatorProps={{ sx: { display: 'none' } }}
         >
-          {testCases.map((testCase, idx) => (
-            <Tab
-              key={idx}
-              value={idx}
-              label={`Case ${idx + 1}`}
-              sx={{
-                textTransform: 'none',
-                minHeight: '32px',
-                height: '32px',
-                padding: '4px 12px',
-                '&.Mui-selected': {
-                  backgroundColor: '#F3F4F6',
-                  borderRadius: '10px',
-                  color: 'black',
-                },
-              }}
-            />
-          ))}
+          {testCases.map(
+            (testCase, idx) =>
+              testCase.visible === 'sample' && (
+                <Tab
+                  key={idx}
+                  value={idx}
+                  label={`Case ${idx + 1}`}
+                  sx={{
+                    textTransform: 'none',
+                    minHeight: '32px',
+                    height: '32px',
+                    padding: '4px 12px',
+                    '&.Mui-selected': {
+                      backgroundColor: '#F3F4F6',
+                      borderRadius: '10px',
+                      color: 'black',
+                    },
+                  }}
+                />
+              ),
+          )}
         </Tabs>
 
         {testCases.map((testCase, idx) =>
-          value === idx ? (
+          value === idx && testCase.visible === 'sample' ? (
             <Stack key={idx} spacing={1} className="mt-2">
               <Typography variant="subtitle2">Input:</Typography>
               <Typography

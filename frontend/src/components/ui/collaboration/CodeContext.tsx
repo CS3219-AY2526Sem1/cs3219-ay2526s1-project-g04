@@ -1,13 +1,17 @@
 'use client';
 
-import { Question } from '@/lib/question-service';
+import { getQuestionResourcesResponse, Question } from '@/lib/question-service';
 import { getQuestionIdBySessId } from '@/services/collaborationServiceApi';
-import { getQuestionById } from '@/services/questionServiceApi';
+import {
+  getQuestionById,
+  getQuestionsInternalResources,
+} from '@/services/questionServiceApi';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 interface TestCase {
   input: string;
   expectedOutput: string;
+  visible: string;
 }
 
 interface ExecutionResult {
@@ -26,6 +30,7 @@ interface CodeContextType {
   setResults: React.Dispatch<React.SetStateAction<ExecutionResult[]>>;
   sessionId: string | undefined;
   setSessionId: React.Dispatch<React.SetStateAction<string | undefined>>;
+  entryPoint: string;
 }
 
 const CodeContext = createContext<CodeContextType | undefined>(undefined);
@@ -38,6 +43,7 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
   const [results, setResults] = React.useState<ExecutionResult[]>([]);
   const [sessionId, setSessionId] = React.useState<string>();
   const [testCases, setTestCases] = useState<TestCase[]>([]);
+  const [entryPoint, setEntryPoint] = useState<string>('');
 
   useEffect(() => {
     if (!sessionId) {
@@ -50,20 +56,28 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
       if (!questionId) return;
 
       const res = await getQuestionById(questionId);
-      if (!res.success) {
+      const resMeta = await getQuestionsInternalResources(questionId);
+
+      if (!res.success || !resMeta.success) {
         alert(`⚠️ Error fetching question: ${res.message}`);
         return;
       }
 
       const question: Question = res.data;
+      const questionInternal: getQuestionResourcesResponse = resMeta.data;
+
       console.log(question);
       console.log(question.starter_code);
-      const quesTestCases = question.test_cases;
-      const quesStarterCode = question.starter_code;
+      const quesTestCases = questionInternal.test_cases;
+      const quesStarterCode = questionInternal.starter_code;
+      const entryCode = questionInternal.entry_point;
+      console.log(quesTestCases);
+      console.log('entry', questionInternal);
       const testCases = quesTestCases?.map((testcase, idx) => {
         return {
           input: testcase.input_data,
           expectedOutput: testcase.expected_output,
+          visible: testcase.visibility,
         };
       });
       if (testCases) {
@@ -71,6 +85,10 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
       }
       if (quesStarterCode) {
         setCode(quesStarterCode);
+      }
+
+      if (entryCode) {
+        setEntryPoint(entryCode);
       }
 
       console.log('tc', quesTestCases);
@@ -90,6 +108,7 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
         setResults,
         sessionId,
         setSessionId,
+        entryPoint,
       }}
     >
       {children}

@@ -36,7 +36,8 @@ export default function CollabNavigationBar({
 }: TopNavigationBarProps) {
   const appBarRef = useRef<HTMLDivElement>(null);
 
-  const { code, language, testCases, setResults, sessionId } = useCodeContext();
+  const { code, language, testCases, setResults, sessionId, entryPoint } =
+    useCodeContext();
   const router = useRouter();
   const CODEEXEURL = process.env.NEXT_PUBLIC_API_CODE_EXE_SERVICE;
 
@@ -77,8 +78,9 @@ export default function CollabNavigationBar({
       const response = await fetch(`${CODEEXEURL}/batch-run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, inputs }),
+        body: JSON.stringify({ code, inputs, entryPoint }),
       });
+      console.log(entryPoint);
 
       const results = await response.json();
       console.log('[Batch Runner Results]', results);
@@ -106,7 +108,7 @@ export default function CollabNavigationBar({
     // runCode(language, code);
     runBatchCode(
       code,
-      testCases.map((t) => t.input),
+      testCases.filter((t) => t.visible == 'sample').map((t) => t.input),
     );
   };
 
