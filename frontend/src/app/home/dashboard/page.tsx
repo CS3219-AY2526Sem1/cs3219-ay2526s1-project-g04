@@ -39,157 +39,159 @@ import { getAccessToken, getUserId, getUsername } from '@/lib/utils/jwt';
 import { PublicUserProfile } from '@/lib/user-service';
 import { getUserProfileById, getUsersBatch } from '@/services/userServiceApi';
 import { getQuestionsBatch } from '@/services/questionServiceApi';
-import { Question } from '@/lib/question-service';
+import {Question, Topic} from '@/lib/question-service';
+import {RawSession} from "@/lib/collaboration-service";
+import {getMySessions} from "@/services/collaborationServiceApi";
 
 // --- Mock Data (Replace with your API data) ---
-interface MockTopic {
-  slug: string;
-  display: string;
-  color_hex: string;
-}
-interface MockQuestion {
-  id: string;
-  title: string;
-  difficulty: string;
-  topics: MockTopic[]; // --- UPDATED ---
-}
-interface MockUser {
-  id: number;
-  username: string;
-}
-
-const mockSessionData = [
-  {
-    id: 1,
-    questionId: 'q_math_001',
-    endedAt: '2025-11-10T10:05:20.000Z',
-    solved: true,
-    UserAId: 1,
-    UserBId: 102,
-  },
-  {
-    id: 2,
-    questionId: 'q_chem_045',
-    endedAt: '2025-11-09T11:00:00Z',
-    solved: true,
-    UserAId: 101,
-    UserBId: 103,
-  },
-  {
-    id: 3,
-    questionId: 'q_algo_002',
-    endedAt: '2025-11-09T14:00:00Z',
-    solved: false,
-    UserAId: 104,
-    UserBId: 101,
-  },
-  {
-    id: 4,
-    questionId: 'q_sys_001',
-    endedAt: '2025-11-08T16:00:00Z',
-    solved: true,
-    UserAId: 101,
-    UserBId: 102,
-  },
-  {
-    id: 5,
-    questionId: 'q_math_001',
-    endedAt: '2025-11-07T12:00:00Z',
-    solved: true,
-    UserAId: 103,
-    UserBId: 101,
-  },
-  {
-    id: 6,
-    questionId: 'q_chem_045',
-    endedAt: '2025-11-06T10:00:00Z',
-    solved: true,
-    UserAId: 101,
-    UserBId: 104,
-  },
-  {
-    id: 7,
-    questionId: 'q_algo_002',
-    endedAt: '2025-11-05T11:00:00Z',
-    solved: true,
-    UserAId: 102,
-    UserBId: 101,
-  },
-
-  // This one is active and will be filtered out
-  {
-    id: 12,
-    questionId: 'q_sys_001',
-    endedAt: null,
-    solved: false,
-    UserAId: 101,
-    UserBId: 104,
-  },
-];
-const mockQuestionDatabase: Record<string, MockQuestion> = {
-  q_math_001: {
-    id: 'q_math_001',
-    title: 'Two Sum',
-    difficulty: 'Easy',
-    topics: [
-      { slug: 'array', display: 'Array', color_hex: '#3b82f6' },
-      { slug: 'hash-table', display: 'Hash Table', color_hex: '#10b981' },
-    ],
-  },
-  q_chem_045: {
-    id: 'q_chem_045',
-    title: 'Contains Duplicate',
-    difficulty: 'Easy',
-    topics: [{ slug: 'array', display: 'Array', color_hex: '#3b82f6' }],
-  },
-  q_algo_002: {
-    id: 'q_algo_002',
-    title: 'Add Two Numbers',
-    difficulty: 'Medium',
-    topics: [
-      { slug: 'linked-list', display: 'Linked List', color_hex: '#ec4899' },
-      { slug: 'math', display: 'Math', color_hex: '#f59e0b' },
-    ],
-  },
-  q_sys_001: {
-    id: 'q_sys_001',
-    title: 'Median of 2 Sorted Arrays',
-    difficulty: 'Hard',
-    topics: [
-      { slug: 'array', display: 'Array', color_hex: '#3b82f6' },
-      { slug: 'binary-search', display: 'Binary Search', color_hex: '#8b5cf6' },
-    ],
-  },
-};
-
-const mockUserDatabase: Record<number, MockUser> = {
-  1: { id: 1, username: 'kailash201' },
-  102: { id: 102, username: 'flexibo' },
-  103: { id: 103, username: 'ylchin' },
-};
-// --- End of Mock Data ---
-
-const fakeFetch = <T,>(
-  db: Record<string | number, T>,
-  ids: (string | number)[],
-): Promise<T[]> => {
-  return new Promise<T[]>((resolve) => {
-    setTimeout(() => {
-      const results = ids.map((id) => db[id]).filter(Boolean);
-      resolve(results);
-    }, 200);
-  });
-};
-
-// Type definitions
-interface RawSession {
-  id: number;
-  questionId: string;
-  endedAt: string | null;
-  solved: boolean;
-  UserAId: number;
-  UserBId: number;
-}
+// interface MockTopic {
+//   slug: string;
+//   display: string;
+//   color_hex: string;
+// }
+// interface MockQuestion {
+//   id: string;
+//   title: string;
+//   difficulty: string;
+//   topics: MockTopic[]; // --- UPDATED ---
+// }
+// interface MockUser {
+//   id: number;
+//   username: string;
+// }
+//
+// const mockSessionData = [
+//   {
+//     id: 1,
+//     questionId: 'q_math_001',
+//     endedAt: '2025-11-10T10:05:20.000Z',
+//     solved: true,
+//     UserAId: 1,
+//     UserBId: 102,
+//   },
+//   {
+//     id: 2,
+//     questionId: 'q_chem_045',
+//     endedAt: '2025-11-09T11:00:00Z',
+//     solved: true,
+//     UserAId: 101,
+//     UserBId: 103,
+//   },
+//   {
+//     id: 3,
+//     questionId: 'q_algo_002',
+//     endedAt: '2025-11-09T14:00:00Z',
+//     solved: false,
+//     UserAId: 104,
+//     UserBId: 101,
+//   },
+//   {
+//     id: 4,
+//     questionId: 'q_sys_001',
+//     endedAt: '2025-11-08T16:00:00Z',
+//     solved: true,
+//     UserAId: 101,
+//     UserBId: 102,
+//   },
+//   {
+//     id: 5,
+//     questionId: 'q_math_001',
+//     endedAt: '2025-11-07T12:00:00Z',
+//     solved: true,
+//     UserAId: 103,
+//     UserBId: 101,
+//   },
+//   {
+//     id: 6,
+//     questionId: 'q_chem_045',
+//     endedAt: '2025-11-06T10:00:00Z',
+//     solved: true,
+//     UserAId: 101,
+//     UserBId: 104,
+//   },
+//   {
+//     id: 7,
+//     questionId: 'q_algo_002',
+//     endedAt: '2025-11-05T11:00:00Z',
+//     solved: true,
+//     UserAId: 102,
+//     UserBId: 101,
+//   },
+//
+//   // This one is active and will be filtered out
+//   {
+//     id: 12,
+//     questionId: 'q_sys_001',
+//     endedAt: null,
+//     solved: false,
+//     UserAId: 101,
+//     UserBId: 104,
+//   },
+// ];
+// const mockQuestionDatabase: Record<string, MockQuestion> = {
+//   q_math_001: {
+//     id: 'q_math_001',
+//     title: 'Two Sum',
+//     difficulty: 'Easy',
+//     topics: [
+//       { slug: 'array', display: 'Array', color_hex: '#3b82f6' },
+//       { slug: 'hash-table', display: 'Hash Table', color_hex: '#10b981' },
+//     ],
+//   },
+//   q_chem_045: {
+//     id: 'q_chem_045',
+//     title: 'Contains Duplicate',
+//     difficulty: 'Easy',
+//     topics: [{ slug: 'array', display: 'Array', color_hex: '#3b82f6' }],
+//   },
+//   q_algo_002: {
+//     id: 'q_algo_002',
+//     title: 'Add Two Numbers',
+//     difficulty: 'Medium',
+//     topics: [
+//       { slug: 'linked-list', display: 'Linked List', color_hex: '#ec4899' },
+//       { slug: 'math', display: 'Math', color_hex: '#f59e0b' },
+//     ],
+//   },
+//   q_sys_001: {
+//     id: 'q_sys_001',
+//     title: 'Median of 2 Sorted Arrays',
+//     difficulty: 'Hard',
+//     topics: [
+//       { slug: 'array', display: 'Array', color_hex: '#3b82f6' },
+//       { slug: 'binary-search', display: 'Binary Search', color_hex: '#8b5cf6' },
+//     ],
+//   },
+// };
+//
+// const mockUserDatabase: Record<number, MockUser> = {
+//   1: { id: 1, username: 'kailash201' },
+//   102: { id: 102, username: 'flexibo' },
+//   103: { id: 103, username: 'ylchin' },
+// };
+// // --- End of Mock Data ---
+//
+// const fakeFetch = <T,>(
+//   db: Record<string | number, T>,
+//   ids: (string | number)[],
+// ): Promise<T[]> => {
+//   return new Promise<T[]>((resolve) => {
+//     setTimeout(() => {
+//       const results = ids.map((id) => db[id]).filter(Boolean);
+//       resolve(results);
+//     }, 200);
+//   });
+// };
+//
+// // Type definitions
+// interface RawSession {
+//   id: number;
+//   questionId: string;
+//   endedAt: string | null;
+//   solved: boolean;
+//   UserAId: number;
+//   UserBId: number;
+// }
 interface EnrichedSession {
   id: number;
   endedAt: string;
@@ -197,7 +199,7 @@ interface EnrichedSession {
   question: {
     title: string;
     difficulty: string;
-    topics: MockTopic[];
+    topics: Topic[];
   };
   peer: {
     id: number;
@@ -255,8 +257,8 @@ export default function DashboardPage() {
       }
 
       try {
-        // const rawSessions: RawSession[] = getMySessions();
-        const rawSessions: RawSession[] = mockSessionData;
+        const rawSessions: RawSession[] = await getMySessions();
+        // const rawSessions: RawSession[] = mockSessionData;
 
         const questionIds = [...new Set(rawSessions.map((s) => s.questionId))];
         const peerIds = [
@@ -268,20 +270,20 @@ export default function DashboardPage() {
         ];
 
         // --- ACTUAL API CALLS ----
-        // const [questionRes, peerData] = await Promise.all([
-        //   questionIds.length > 0 ? getQuestionsBatch(questionIds) : Promise.resolve({ success: true, data: { items: [] } }),
-        //   peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
-        // ]);
-        // if (!questionRes.success) {
-        //   throw new Error("Failed to fetch questions");
-        // }
-        // const questionData: Question[] = questionRes.data.items;
+        const [questionRes, peerData] = await Promise.all([
+          questionIds.length > 0 ? getQuestionsBatch(questionIds) : Promise.resolve({ success: true, data: { items: [] } }),
+          peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
+        ]);
+        if (!questionRes.success) {
+          throw new Error("Failed to fetch questions");
+        }
+        const questionData: Question[] = questionRes.data.items;
         // --- END ----
 
-        const [questionData, peerData] = await Promise.all([
-          fakeFetch(mockQuestionDatabase, questionIds),
-          fakeFetch(mockUserDatabase, peerIds),
-        ]);
+        // const [questionData, peerData] = await Promise.all([
+        //   fakeFetch(mockQuestionDatabase, questionIds),
+        //   fakeFetch(mockUserDatabase, peerIds),
+        // ]);
 
         const questionMap = new Map(questionData.map((q) => [q.id, q]));
         const peerMap = new Map(peerData.map((p) => [p.id, p]));
