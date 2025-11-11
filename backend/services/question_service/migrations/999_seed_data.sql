@@ -489,7 +489,12 @@ ON CONFLICT DO NOTHING;
 -- Python starter code for each question
 -- ==============================================================
 
-INSERT INTO question_python_starter (question_id, starter_code) VALUES
+-- ==============================================================
+-- Python starter code for each question (ONE function entry point)
+-- ==============================================================
+
+INSERT INTO question_python_starter (question_id, starter_code, entry_point) VALUES
+  -- reverse-a-string
   (
     'reverse-a-string',
     'class Solution:
@@ -498,15 +503,21 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
         Return a new reversed array. Do not mutate `s`.
         """
         pass
-'
+',
+    'Solution.reverseString'
   ),
+
+  -- linked-list-cycle-detection
   (
     'linked-list-cycle-detection',
     'class Solution:
     def hasCycle(self, head: "ListNode | None") -> bool:
         pass
-'
+',
+    'Solution.hasCycle'
   ),
+
+  -- rotate-image
   (
     'rotate-image',
     'class Solution:
@@ -516,61 +527,206 @@ INSERT INTO question_python_starter (question_id, starter_code) VALUES
         Do not mutate `matrix`.
         """
         pass
-'
+',
+    'Solution.rotate'
   ),
+
+  -- validate-binary-search-tree
   (
     'validate-binary-search-tree',
     'class Solution:
     def isValidBST(self, root: "TreeNode | None") -> bool:
         pass
-'
+',
+    'Solution.isValidBST'
   ),
+
+  -- LRU Cache (single entry: process ops/args and return outputs)
   (
     'lru-cache',
-    'class LRUCache:
-    def __init__(self, capacity: int):
+    'class Solution:
+    def lru(self, ops: list[str], args: list[list[int]]) -> list[object]:
+        """
+        Simulate LRUCache using operation/argument arrays.
+        Return the list of results (null for non-returning ops).
+        """
         pass
-
-    def get(self, key: int) -> int:
-        return -1
-
-    def put(self, key: int, value: int) -> None:
-        pass
-'
+',
+    'Solution.lru'
   ),
+
+  -- longest-common-subsequence
   (
     'longest-common-subsequence',
     'class Solution:
     def longestCommonSubsequence(self, text1: str, text2: str) -> int:
         pass
-'
+',
+    'Solution.longestCommonSubsequence'
   ),
+
+  -- sliding-window-maximum
   (
     'sliding-window-maximum',
     'class Solution:
     def maxSlidingWindow(self, nums: list[int], k: int) -> list[int]:
         pass
-'
+',
+    'Solution.maxSlidingWindow'
   ),
+
+  -- Serialize/Deserialize tree (single entry: serialize only, matches sample test)
   (
     'serialize-and-deserialize-binary-tree',
-    'class Codec:
+    'class Solution:
     def serialize(self, root: "TreeNode | None") -> str:
+        """
+        Return a BFS serialization with ''null'' markers, e.g. "1,2,3,null,null,4,5".
+        """
         pass
-
-    def deserialize(self, data: str) -> "TreeNode | None":
-        pass
-'
+',
+    'Solution.serialize'
   ),
+
+  -- n-queens
   (
     'n-queens',
     'class Solution:
     def solveNQueens(self, n: int) -> list[list[str]]:
         pass
-'
+',
+    'Solution.solveNQueens'
+  ),
+
+  -- roman-to-integer
+  (
+    'roman-to-integer',
+    'class Solution:
+    def romanToInt(self, s: str) -> int:
+        """
+        Convert a Roman numeral to integer.
+        """
+        pass
+',
+    'Solution.romanToInt'
+  ),
+
+  -- add-binary
+  (
+    'add-binary',
+    'class Solution:
+    def addBinary(self, a: str, b: str) -> str:
+        pass
+',
+    'Solution.addBinary'
+  ),
+
+  -- fibonacci-number
+  (
+    'fibonacci-number',
+    'class Solution:
+    def fib(self, n: int) -> int:
+        pass
+',
+    'Solution.fib'
+  ),
+
+  -- implement-stack-using-queues (single entry: process ops/args, matches test)
+  (
+    'implement-stack-using-queues',
+    'class Solution:
+    def stackOps(self, ops: list[str], args: list[list[int]]) -> list[object]:
+        """
+        Simulate a stack using queue ops from (ops, args).
+        Return the list of results (null for non-returning ops).
+        """
+        pass
+',
+    'Solution.stackOps'
+  ),
+
+  -- combine-two-tables (SQL-as-string)
+  (
+    'combine-two-tables',
+    'class Solution:
+    def sql(self) -> str:
+        """
+        Return the SQL query as a single string.
+        Schema:
+          Person(id, firstName, lastName)
+          Address(personId, city, state)
+        """
+        return ""
+',
+    'Solution.sql'
+  ),
+
+  -- repeated-dna-sequences
+  (
+    'repeated-dna-sequences',
+    'class Solution:
+    def findRepeatedDnaSequences(self, s: str) -> list[str]:
+        pass
+',
+    'Solution.findRepeatedDnaSequences'
+  ),
+
+  -- course-schedule
+  (
+    'course-schedule',
+    'class Solution:
+    def canFinish(self, numCourses: int, prerequisites: list[list[int]]) -> bool:
+        pass
+',
+    'Solution.canFinish'
+  ),
+
+  -- airplane-seat-assignment-probability
+  (
+    'airplane-seat-assignment-probability',
+    'class Solution:
+    def nthPersonGetsNthSeat(self, n: int) -> float:
+        pass
+',
+    'Solution.nthPersonGetsNthSeat'
+  ),
+
+  -- wildcard-matching
+  (
+    'wildcard-matching',
+    'class Solution:
+    def isMatch(self, s: str, p: str) -> bool:
+        pass
+',
+    'Solution.isMatch'
+  ),
+
+  -- chalkboard-xor-game
+  (
+    'chalkboard-xor-game',
+    'class Solution:
+    def xorGame(self, nums: list[int]) -> bool:
+        pass
+',
+    'Solution.xorGame'
+  ),
+
+  -- trips-and-users (SQL-as-string)
+  (
+    'trips-and-users',
+    'class Solution:
+    def sql(self) -> str:
+        """
+        Return the SQL analytics query as a single string.
+        Tables: Trips, Users (with banned flag).
+        """
+        return ""
+',
+    'Solution.sql'
   )
 ON CONFLICT (question_id) DO UPDATE
-  SET starter_code = EXCLUDED.starter_code;
+  SET starter_code = EXCLUDED.starter_code,
+      entry_point  = EXCLUDED.entry_point;
 
 -- ==============================================================
 -- Test cases (ordinals now 1..n)
@@ -745,6 +901,89 @@ VALUES
     'sample',
     '{"n":4}',
     '[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]',
+    1
+  )
+ON CONFLICT DO NOTHING;
+
+-- roman-to-integer
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('roman-to-integer','sample','{"s":"MCMXCIV"}','1994',1),
+  ('roman-to-integer','hidden','{"s":"LVIII"}','58',2)
+ON CONFLICT DO NOTHING;
+
+-- add-binary
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('add-binary','sample','{"a":"11","b":"1"}','"100"',1),
+  ('add-binary','hidden','{"a":"1010","b":"1011"}','"10101"',2)
+ON CONFLICT DO NOTHING;
+
+-- fibonacci-number
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('fibonacci-number','sample','{"n":4}','3',1),
+  ('fibonacci-number','hidden','{"n":0}','0',2),
+  ('fibonacci-number','hidden','{"n":1}','1',3)
+ON CONFLICT DO NOTHING;
+
+-- implement-stack-using-queues (operation-based harness)
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  (
+    'implement-stack-using-queues',
+    'sample',
+    '{"ops":["MyStack","push","push","top","pop","empty"],"args":[[],[1],[2],[],[],[]]}',
+    '[null,null,null,2,2,false]',
+    1
+  )
+ON CONFLICT DO NOTHING;
+
+-- combine-two-tables (expect canonical SQL string normalized)
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  (
+    'combine-two-tables',
+    'sample',
+    '{}',
+    '"SELECT p.firstName, p.lastName, a.city, a.state FROM Person p LEFT JOIN Address a ON a.personId = p.id"',
+    1
+  )
+ON CONFLICT DO NOTHING;
+
+-- repeated-dna-sequences
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('repeated-dna-sequences','sample','{"s":"AAAAACCCCCAAAAACCCCCCAAAAAGGGTTT"}','["AAAAACCCCC","CCCCCAAAAA"]',1),
+  ('repeated-dna-sequences','hidden','{"s":"AAAAAAAAAAAAA"}','["AAAAAAAAAA"]',2)
+ON CONFLICT DO NOTHING;
+
+-- course-schedule
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('course-schedule','sample','{"numCourses":2,"prerequisites":[[1,0]]}','true',1),
+  ('course-schedule','hidden','{"numCourses":2,"prerequisites":[[1,0],[0,1]]}','false',2)
+ON CONFLICT DO NOTHING;
+
+-- airplane-seat-assignment-probability
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('airplane-seat-assignment-probability','sample','{"n":1}','1',1),
+  ('airplane-seat-assignment-probability','hidden','{"n":10}','0.5',2)
+ON CONFLICT DO NOTHING;
+
+-- wildcard-matching
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('wildcard-matching','sample','{"s":"aa","p":"a"}','false',1),
+  ('wildcard-matching','hidden','{"s":"aa","p":"*"}','true',2),
+  ('wildcard-matching','hidden','{"s":"cb","p":"?a"}','false',3)
+ON CONFLICT DO NOTHING;
+
+-- chalkboard-xor-game
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  ('chalkboard-xor-game','sample','{"nums":[1,1,2]}','false',1),
+  ('chalkboard-xor-game','hidden','{"nums":[1,2,3]}','true',2)
+ON CONFLICT DO NOTHING;
+
+-- trips-and-users (expect canonical SQL string normalized)
+INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
+  (
+    'trips-and-users',
+    'sample',
+    '{}',
+    '"-- return an aggregate query computing daily cancellation rate excluding banned users"',
     1
   )
 ON CONFLICT DO NOTHING;

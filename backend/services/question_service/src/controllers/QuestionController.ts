@@ -44,6 +44,12 @@ function parseNum(x: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function parseBool(x: unknown): boolean {
+  if (typeof x === 'string') return x.toLowerCase() === 'true';
+  if (typeof x === 'boolean') return x;
+  return false;
+}
+
 /**
  * GET /questions/:id
  */
@@ -121,6 +127,7 @@ export async function list(req: AuthRequest, res: Response) {
     q?: string;
     page?: number;
     page_size?: number;
+    highlight?: boolean;
   } = {};
 
   const d = parseDifficulty(req.query['difficulty']);
@@ -128,12 +135,14 @@ export async function list(req: AuthRequest, res: Response) {
   const qq = parseStr(req.query['q']);
   const p = parseNum(req.query['page']);
   const s = parseNum(req.query['page_size']);
+  const h = !!qq && parseBool(req.query['highlight']);
 
   if (d !== undefined) args.difficulty = d;
   if (t !== undefined) args.topics = t;
   if (qq !== undefined) args.q = qq;
   if (p !== undefined) args.page = p;
   if (s !== undefined) args.page_size = s;
+  if (h) args.highlight = true;
 
   log.info('[GET /questions] request', {
     ip: req.ip,
@@ -145,6 +154,7 @@ export async function list(req: AuthRequest, res: Response) {
     q_len: args.q?.length ?? 0,
     page: args.page,
     page_size: args.page_size,
+    highlight: !!args.highlight,
   });
 
   try {
@@ -157,6 +167,7 @@ export async function list(req: AuthRequest, res: Response) {
       topics: args.topics,
       page: args.page,
       page_size: args.page_size,
+      highlight: args.highlight ?? false,
     });
 
     return res.json({

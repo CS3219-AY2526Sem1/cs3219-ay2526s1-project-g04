@@ -7,7 +7,36 @@ import {
   beforeAll,
 } from '@jest/globals';
 import type { Request, Response } from 'express';
-import { asMock } from '../helpers/asMock.js'; // <-- explicit .js for node16/nodenext
+import { asMock } from '../helpers/asMock.js';
+
+type TestCase = {
+  name: string;
+  visibility: string;
+  input_data: string;
+  expected_output: string;
+  ordinal: number;
+};
+
+type Bundle = {
+  question_id: string;
+  status: string;
+  starter_code: string | undefined;
+  entry_point: string | undefined;
+  test_cases: TestCase[];
+  updated_at: string;
+};
+
+function makeBundle(overrides: Partial<Bundle> = {}): Bundle {
+  return {
+    question_id: 'test-question',
+    status: 'draft',
+    starter_code: '',
+    entry_point: 'main',
+    test_cases: [],
+    updated_at: new Date().toISOString(),
+    ...overrides,
+  };
+}
 
 let AdminController: typeof import('../../src/controllers/AdminController.js');
 let Repo: typeof import('../../src/repositories/QuestionRepository.js');
@@ -75,6 +104,7 @@ function bundle(overrides: Partial<Record<string, any>> = {}) {
     question_id: 'test',
     status: 'draft',
     starter_code: '', // string (not a language map)
+    entry_point: 'main',
     test_cases: [] as Array<{
       name: string;
       visibility: string;
@@ -177,12 +207,27 @@ describe('AdminController - Unit Tests', () => {
     } as Partial<Request>;
   });
 
+  // Minimal required execution resources for create() to pass validation
+  const REQUIRED_EXEC = {
+    starter_code: 'def solve():\n    pass',
+    entry_point: 'solve',
+    test_cases: [
+      {
+        visibility: 'sample',
+        input_data: '1',
+        expected_output: '1',
+        ordinal: 1,
+      },
+    ],
+  };
+
   describe('create', () => {
     describe('validation', () => {
       it('should return 400 when title is missing', async () => {
         mockRequest.body = {
           body_md: 'Test body',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         await AdminController.create(
@@ -199,6 +244,7 @@ describe('AdminController - Unit Tests', () => {
           title: '   ',
           body_md: 'Test body',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         await AdminController.create(
@@ -214,6 +260,7 @@ describe('AdminController - Unit Tests', () => {
         mockRequest.body = {
           title: 'Test Question',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         await AdminController.create(
@@ -230,6 +277,7 @@ describe('AdminController - Unit Tests', () => {
           title: 'Test Question',
           body_md: '   ',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         await AdminController.create(
@@ -246,6 +294,7 @@ describe('AdminController - Unit Tests', () => {
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Super Hard',
+          ...REQUIRED_EXEC,
         };
 
         await AdminController.create(
@@ -264,6 +313,7 @@ describe('AdminController - Unit Tests', () => {
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'easy',
+          ...REQUIRED_EXEC,
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test-question');
@@ -285,11 +335,7 @@ describe('AdminController - Unit Tests', () => {
           }),
         );
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
-          bundle({
-            question_id: 'test-question',
-            starter_code: '',
-            test_cases: [],
-          }),
+          makeBundle({ question_id: 'test' }),
         );
 
         await AdminController.create(
@@ -310,6 +356,7 @@ describe('AdminController - Unit Tests', () => {
           body_md: 'Test body',
           difficulty: 'Easy',
           topics: ['arrays', 'non-existent-topic'],
+          ...REQUIRED_EXEC,
         };
 
         setTopics([{ slug: 'arrays' }]);
@@ -332,6 +379,7 @@ describe('AdminController - Unit Tests', () => {
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         asMock(slugUtils.slugify).mockReturnValue('');
@@ -360,6 +408,7 @@ describe('AdminController - Unit Tests', () => {
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         const mockDraft = dbRow({
@@ -375,8 +424,15 @@ describe('AdminController - Unit Tests', () => {
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
           bundle({
             question_id: 'test-question',
-            starter_code: '',
-            test_cases: [],
+            starter_code: REQUIRED_EXEC.starter_code,
+            entry_point: REQUIRED_EXEC.entry_point,
+            test_cases: REQUIRED_EXEC.test_cases.map((tc, i) => ({
+              name: `tc-${i + 1}`,
+              visibility: tc.visibility,
+              input_data: tc.input_data,
+              expected_output: tc.expected_output,
+              ordinal: tc.ordinal ?? i + 1,
+            })),
           }),
         );
         asMock(AttachmentService.signViewUrl).mockResolvedValue({
@@ -398,8 +454,8 @@ describe('AdminController - Unit Tests', () => {
           expect.objectContaining({
             id: 'test-question',
             title: 'Test Question',
-            starter_code: '',
-            test_cases: [],
+            starter_code: REQUIRED_EXEC.starter_code,
+            test_cases: expect.any(Array),
           }),
         );
       });
@@ -410,6 +466,7 @@ describe('AdminController - Unit Tests', () => {
           body_md: 'Test body',
           difficulty: 'Medium',
           topics: ['arrays', 'hash-table'],
+          ...REQUIRED_EXEC,
         };
 
         setTopics([{ slug: 'arrays' }, { slug: 'hash-table' }]);
@@ -428,7 +485,8 @@ describe('AdminController - Unit Tests', () => {
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
           bundle({
             question_id: 'test-question',
-            starter_code: '',
+            starter_code: REQUIRED_EXEC.starter_code,
+            entry_point: REQUIRED_EXEC.entry_point,
             test_cases: [],
           }),
         );
@@ -457,6 +515,7 @@ describe('AdminController - Unit Tests', () => {
           body_md: 'Test body',
           difficulty: 'Hard',
           starter_code: 'def solution():\n    pass',
+          entry_point: 'solution',
           test_cases: [
             {
               visibility: 'sample',
@@ -487,6 +546,7 @@ describe('AdminController - Unit Tests', () => {
           bundle({
             question_id: 'test-question',
             starter_code: 'def solution():\n    pass',
+            entry_point: 'solution',
             test_cases: mockRequest.body.test_cases.map(
               (tc: any, i: number) => ({
                 name: `tc-${i + 1}`,
@@ -531,6 +591,7 @@ describe('AdminController - Unit Tests', () => {
               mime: 'image/png',
             },
           ],
+          ...REQUIRED_EXEC,
         };
 
         const mockDraft = dbRow({
@@ -563,7 +624,8 @@ describe('AdminController - Unit Tests', () => {
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
           bundle({
             question_id: 'test-question',
-            starter_code: '',
+            starter_code: REQUIRED_EXEC.starter_code,
+            entry_point: REQUIRED_EXEC.entry_point,
             test_cases: [],
           }),
         );
@@ -602,6 +664,7 @@ describe('AdminController - Unit Tests', () => {
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         asMock(Repo.createDraft).mockResolvedValue(
@@ -629,6 +692,7 @@ describe('AdminController - Unit Tests', () => {
           title: 'Test Question',
           body_md: 'Test body',
           difficulty: 'Easy',
+          ...REQUIRED_EXEC,
         };
 
         asMock(Repo.createDraft).mockRejectedValue(new Error('Database error'));
@@ -750,8 +814,9 @@ describe('AdminController - Unit Tests', () => {
 
         expect(mockStatus).toHaveBeenCalledWith(400);
         expect(mockJson).toHaveBeenCalledWith({
-          error:
-            'test_cases must be an array of { visibility, input_data, expected_output, [ordinal] }',
+          error: 'test_cases_nonempty',
+          message:
+            'test_cases must be a non-empty array of valid test cases when provided.',
         });
       });
     });
@@ -774,6 +839,7 @@ describe('AdminController - Unit Tests', () => {
           bundle({
             question_id: 'test-question',
             starter_code: '',
+            entry_point: 'solve',
             test_cases: [],
           }),
         );
@@ -814,6 +880,7 @@ describe('AdminController - Unit Tests', () => {
           bundle({
             question_id: 'test-question',
             starter_code: '',
+            entry_point: 'solve',
             test_cases: [],
           }),
         );
@@ -859,6 +926,7 @@ describe('AdminController - Unit Tests', () => {
           bundle({
             question_id: 'test-question',
             starter_code: 'function solve() {}',
+            entry_point: 'solve',
             test_cases: [
               {
                 name: 'tc-1',
@@ -924,6 +992,7 @@ describe('AdminController - Unit Tests', () => {
           bundle({
             question_id: 'test-question',
             starter_code: '',
+            entry_point: 'solve',
             test_cases: [],
           }),
         );
@@ -1003,12 +1072,37 @@ describe('AdminController - Unit Tests', () => {
         status: 'published' as const,
       });
 
+      // Existence + pre-publish resource check
+      asMock(Service.getQuestionWithHtml).mockResolvedValue(
+        publicView({ id: 'test-question', status: 'draft' as const }),
+      );
+      // Pre-publish bundle (must contain starter_code, entry_point, test_cases)
+      asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+        bundle({
+          question_id: 'test-question',
+          status: 'draft',
+          starter_code: 'def solve():',
+          entry_point: 'solve',
+          test_cases: [
+            {
+              name: 'tc-1',
+              visibility: 'sample',
+              input_data: '1',
+              expected_output: '2',
+              ordinal: 1,
+            },
+          ],
+        }),
+      );
+      // Repo.publish result
       asMock(Repo.publish).mockResolvedValue(mockPublished);
+      // Post-publish bundle (what the controller reads for response)
       asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
         bundle({
           question_id: 'test-question',
           status: 'published',
           starter_code: 'def solve():',
+          entry_point: 'solve',
           test_cases: [
             {
               name: 'tc-1',
@@ -1032,6 +1126,7 @@ describe('AdminController - Unit Tests', () => {
           id: 'test-question',
           status: 'published',
           starter_code: expect.any(String),
+          entry_point: expect.any(String),
           test_cases: expect.any(Array),
         }),
       );
@@ -1040,7 +1135,7 @@ describe('AdminController - Unit Tests', () => {
     it('should return 404 when question not found', async () => {
       mockRequest.params = { id: 'non-existent' };
 
-      asMock(Repo.publish).mockResolvedValue(null as any);
+      asMock(Service.getQuestionWithHtml).mockResolvedValue(undefined as any);
 
       await AdminController.publish(
         mockRequest as Request,
@@ -1054,6 +1149,27 @@ describe('AdminController - Unit Tests', () => {
     it('should return 500 on error', async () => {
       mockRequest.params = { id: 'test-question' };
 
+      // Pass existence + resource checks
+      asMock(Service.getQuestionWithHtml).mockResolvedValue(
+        publicView({ id: 'test-question', status: 'draft' as const }),
+      );
+      asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
+        bundle({
+          question_id: 'test-question',
+          starter_code: 'def solve():',
+          entry_point: 'solve',
+          test_cases: [
+            {
+              name: 'tc-1',
+              visibility: 'sample',
+              input_data: '1',
+              expected_output: '1',
+              ordinal: 1,
+            },
+          ],
+        }),
+      );
+      // Throw on publish
       asMock(Repo.publish).mockRejectedValue(new Error('Publish failed'));
 
       await AdminController.publish(
@@ -1381,6 +1497,7 @@ describe('AdminController - Unit Tests', () => {
       const mockBundle = bundle({
         question_id: 'test-question',
         starter_code: 'def solve():',
+        entry_point: 'solve',
         test_cases: [
           {
             name: 'sample-1',
@@ -1414,6 +1531,7 @@ describe('AdminController - Unit Tests', () => {
       expect(mockJson).toHaveBeenCalledWith({
         ...mockQuestion,
         starter_code: mockBundle.starter_code,
+        entry_point: mockBundle.entry_point,
         test_cases: mockBundle.test_cases,
       });
     });
@@ -1442,6 +1560,7 @@ describe('AdminController - Unit Tests', () => {
       expect(mockJson).toHaveBeenCalledWith({
         ...mockQuestion,
         starter_code: '',
+        entry_point: '',
         test_cases: [],
       });
     });
@@ -1492,6 +1611,8 @@ describe('AdminController - Unit Tests', () => {
               expected_output: 'result',
             },
           ],
+          starter_code: 'print(1)',
+          entry_point: 'main',
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test');
@@ -1502,7 +1623,8 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.createDraft).toHaveBeenCalled();
+        // controller validates test cases before draft creation
+        expect(Repo.createDraft).not.toHaveBeenCalled();
       });
 
       it('should reject test cases with missing fields', async () => {
@@ -1517,6 +1639,8 @@ describe('AdminController - Unit Tests', () => {
               // missing expected_output
             } as any,
           ],
+          starter_code: 'print(1)',
+          entry_point: 'main',
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test');
@@ -1527,7 +1651,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.createDraft).toHaveBeenCalled();
+        expect(Repo.createDraft).not.toHaveBeenCalled();
       });
 
       it('should accept test cases with valid ordinal', async () => {
@@ -1543,6 +1667,8 @@ describe('AdminController - Unit Tests', () => {
               ordinal: 1,
             },
           ],
+          starter_code: 'print(1)',
+          entry_point: 'main',
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test');
@@ -1564,6 +1690,8 @@ describe('AdminController - Unit Tests', () => {
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
           bundle({
             question_id: 'test',
+            starter_code: 'print(1)',
+            entry_point: 'main',
             test_cases: [
               {
                 name: 'tc-1',
@@ -1602,6 +1730,8 @@ describe('AdminController - Unit Tests', () => {
               ordinal: 'not-a-number',
             } as any,
           ],
+          starter_code: 'print(1)',
+          entry_point: 'main',
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test');
@@ -1612,7 +1742,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
-        expect(Repo.createDraft).toHaveBeenCalled();
+        expect(Repo.createDraft).not.toHaveBeenCalled();
       });
     });
 
@@ -1628,6 +1758,7 @@ describe('AdminController - Unit Tests', () => {
               // missing mime and filename
             } as any,
           ],
+          ...REQUIRED_EXEC,
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test');
@@ -1638,6 +1769,7 @@ describe('AdminController - Unit Tests', () => {
           mockResponse as Response,
         );
 
+        // controller reaches draft creation (exec resources present), then fails attachments check
         expect(Repo.createDraft).toHaveBeenCalled();
       });
 
@@ -1654,6 +1786,7 @@ describe('AdminController - Unit Tests', () => {
               alt: 'Test image',
             },
           ],
+          ...REQUIRED_EXEC,
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test');
@@ -1683,7 +1816,8 @@ describe('AdminController - Unit Tests', () => {
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
           bundle({
             question_id: 'test',
-            starter_code: '',
+            starter_code: REQUIRED_EXEC.starter_code,
+            entry_point: REQUIRED_EXEC.entry_point,
             test_cases: [],
           }),
         );
@@ -1715,6 +1849,7 @@ describe('AdminController - Unit Tests', () => {
           bundle({
             question_id: 'test-question',
             starter_code: '',
+            entry_point: 'solve',
             test_cases: [],
           }),
         );
@@ -1750,6 +1885,7 @@ describe('AdminController - Unit Tests', () => {
               mime: 'image/png',
             },
           ],
+          ...REQUIRED_EXEC,
         };
 
         asMock(slugUtils.slugify).mockReturnValue('test');
@@ -1784,7 +1920,8 @@ describe('AdminController - Unit Tests', () => {
         asMock(Repo.getInternalResourcesBundle).mockResolvedValue(
           bundle({
             question_id: 'test',
-            starter_code: '',
+            starter_code: REQUIRED_EXEC.starter_code,
+            entry_point: REQUIRED_EXEC.entry_point,
             test_cases: [],
           }),
         );

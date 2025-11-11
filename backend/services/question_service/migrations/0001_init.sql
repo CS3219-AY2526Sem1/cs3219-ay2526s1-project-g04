@@ -76,7 +76,10 @@ CREATE TABLE IF NOT EXISTS question_test_cases (
 -- Single canonical Python starter template for the editor.
 CREATE TABLE IF NOT EXISTS question_python_starter (
   question_id   text PRIMARY KEY REFERENCES questions(id) ON DELETE CASCADE,
-  starter_code  text NOT NULL
+  starter_code  text NOT NULL,
+  entry_point   text NOT NULL,
+  CONSTRAINT chk_qps_entry_point_nonempty
+    CHECK (char_length(trim(entry_point)) > 0)
 );
 
 -- =========================
