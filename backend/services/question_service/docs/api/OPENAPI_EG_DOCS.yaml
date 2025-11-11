@@ -104,20 +104,10 @@ components:
       enum: [draft, published, archived]
 
     ExecutionEntryPoint:
-      type: object
-      additionalProperties: false
-      description: How the runner should invoke the user’s code.
-      properties:
-        language:
-          type: string
-          enum: [python] # extend later if you add more languages
-        callable:
-          type: string
-          description: Python callable to invoke (e.g., rotate_image)
-          pattern: '^[A-Za-z_][A-Za-z0-9_]*$'
-      required:
-        - language
-        - callable
+      type: string
+      description: Name of the function the runner should invoke.
+      example: solve
+      pattern: '^[A-Za-z_][A-Za-z0-9_]*$'
 
     Error:
       type: object
