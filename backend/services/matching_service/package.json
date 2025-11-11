@@ -13,7 +13,7 @@
     "start": "node dist/services/matching_service/src/main.js",
     "build": "tsc && tsc-alias",
     "type-check": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "lint": "cd ../.. && npm run lint -- services/matching_service/src "
   },
   "keywords": [],
@@ -23,8 +23,13 @@
     "@tsconfig/node22": "^22.0.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^24.8.0",
+    "@types/supertest": "^6.0.3",
+    "jest": "^30.2.0",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"

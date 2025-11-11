@@ -47,6 +47,7 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
   const [starterCode, setStarterCode] = useState(
     initialData?.starter_code || '',
   );
+  const [entryPoint, setEntryPoint] = useState(initialData?.entry_point || '');
   const [testCases, setTestCases] = useState<TestCase[]>(
     initialData?.test_cases || [],
   );
@@ -72,6 +73,18 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
       return alert('Question body cannot be empty.');
     }
 
+    if (!starterCode.trim()) {
+      return alert('Starter code cannot be empty.');
+    }
+
+    if (!entryPoint.trim()) {
+      return alert('Starter code entry point cannot be empty.');
+    }
+
+    if (testCases.length === 0) {
+      return alert('Question needs to have at least one test case.');
+    }
+
     const newData: postAdminQuestionsRequest = {
       title: title,
       body_md: body,
@@ -79,6 +92,7 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
       topics: topics,
       attachments: attachments,
       starter_code: starterCode,
+      entry_point: entryPoint,
       test_cases: testCases,
     };
     // console.log(`Submission contents: ${newData}`);
@@ -180,6 +194,8 @@ export default function QuestionForm({ mode, initialData }: QuestionFormProps) {
         <StarterCodeInput
           starterCode={starterCode}
           setStarterCode={setStarterCode}
+          entryPoint={entryPoint}
+          setEntryPoint={setEntryPoint}
         />
         <TestCasesInput testCases={testCases} setTestCases={setTestCases} />
         <SubmitButton />
