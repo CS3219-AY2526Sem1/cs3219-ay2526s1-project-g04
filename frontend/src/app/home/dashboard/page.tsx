@@ -42,6 +42,7 @@ import { getQuestionsBatch } from '@/services/questionServiceApi';
 import { Question, Topic } from '@/lib/question-service';
 import { RawSession } from '@/lib/collaboration-service';
 import { getMySessions } from '@/services/collaborationServiceApi';
+import { useAuth } from '@/components/auth/AuthContext';
 
 // --- Mock Data (Replace with your API data) ---
 interface MockTopic {
@@ -217,8 +218,10 @@ export default function DashboardPage() {
   const [showMatching, setShowMatching] = React.useState(false);
   const [showSessionBeingCreated, setShowSessionBeingCreated] =
     React.useState(true);
+  const { user, isLoading: isAuthLoading } = useAuth();
+
   const [history, setHistory] = useState<EnrichedSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true); // Renamed from isLoading
   const router = useRouter();
 
   const [selectedPeer, setSelectedPeer] = useState<
@@ -233,18 +236,15 @@ export default function DashboardPage() {
   // 1. Data Fetching and Orchestration
   useEffect(() => {
     const loadDashboardData = async () => {
-      let currentUserId: number | null = null;
-      // const token = localStorage.getItem('accessToken');
-      const token = getAccessToken();
-      try {
-        console.log(token);
-        currentUserId = getUserId();
-      } catch (error) {
-        console.error('Invalid token:', error);
+      if (isAuthLoading) {
+        return;
+      }
+      if (!user) {
         router.push('/accounts/login');
         return;
       }
-
+      const currentUserId = user.userId;
+      setIsDataLoading(true);
       try {
         // const rawSessions: RawSession[] = await getMySessions();
         const rawSessions: RawSession[] = mockSessionData;
@@ -253,7 +253,7 @@ export default function DashboardPage() {
 
         if (finishedSessions.length === 0) {
           setHistory([]);
-          setIsLoading(false);
+          setIsDataLoading(false);
           return;
         }
 
@@ -320,11 +320,11 @@ export default function DashboardPage() {
       } catch (error) {
         console.error(error);
       } finally {
-        setIsLoading(false);
+        setIsDataLoading(false);
       }
     };
     loadDashboardData();
-  }, [router]);
+  }, [router, user, isAuthLoading]);
 
   useEffect(() => {
     if (!selectedPeer || selectedPeer.id === -1) return; // Don't fetch for deleted user
@@ -370,8 +370,7 @@ export default function DashboardPage() {
     return { totalSolved, easy, medium, hard, categories };
   }, [history]);
 
-  // --- 3. Loading State ---
-  if (isLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <Box
         sx={{
@@ -413,7 +412,7 @@ export default function DashboardPage() {
             opacity: 0.8,
           }}
         >
-          Welcome back, {getUsername()}!
+          Welcome back, {user?.username}!
         </Typography>
 
         <Box

@@ -17,7 +17,7 @@ interface DecodedAccessToken {
   exp: number;
 }
 
-async function getNewAccessToken(): Promise<string | null> {
+export async function getNewAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
   if (!refreshToken) {
     console.log('No refresh token found.');
@@ -26,8 +26,8 @@ async function getNewAccessToken(): Promise<string | null> {
 
   try {
     const data = await refreshExpiredToken(refreshToken);
-    setAccessToken(data.token);
-    return data.token;
+    setAccessToken(data.accessToken);
+    return data.accessToken;
   } catch (error) {
     console.error('Error refreshing token:', error);
     return null;

@@ -38,6 +38,7 @@ import { getQuestionsBatch } from '@/services/questionServiceApi';
 import { Question, Topic } from '@/lib/question-service';
 import { RawSession } from '@/lib/collaboration-service';
 import { getMySessions } from '@/services/collaborationServiceApi';
+import { useAuth } from '@/components/auth/AuthContext';
 
 // --- MOCK DATABASES (Expanded for pagination) ---
 interface MockTopic {
@@ -238,8 +239,12 @@ const getDifficultyHex = (difficultyName: string) => {
 const ITEMS_PER_PAGE = 10;
 
 export default function PracticeHistoryPage() {
+  const { user, isLoading: isAuthLoading } = useAuth();
+
   const [history, setHistory] = useState<EnrichedSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true); // Renamed from isLoading
+  const [error, setError] = useState<string | null>(null);
+
   const router = useRouter();
 
   const [page, setPage] = useState(1);
@@ -257,15 +262,17 @@ export default function PracticeHistoryPage() {
   // 1. Data Fetching and Orchestration
   useEffect(() => {
     const loadDashboardData = async () => {
-      let currentUserId: number | null = null;
-      const token = getAccessToken();
-      try {
-        currentUserId = getUserId();
-      } catch (error) {
-        console.error('Invalid token:', error);
+      if (isAuthLoading) {
+        return;
+      }
+      if (!user) {
         router.push('/accounts/login');
         return;
       }
+
+      const currentUserId = user.userId;
+      setIsDataLoading(true);
+      setError(null);
 
       try {
         // const rawSessions: RawSession[] = await getMySessions();
@@ -335,11 +342,11 @@ export default function PracticeHistoryPage() {
       } catch (error) {
         console.error(error);
       } finally {
-        setIsLoading(false);
+        setIsDataLoading(false);
       }
     };
     loadDashboardData();
-  }, [router]);
+  }, [router, user, isAuthLoading]);
 
   useEffect(() => {
     if (!selectedPeer || selectedPeer.id === -1) return; // don't fetch for deleted user
@@ -359,14 +366,12 @@ export default function PracticeHistoryPage() {
     fetchPeerProfile();
   }, [selectedPeer]);
 
-  // 2. Memoized Pagination Logic
   const paginatedHistory = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
     const end = start + ITEMS_PER_PAGE;
     return history.slice(start, end);
   }, [history, page]);
 
-  // 3. Page Change Handler
   const handlePageChange = (
     event: React.ChangeEvent<unknown>,
     newPage: number,
@@ -374,8 +379,7 @@ export default function PracticeHistoryPage() {
     setPage(newPage);
   };
 
-  // 4. Loading State
-  if (isLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <Box
         sx={{

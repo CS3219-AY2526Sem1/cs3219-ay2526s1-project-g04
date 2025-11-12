@@ -5,6 +5,11 @@ import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/styles/theme';
 import '@/styles/globals.css';
 
+// --- 1. Import AuthProvider and necessary React/MUI components ---
+import * as React from 'react';
+import { AuthProvider } from '@/components/auth/AuthContext';
+import { Box, CircularProgress } from '@mui/material';
+
 export const metadata: Metadata = {
   title: 'PeerPrep',
   icons: {
@@ -18,12 +23,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" style={{ height: '100%' }}>
       <body
         className={`${openSans.variable} ${sourceCodePro.variable} antialiased`}
+        style={{ height: '100%', margin: 0 }}
       >
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-          <ThemeProvider theme={theme}>{children}</ThemeProvider>
+          <ThemeProvider theme={theme}>
+            <AuthProvider>
+              <React.Suspense
+                fallback={
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      height: '100vh',
+                    }}
+                  >
+                    <CircularProgress />
+                  </Box>
+                }
+              >
+                {children}
+              </React.Suspense>
+            </AuthProvider>
+          </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

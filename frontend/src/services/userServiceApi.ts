@@ -117,7 +117,7 @@ export async function resetPassword(
  */
 export async function refreshExpiredToken(
   token: string,
-): Promise<Types.AuthResponse> {
+): Promise<Types.RefreshResponse> {
   const response = await fetch(`${USER_SERVICE_URL}/user/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

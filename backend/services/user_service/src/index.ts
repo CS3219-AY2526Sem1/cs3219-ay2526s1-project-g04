@@ -507,7 +507,7 @@ app.post('/user/auth/login', async (req, res) => {
       { userId: user.id, username: user.username, role: user.role },
       privateKey,
       {
-        expiresIn: '1d',
+        expiresIn: '15m',
         algorithm: 'RS256',
       },
     );
