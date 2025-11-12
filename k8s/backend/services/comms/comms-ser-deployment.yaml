@@ -40,11 +40,11 @@ spec:
                   name: cms-secret
                   key: PORT
 
-          # readinessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3012
-          # livenessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3012
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3012
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3012

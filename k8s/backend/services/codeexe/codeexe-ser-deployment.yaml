@@ -31,6 +31,15 @@ spec:
             - name: docker-sock-volume
               mountPath: /var/run
 
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3010
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3010
+
         # Container 2: The Docker-in-Docker Daemon Sidecar
         - name: dind-daemon
           image: docker:25-dind
@@ -40,12 +49,3 @@ spec:
 
           securityContext:
             privileged: true
-
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: 3009
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 3009

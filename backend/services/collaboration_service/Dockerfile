@@ -24,7 +24,6 @@ RUN npm run build
 
 RUN ls -la
 
-# Copy Prisma generated folder into dist
 RUN mkdir -p ./dist/services/collaboration_service/generated && cp -r ./generated/prisma ./dist/services/collaboration_service/generated/prisma
 
 EXPOSE 3009
