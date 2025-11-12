@@ -29,7 +29,9 @@ export class CommunicationManager {
   // Created when session is formed
   public createDoc(matchedId: string, sessionId: string) {
     if (this.sessions.has(sessionId)) {
-      console.log(`[Doc] already exists for session ${sessionId}`);
+      console.log(
+        `[CommunicationManager] Comms document already exists for session ${sessionId}`,
+      );
       return;
     }
 
@@ -43,7 +45,7 @@ export class CommunicationManager {
 
     this.redis.setCommunicationState(matchedId, COMMUNICATION_STATE.active);
     console.log(
-      `Created new doc with matchedId: ${matchedId} and sessId: ${sessionId}`,
+      `[CommunicationManager] Created new doc with matchedId: ${matchedId} and sessId: ${sessionId}`,
     );
   }
 
@@ -70,7 +72,7 @@ export class CommunicationManager {
 
     if (!this.sessions.has(sessionId)) {
       console.log(
-        'ERROR, create doc is not run after session is created, creating doc entry without match id',
+        '[CommunicationManager] ERROR, create doc is not run after session is created, creating doc entry without match id',
       );
       this.createDoc('', sessionId);
       return;
@@ -79,14 +81,16 @@ export class CommunicationManager {
     const { matchedId, ydoc } = this.sessions.get(sessionId)!;
 
     if (!this.redis.isUserInSession(matchedId, userId)) {
-      console.log(`user ${userId} don't belong in ${sessionId}`);
+      console.log(
+        `[CommunicationManager] user ${userId} don't belong in ${sessionId}`,
+      );
       return;
     }
 
     // Setup y-websocket
     setupWSConnection(ws, req, { doc: ydoc });
     console.log(
-      `Connected user ${userId} to session ${sessionId} in communication service.`,
+      `[CommunicationManager] Connected user ${userId} to session ${sessionId} in communication service.`,
     );
   }
 }

@@ -51,7 +51,7 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
     }
     const fetchQuestion = async () => {
       const questionId: string | null = await getQuestionIdBySessId(sessionId);
-      console.log(1, questionId);
+      // console.log(1, questionId);
 
       if (!questionId) return;
 
@@ -66,13 +66,13 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
       const question: Question = res.data;
       const questionInternal: getQuestionResourcesResponse = resMeta.data;
 
-      console.log(question);
-      console.log(question.starter_code);
+      // console.log(question);
+      // console.log(question.starter_code);
       const quesTestCases = questionInternal.test_cases;
       const quesStarterCode = questionInternal.starter_code;
       const entryCode = questionInternal.entry_point;
-      console.log(quesTestCases);
-      console.log('entry', questionInternal);
+      // console.log(quesTestCases);
+      // console.log('entry', questionInternal);
       const testCases = quesTestCases?.map((testcase, idx) => {
         return {
           input: testcase.input_data,
@@ -93,7 +93,7 @@ export function CodeProvider({ children }: { children: React.ReactNode }) {
         setEntryPoint('Solution.reverseString');
       }
 
-      console.log('tc', quesTestCases);
+      // console.log('tc', quesTestCases);
     };
     fetchQuestion();
   }, [sessionId]);

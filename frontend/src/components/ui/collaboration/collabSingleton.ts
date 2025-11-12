@@ -12,7 +12,7 @@ export function getCollabProvider(sessionId: string, userId: string) {
   if (yCodeDoc && codeProvider) return { yCodeDoc, codeProvider };
 
   if (!yCodeDoc && !codeProvider) {
-    console.log('called');
+    // console.log('called');
     yCodeDoc = new Y.Doc();
     const wsUrl =
       process.env.NEXT_PUBLIC_COLLAB_WSSERVER_URL || 'ws://localhost:3009';
@@ -33,9 +33,9 @@ export function getCommsProvider(
   userId: string,
 ): { yCommsDoc: Y.Doc; commsProvider: WebsocketProvider } {
   if (!yCommsDoc || !commsProvider) {
-    console.log(
-      `Calling getCommsProvider sessId: ${sessionId}, userid: ${userId}`,
-    );
+    // console.log(
+    //   `Calling getCommsProvider sessId: ${sessionId}, userid: ${userId}`,
+    // );
     yCommsDoc = new Y.Doc();
 
     const wsUrl =
@@ -72,7 +72,7 @@ export function removeCollabProvider() {
       yCodeDoc = null;
     }
 
-    console.log('Collab provider removed');
+    // console.log('Collab provider removed');
   }, 3000);
 }
 
@@ -90,6 +90,6 @@ export function removeCommsProvider() {
       yCommsDoc = null;
     }
 
-    console.log('Comms provider removed');
+    // console.log('Comms provider removed');
   }, 3000);
 }
