@@ -60,7 +60,7 @@ export class Session {
   }
 
   public end(userId: string) {
-    // console.log(userId);
+    console.log(`[Session] Ending session for ${userId}`);
   }
 
   public getUsers(): string[] {
