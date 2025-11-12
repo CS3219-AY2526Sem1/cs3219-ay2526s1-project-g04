@@ -68,6 +68,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
       - run: cd services/question_service && npm i && npm run build
+      - run: cd services/question_service && npm run test
 
   node-build-matching-service:
     needs: [lint-matching-service]
