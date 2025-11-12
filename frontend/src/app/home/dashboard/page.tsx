@@ -255,9 +255,7 @@ export default function DashboardPage() {
         // const rawSessions: RawSession[] = mockSessionData;
         const currentActiveSession = await getMyActiveSession();
         if (isMounted) {
-          setActiveSession(
-            currentActiveSession.activeSession?.sessionId || null,
-          );
+          setActiveSession(currentActiveSession.sessionId || 1);
         }
 
         const finishedSessions = rawSessions.filter((s) => s.endedAt !== null);
@@ -470,7 +468,7 @@ export default function DashboardPage() {
                         }
                       }
                     >
-                      {activeSession
+                      {activeSession != 1
                         ? 'You have an ongoing session'
                         : 'Sharpen your skills, practice live with peers'}
                     </Typography>
@@ -481,11 +479,13 @@ export default function DashboardPage() {
                         fontFamily: openSans.style.fontFamily,
                       }}
                     >
-                      {activeSession ? 'Rejoin Session.' : 'Start Practising.'}
+                      {activeSession != 1
+                        ? 'Rejoin Session.'
+                        : 'Start Practising.'}
                     </Typography>
                   </Box>
 
-                  {activeSession ? (
+                  {activeSession != 1 ? (
                     <Button
                       variant="contained"
                       onClick={() => router.push(`/practice/${activeSession}`)}

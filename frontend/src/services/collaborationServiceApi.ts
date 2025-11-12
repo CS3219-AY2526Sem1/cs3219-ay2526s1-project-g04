@@ -1,4 +1,5 @@
 import {
+  ActiveSession,
   GetActiveSessionResponse,
   RawSession,
 } from '@/lib/collaboration-service';
@@ -39,7 +40,7 @@ export async function getMySessions(): Promise<RawSession[]> {
   return handleResponse(response);
 }
 
-export async function getMyActiveSession(): Promise<GetActiveSessionResponse> {
+export async function getMyActiveSession(): Promise<ActiveSession> {
   const response = await fetchWithAuth(
     `${COLLAB_SERVICE_URL}/sessions/me/active`,
   );
