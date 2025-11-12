@@ -29,7 +29,7 @@ export class MatchingPool {
         const key = this.getKey(difficulty, topic);
         return this.redis.enqueueValueByKey(key, serialisedData);
       });
-      await Promise.all([enqueuePromises]);
+      await Promise.all(enqueuePromises);
       logger.info(
         `[MatchingPool] User ${data.userId} enqueued to all topics successfully.`,
       );
