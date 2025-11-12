@@ -78,9 +78,9 @@ export default function SideNavigationBar({
               <Link
                 href={link.href}
                 className={clsx(
-                  'flex items-center gap-3 p-3 rounded-md text-base hover:bg-gray-100 dark:hover:bg-gray-800',
+                  'flex items-center gap-3 p-3 rounded-md text-base hover:bg-gray-100',
                   {
-                    'bg-gray-100 dark:bg-gray-800': pathname === link.href,
+                    'bg-gray-100': pathname === link.href,
                   },
                 )}
               >
