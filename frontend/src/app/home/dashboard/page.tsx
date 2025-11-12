@@ -488,7 +488,9 @@ export default function DashboardPage() {
                   {activeSession != 1 ? (
                     <Button
                       variant="contained"
-                      onClick={() => router.push(`/collaboration/${activeSession}`)}
+                      onClick={() =>
+                        router.push(`/collaboration/${activeSession}`)
+                      }
                       sx={{
                         backgroundColor: '#10B981', // Green
                         color: 'white',
