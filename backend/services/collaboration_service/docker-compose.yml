@@ -39,7 +39,7 @@ services:
       # - redis
       # - rabbitmq
     ports:
-      - '3012:3012'
+      - '3009:3009'
     networks:
       - peerprep-network
 
