@@ -53,7 +53,7 @@ Create `.env` from the example below:
 | `NODE_ENV`               | `development`                                      | `production` in prod   |
 | `DATABASE_URL`           | `postgresql://postgres:postgres@localhost:5432/qs` | Postgres DSN           |
 | `SIGNED_URL_TTL_SECONDS` | `900`                                              | Default: 15 minutes    |
-| `S3_BUCKET`              | `peerprep-questions`                               | Bucket for attachments |
+| `S3_BUCKET`              | `qs`                                               | Bucket for attachments |
 | `ACCESS_KEY`             |                                                    | AWS Access Key         |
 | `SECRET_KEY`             |                                                    | AWS Secret Key         |
 | `AWS_REGION`             | `ap-southeast-1`                                   | Region for S3/signing  |
