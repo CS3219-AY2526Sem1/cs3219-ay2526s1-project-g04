@@ -1,6 +1,6 @@
 # Question Service (PeerPrep)
 
-> **Stack:** Express.js · TypeScript · PostgreSQL · RabbitMQ · AWS
+> **Stack:** Express.js · TypeScript · PostgreSQL · AWS
 
 A microservice that stores coding interview questions and reliably serves **one suitable random question** to start a collaboration session. Includes admin CRUD + publish/versioning, safe markdown rendering, image delivery via signed URLs/CDN, JWT/RBAC security, and basic search.
 
