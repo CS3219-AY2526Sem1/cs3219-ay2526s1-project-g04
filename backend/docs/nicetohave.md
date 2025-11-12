@@ -28,6 +28,8 @@ Our team has decided to prioritize the N2H features that provide the most immedi
     * **Logic:** The frontend application will simply iterate over this array (which now contains question details like topic and difficulty) and perform its own calculations (e.g., `totalCompleted = sessions.length`, `easyCompleted = sessions.filter(s => s.question.difficulty === 'Easy').length`) to populate the summary card.
 * **Role Allocation:** Yixin
 
+
+
 ### Collab Messaging + Drawing
 
 * **Relevance:** High. These features are the *collaboration* in "PeerPrep." They make the shared coding experience feel live, interactive, and human. `Cursor Highlighting` provides a clear focus point during discussion, and `Collab Messaging` allows communication if users don't want to use voice chat, and `Collab Drawing` allows users to communicate their concepts more clearly, and we think that it is especially important for solving coding problems.
@@ -41,25 +43,17 @@ Our team has decided to prioritize the N2H features that provide the most immedi
     * **Language Support:** Python
 * **Role Allocation:** Debbie
 
-### Test Cases (80% coverage)
-
-* **Relevance:** Critical (for long-term project health). High `Test Coverage` ensures that when we add new features (like 'Admin Permissions'), we don't accidentally break existing ones (like 'Login'). 
-* **Technical Feasibility:** High. We will use Jest to run coverage test. 
-* ``` json
-  {
-    "scripts": {
-    "test": "jest",
-    "test:coverage": "jest --coverage"
-    }
-  }
-  ```
-  Simply run this from time to time:
-  ``` bash
-  npm run test:coverage
-  ```
-* **Role Allocation:** Everyone
-
 ###  CI/CD
 * **Relevance:** `CI/CD` (Continuous Integration / Continuous Deployment) automates testing and deployment, allowing us to ship features faster and more reliably.
 * **Technical Feasibility:** High. This is a standard, essential development practice. `Point 5` will elaborate on CI/CD.
 * **Role Allocation:** Kailash
+
+### Full-Text Search for Questions
+
+*   **Relevance:** This feature significantly enhances the user experience by allowing users to find questions by searching for keywords, phrases, or concepts within the question titles and descriptions. This is much more powerful than the existing topic-based filter and allows users to quickly find specific problems they want to practice.
+
+*   **Technical Feasibility:** High. This feature requires coordinated changes on both the backend and frontend.
+    *   **Backend:** `GET /questions/search` will be added to the Question Service. This endpoint will accept a search query string. It will leverage PostgreSQL's built-in full-text search capabilities. Specifically, it will use the `websearch_to_tsquery` function, which converts a user-friendly search string into a `tsquery` that can be efficiently matched against a `tsvector` column (a pre-indexed, searchable version of the question text).
+    *   **Frontend:** A search bar will be added to the question bank page. When the user types a query and submits, the frontend will call the new `GET /questions/search` endpoint. The existing `QuestionBankTable` will be updated to display the search results returned by the API.
+
+*   **Role Allocation:** Yi Ling

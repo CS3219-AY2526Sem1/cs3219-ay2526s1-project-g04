@@ -41,14 +41,16 @@ export class Session {
   }
 
   public readyUser(userId: number) {
-    console.log(`Added userId ${userId} to session ${this.sessionId}`);
+    console.log(
+      `[Session] Added userId ${userId} to session ${this.sessionId}`,
+    );
     if (userId in this.users) {
       this.users[userId]!.state = USERSTATE.ready;
     }
   }
 
   public userNotReady(userId: number): boolean {
-    console.log(this.users[userId]);
+    // console.log(this.users[userId]);
     if (userId in this.users) {
       return this.users[userId]!.state === USERSTATE.waiting;
     } else {

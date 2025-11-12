@@ -13,7 +13,7 @@
     "start": "node dist/services/matching_service/src/main.js",
     "build": "tsc && tsc-alias",
     "type-check": "tsc --noEmit",
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --coverage",
     "lint": "cd ../.. && npm run lint -- services/matching_service/src "
   },
   "keywords": [],

@@ -19,7 +19,7 @@ export const MessageDialogs = ({ yCommsDoc, userId }: MessageDialogsProps) => {
 
   useEffect(() => {
     if (!yCommsDoc) {
-      console.error('Missing yCommsDoc — cannot initialize MessageDialogs');
+      // console.error('Missing yCommsDoc — cannot initialize MessageDialogs');
       return;
     }
 

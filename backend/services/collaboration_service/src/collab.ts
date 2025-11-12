@@ -53,13 +53,13 @@ export class Collab {
     const server = http.createServer(app);
 
     server.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`[Collab] Server running on http://localhost:${PORT}`);
     });
 
     setPersistence({
       provider: pgdb,
       bindState: async (docName, ydoc) => {
-        console.log(`[y-postgres] Binding state for ${docName}`);
+        console.log(`[Collab] Binding state to y-postgres for ${docName}`);
 
         const persistedYDoc = await pgdb.getYDoc(docName);
         Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYDoc));
@@ -70,7 +70,7 @@ export class Collab {
       },
 
       writeState: async (docName) => {
-        console.log(`[y-postgres] writeState called for ${docName}}`);
+        console.log(`[Collab] WriteState (y-postgres) called for ${docName}}`);
         return Promise.resolve();
       },
     });

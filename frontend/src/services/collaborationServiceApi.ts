@@ -1,4 +1,7 @@
-import { RawSession } from '@/lib/collaboration-service';
+import {
+  GetActiveSessionResponse,
+  RawSession,
+} from '@/lib/collaboration-service';
 import { fetchWithAuth } from '@/lib/utils/apiClient';
 
 /**
@@ -33,6 +36,13 @@ const COLLAB_SERVICE_URL = process.env.NEXT_PUBLIC_API_COLLAB_SERVICE!;
 
 export async function getMySessions(): Promise<RawSession[]> {
   const response = await fetchWithAuth(`${COLLAB_SERVICE_URL}/sessions/me`);
+  return handleResponse(response);
+}
+
+export async function getMyActiveSession(): Promise<GetActiveSessionResponse> {
+  const response = await fetchWithAuth(
+    `${COLLAB_SERVICE_URL}/sessions/me/active`,
+  );
   return handleResponse(response);
 }
 

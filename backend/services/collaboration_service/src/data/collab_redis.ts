@@ -53,7 +53,9 @@ export class CollabRedis {
     const matchedRedisData: Record<string, string> =
       await this.redis.getDictValueByKey(matchedId);
     if (sessionId !== matchedRedisData['session_id']) {
-      console.log('mismatch');
+      console.log(
+        '[Session] Session id does not match session id stored with matched id.',
+      );
     }
     matchedRedisData['session_state'] = state.valueOf();
     await this.redis.setDictValueByKey(matchedId, matchedRedisData);

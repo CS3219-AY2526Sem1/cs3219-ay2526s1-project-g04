@@ -138,7 +138,7 @@ app.get('/sessions/status/matched/:matchedId', async (req, res) => {
     const sessionManager = SessionManager.getInstance();
     const sessionData =
       await sessionManager.getSessionStateByMatchedId(matchedId);
-    console.log('states for: ', matchedId, sessionData);
+    // console.log('states for: ', matchedId, sessionData);
     res.json({
       sessionState: sessionData['session_state'],
       sessionId: sessionData['session_id'],
@@ -155,7 +155,7 @@ app.get('/sessions/status/session/:sessionId', async (req, res) => {
     const matchedId = req.params.sessionId;
     const sessionManager = SessionManager.getInstance();
     const sessionData = await sessionManager.getSessionState(matchedId);
-    console.log(sessionData);
+    // console.log(sessionData);
     res.json({
       sessionState: sessionData['session_state'],
     });
@@ -180,7 +180,7 @@ app.delete('/sessions/:sessionId/user/:userId', async (req, res) => {
 app.get('/document/:sessionId', async (req, res) => {
   try {
     const sessionId = req.params.sessionId;
-    console.log(`[GET /document] Fetching Y.Doc for session ${sessionId}`);
+    // console.log(`[GET /document] Fetching Y.Doc for session ${sessionId}`);
 
     const ydoc = await pgdb.getYDoc(sessionId);
     const yText = ydoc.getText('monaco');
@@ -200,7 +200,7 @@ app.get('/document/:sessionId', async (req, res) => {
 
 app.get('/question/:sessionId', async (req, res) => {
   const sessionId = req.params.sessionId;
-  console.log(sessionId);
+  // console.log(sessionId);
   try {
     const questionId = await db.getQuestionIdBySessionId(Number(sessionId));
     if (!questionId) {

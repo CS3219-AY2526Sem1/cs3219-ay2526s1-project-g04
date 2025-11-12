@@ -9,7 +9,10 @@ import React, {
 import { Snackbar, Alert } from '@mui/material';
 
 interface SnackbarContextType {
-  showNotification: (message: string) => void;
+  showNotification: (
+    message: React.ReactNode,
+    severity?: 'success' | 'error' | 'info' | 'warning',
+  ) => void;
 }
 
 const SnackbarContext = createContext<SnackbarContextType | undefined>(
@@ -18,14 +21,25 @@ const SnackbarContext = createContext<SnackbarContextType | undefined>(
 
 export const SnackbarProvider = ({ children }: { children: ReactNode }) => {
   const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<React.ReactNode>('');
 
   const handleClose = useCallback(() => setOpen(false), []);
 
-  const showNotification = useCallback((msg: string) => {
-    setMessage(msg);
-    setOpen(true);
-  }, []);
+  // const showNotification = useCallback((msg: string) => {
+  //   setMessage(msg);
+  //   setOpen(true);
+  // }, []);
+
+  const showNotification = useCallback(
+    (
+      msg: React.ReactNode,
+      sev: 'success' | 'error' | 'info' | 'warning' = 'info',
+    ) => {
+      setMessage(msg);
+      setOpen(true);
+    },
+    [],
+  );
 
   const customAlertStyle = {
     backgroundColor: '#1C2541',
