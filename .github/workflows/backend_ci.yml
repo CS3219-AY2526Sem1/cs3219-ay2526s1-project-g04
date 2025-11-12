@@ -80,6 +80,15 @@ jobs:
       - run: cd services/matching_service && npm i && npm run build
       - run: cd services/matching_service && npm run test
 
+  node-build-comms-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: cd shared/messaging && npm i
+      - run: cd shared/redis && npm i
+      - run: cd services/communication_service && npm i && npm run build
+
   docker-build-push-collab-service:
     needs: [node-build-collab-service]
     runs-on: ubuntu-latest
