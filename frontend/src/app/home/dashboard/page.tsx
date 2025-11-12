@@ -40,8 +40,11 @@ import { PublicUserProfile } from '@/lib/user-service';
 import { getUserProfileById, getUsersBatch } from '@/services/userServiceApi';
 import { getQuestionsBatch } from '@/services/questionServiceApi';
 import { Question, Topic } from '@/lib/question-service';
-import {ActiveSession, RawSession} from '@/lib/collaboration-service';
-import { getMySessions, getMyActiveSession } from '@/services/collaborationServiceApi';
+import { ActiveSession, RawSession } from '@/lib/collaboration-service';
+import {
+  getMySessions,
+  getMyActiveSession,
+} from '@/services/collaborationServiceApi';
 import { useAuth } from '@/components/auth/AuthContext';
 
 // --- Mock Data (Replace with your API data) ---
@@ -252,7 +255,9 @@ export default function DashboardPage() {
         // const rawSessions: RawSession[] = mockSessionData;
         const currentActiveSession = await getMyActiveSession();
         if (isMounted) {
-          setActiveSession(currentActiveSession.activeSession?.sessionId || null);
+          setActiveSession(
+            currentActiveSession.activeSession?.sessionId || null,
+          );
         }
 
         const finishedSessions = rawSessions.filter((s) => s.endedAt !== null);
@@ -483,9 +488,7 @@ export default function DashboardPage() {
                   {activeSession ? (
                     <Button
                       variant="contained"
-                      onClick={() =>
-                        router.push(`/practice/${activeSession}`)
-                      }
+                      onClick={() => router.push(`/practice/${activeSession}`)}
                       sx={{
                         backgroundColor: '#10B981', // Green
                         color: 'white',
