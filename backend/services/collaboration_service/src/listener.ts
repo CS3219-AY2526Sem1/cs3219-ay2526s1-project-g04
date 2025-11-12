@@ -23,7 +23,7 @@ export class MessageListener {
       case MESSAGE_TYPES.CollaborationService: {
         const msgJson = JSON.parse(msg);
         if (msgJson['type'] === 'matched') {
-          console.log(msgJson['matchedId']);
+          // console.log(msgJson['matchedId']);
           await this.handleStartSession(msgJson['matchedId']);
         }
         break;

@@ -112,36 +112,36 @@ export class SessionManager {
       const resJson: QuestionResponse = await res.json();
       if (resJson['starter_code']) yText.insert(0, resJson['starter_code']);
     } catch (error) {
-      console.log(`ERROR ERROR ERROR:`, error);
+      console.log(`[SessionManager] Unable to fetch:`, error);
     }
 
     const docName = sessionId.toString();
 
     this.pgdb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
-    console.log(`[y-postgres] Document initialized for session ${docName}`);
+    console.log(`[SessionManager] Document initialized for session ${docName}`);
 
-    async function logPersistedDoc(
-      pgdb: PostgresqlPersistence,
-      docName: string,
-    ) {
-      setInterval(async () => {
-        try {
-          const ydoc = await pgdb.getYDoc(docName);
+    // async function logPersistedDoc(
+    //   pgdb: PostgresqlPersistence,
+    //   docName: string,
+    // ) {
+    //   setInterval(async () => {
+    //     try {
+    //       const ydoc = await pgdb.getYDoc(docName);
 
-          const yText = ydoc.getText('monaco');
+    //       const yText = ydoc.getText('monaco');
 
-          console.log(
-            `\n[Y.PostgreSQL Snapshot @${new Date().toLocaleTimeString()}]`,
-          );
-          console.log(`Document: ${docName}`);
-          console.log(yText.toString() || '(empty)');
-        } catch (err) {
-          console.error(`Failed to load persisted doc ${docName}:`, err);
-        }
-      }, 20_000); // every 20 seconds
-    }
+    //       console.log(
+    //         `\n[Y.PostgreSQL Snapshot @${new Date().toLocaleTimeString()}]`,
+    //       );
+    //       // console.log(`Document: ${docName}`);
+    //       console.log(yText.toString() || '(empty)');
+    //     } catch (err) {
+    //       console.error(`Failed to load persisted doc ${docName}:`, err);
+    //     }
+    //   }, 20_000); // every 20 seconds
+    // }
 
-    logPersistedDoc(this.pgdb, sessionId.toString());
+    // logPersistedDoc(this.pgdb, sessionId.toString());
 
     // Initialize communication service documents
     const broker = new MessagePublisher('CollaborationService');
@@ -158,13 +158,13 @@ export class SessionManager {
       payload,
     );
     console.log(
-      `Sent session creation for ${sessionId} (match ${matchedId}) to communication service`,
+      `[SessionManager] Sent session creation for ${sessionId} (match ${matchedId}) to communication service`,
     );
   }
 
-  public saveSession(sessionId: string) {
-    this.sessions[sessionId]?.session?.save();
-  }
+  // public saveSession(sessionId: string) {
+  //   this.sessions[sessionId]?.session?.save();
+  // }
 
   public endSession(sessionId: string, userId: string) {
     const matchingId = this.sessions[sessionId]?.matchedId;
@@ -265,7 +265,7 @@ export class SessionManager {
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
-    console.log('a client connected');
+    // console.log('a client connected');
 
     // Get param values
     const fullUrl = `ws://${req.headers.host}${req.url}`;
@@ -274,14 +274,18 @@ export class SessionManager {
     const userId = Number(params.get('userId'));
     const sessionId = Number(urlObj.pathname.slice(1));
     const session = this.getSessionById(sessionId);
-    console.log(fullUrl);
+    // console.log(fullUrl);
+
+    console.log(`[SessionManager] Client ${userId} connected`);
 
     if (!session) {
-      console.log(`session id not found in session manager: ${sessionId}`);
+      console.log(
+        `[SessionManager] Session id not found in session manager: ${sessionId}`,
+      );
       return;
     }
-    console.log(`sessionId in ws url : ${sessionId}`);
-    console.log(`sessionId in created session obj ${session?.getId()}`);
+    // console.log(`sessionId in ws url : ${sessionId}`);
+    // console.log(`sessionId in created session obj ${session?.getId()}`);
 
     // Setup y-websocket
     setupWSConnection(ws, req, { docName: sessionId.toString() });
@@ -294,7 +298,7 @@ export class SessionManager {
     }
 
     if (session?.allReady()) {
-      console.log(`all ready in ${sessionId}`);
+      console.log(`[SessionManager] All users are ready in ${sessionId}`);
       this.setSessionToReady(session);
     }
   }
