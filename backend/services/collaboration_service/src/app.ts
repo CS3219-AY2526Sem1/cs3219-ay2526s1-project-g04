@@ -26,9 +26,8 @@ const pgdb = await PostgresqlPersistence.build(
 app.use(cors());
 app.use(express.json());
 
-app.get('/', (req, res) => {
+app.get('/healthz', (req, res) => {
   res.status(200).send('Collab service is alive');
-  console.log('testpoop');
 });
 
 app.get(
@@ -139,10 +138,11 @@ app.get('/sessions/status/matched/:matchedId', async (req, res) => {
     const sessionManager = SessionManager.getInstance();
     const sessionData =
       await sessionManager.getSessionStateByMatchedId(matchedId);
-    console.log(sessionData);
+    console.log('states for: ', matchedId, sessionData);
     res.json({
       sessionState: sessionData['session_state'],
       sessionId: sessionData['session_id'],
+      communicationState: sessionData['communication_state'],
     });
   } catch (err) {
     console.error('Error getting sessionstate:', err);

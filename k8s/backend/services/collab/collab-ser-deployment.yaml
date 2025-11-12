@@ -67,11 +67,11 @@ spec:
                   name: cs-secret
                   key: QUESTIONURL
 
-          # readinessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
-          # livenessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009

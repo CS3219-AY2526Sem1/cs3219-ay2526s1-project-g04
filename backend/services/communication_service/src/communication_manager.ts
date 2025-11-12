@@ -57,6 +57,11 @@ export class CommunicationManager {
     const userId = params.get('userId');
     const sessionId = urlObj.pathname.slice(1);
 
+    if (!userId) {
+      console.error('userid not received', userId);
+      return;
+    }
+
     console.log(
       `Handling connection for user ${userId} for session ${sessionId}`,
     );

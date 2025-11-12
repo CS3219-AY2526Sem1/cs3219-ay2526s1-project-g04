@@ -67,6 +67,7 @@ export class CollabRedis {
     return {
       session_state: matchedRedisData['session_state'],
       session_id: matchedRedisData['session_id'],
+      communication_state: matchedRedisData['communication_state'],
     };
   }
 }

@@ -1,4 +1,4 @@
-import { Commmunication } from './communication';
+import { Commmunication } from './communication.js';
 
 /**
  * Entry point for collab service

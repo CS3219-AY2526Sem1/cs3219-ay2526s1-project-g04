@@ -190,15 +190,24 @@ export class SessionManager {
       sessionData['session_state'] &&
       sessionData['session_id']
     ) {
-      console.log(1);
-      return {
-        session_state: sessionData['session_state'],
-        session_id: sessionData['session_id'],
-      };
+      if (sessionData['communication_state']) {
+        return {
+          session_state: sessionData['session_state'],
+          session_id: sessionData['session_id'],
+          communication_state: sessionData['communication_state'],
+        };
+      } else {
+        return {
+          session_state: sessionData['session_state'],
+          session_id: sessionData['session_id'],
+          communication_state: SESSIONSTATE.notCreated.valueOf(),
+        };
+      }
     } else {
       return {
         session_state: SESSIONSTATE.notCreated.valueOf(),
         session_id: SESSIONSTATE.notCreated.valueOf(),
+        communication_state: SESSIONSTATE.notCreated.valueOf(),
       };
     }
   }

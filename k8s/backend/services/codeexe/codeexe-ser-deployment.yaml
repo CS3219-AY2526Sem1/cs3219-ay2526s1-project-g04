@@ -40,3 +40,12 @@ spec:
 
           securityContext:
             privileged: true
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009

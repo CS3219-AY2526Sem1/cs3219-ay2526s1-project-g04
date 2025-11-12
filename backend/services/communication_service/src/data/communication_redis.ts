@@ -1,6 +1,12 @@
 import { Redis } from '@shared/redis/src/redis.js';
-import { COMMUNICATION_STATE } from '../types/enums';
-import { SESSIONSTATE } from 'services/collaboration_service/src/session/session_manager';
+import { COMMUNICATION_STATE } from '../types/enums.js';
+
+export enum SESSIONSTATE {
+  notCreated = 'notCreated',
+  created = 'created',
+  active = 'active',
+  end = 'end',
+}
 
 export class CommunicationRedis {
   private static instance: CommunicationRedis;
@@ -52,7 +58,7 @@ export class CommunicationRedis {
 
   public async addCommunicationState(matchedId: string): Promise<void> {
     const commsData = {
-      communication_state: SESSIONSTATE.notCreated,
+      communication_state: SESSIONSTATE.created,
     };
     const matchedRedisData: Record<string, string> =
       await this.redis.getDictValueByKey(matchedId);

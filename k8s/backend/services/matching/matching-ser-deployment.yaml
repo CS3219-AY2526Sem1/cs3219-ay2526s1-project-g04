@@ -42,11 +42,11 @@ spec:
                   name: ms-secret
                   key: PORT
 
-          # readinessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
-          # livenessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3007
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3007
