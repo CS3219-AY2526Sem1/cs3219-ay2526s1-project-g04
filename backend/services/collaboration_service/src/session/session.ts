@@ -57,23 +57,6 @@ export class Session {
     }
   }
 
-  public updateCodeDocument() {
-    //TODO
-  }
-
-  public updateChatMessage() {
-    //TODO
-  }
-
-  public save() {
-    //TODO
-  }
-
-  public end(userId: string) {
-    //TODO
-    console.log(userId);
-  }
-
   public getUsers(): string[] {
     return Object.keys(this.users);
   }

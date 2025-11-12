@@ -162,16 +162,11 @@ export class SessionManager {
     );
   }
 
-  public saveSession(sessionId: string) {
-    this.sessions[sessionId]?.session?.save();
-  }
-
   public endSession(sessionId: string, userId: string) {
     const matchingId = this.sessions[sessionId]?.matchedId;
     if (!matchingId) {
       return;
     }
-    this.sessions[sessionId]?.session.end(userId);
     this.db.setTerminationSession(
       Number(sessionId),
       SessionTerminations.endByUser,
