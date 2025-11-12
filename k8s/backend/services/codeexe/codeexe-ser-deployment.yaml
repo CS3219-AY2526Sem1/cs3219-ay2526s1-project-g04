@@ -31,6 +31,11 @@ spec:
             - name: docker-sock-volume
               mountPath: /var/run
 
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+
           readinessProbe:
             httpGet:
               path: /healthz
@@ -46,6 +51,10 @@ spec:
           volumeMounts:
             - name: docker-sock-volume
               mountPath: /var/run
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
 
           securityContext:
             privileged: true
