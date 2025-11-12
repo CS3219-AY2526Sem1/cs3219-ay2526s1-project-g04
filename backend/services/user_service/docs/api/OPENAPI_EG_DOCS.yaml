@@ -783,7 +783,7 @@ paths:
       tags:
         - Internal Admin
       summary: (Internal) Promote user to Admin
-      description: Protected by a static secret token (`x-internal-secret`). Promotes a user by their email.
+      description: Promotes a user by their email.
       security:
         - internalSecret: []
       requestBody:
@@ -809,7 +809,7 @@ paths:
       tags:
         - Internal Admin
       summary: (Internal) Demote admin to User
-      description: Protected by a static secret token (`x-internal-secret`). Demotes an admin by their email.
+      description: Demotes an admin by their email.
       security:
         - internalSecret: []
       requestBody:
