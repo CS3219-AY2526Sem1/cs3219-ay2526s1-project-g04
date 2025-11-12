@@ -10,10 +10,6 @@ app.get('/healthz', (req, res) => {
   res.status(200).send('Comms service is alive');
 });
 
-/**
- * POST /run
- * Runs a single Python code snippet (for manual runs)
- */
 app.post('/run', (req, res) => {
   const { code, input } = req.body;
   if (!code) return res.status(400).json({ error: 'Missing code.' });
@@ -67,12 +63,6 @@ app.post('/run', (req, res) => {
   });
 });
 
-/**
- * POST /batch-run
- * Runs the same Python solution function for multiple input cases.
- * Universal handler: supports any entry point (class.method),
- * variable number of args, and no-arg SQL problems.
- */
 app.post('/batch-run', async (req, res) => {
   const { code, inputs, entryPoint } = req.body;
 

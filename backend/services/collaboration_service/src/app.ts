@@ -55,7 +55,7 @@ app.get(
       });
       res.json(toRet);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      // console.error('Error fetching sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -92,7 +92,7 @@ app.get(
       };
       res.json(activeSession);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      // console.error('Error fetching sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -111,7 +111,7 @@ app.post(
       sessionManager.setCodePassedSession(sessionId);
       res.status(204).end();
     } catch (error) {
-      console.error('Error saving code in sessions:', error);
+      // console.error('Error saving code in sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
@@ -127,7 +127,7 @@ app.get('/sessions/:userId', authenticateToken, async (req, res) => {
     const sessions = await db.getPastSessionsByUser(userId);
     res.json(sessions);
   } catch (err) {
-    console.error('Error fetching sessions:', err);
+    // console.error('Error fetching sessions:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -138,14 +138,14 @@ app.get('/sessions/status/matched/:matchedId', async (req, res) => {
     const sessionManager = SessionManager.getInstance();
     const sessionData =
       await sessionManager.getSessionStateByMatchedId(matchedId);
-    console.log('states for: ', matchedId, sessionData);
+    // console.log('states for: ', matchedId, sessionData);
     res.json({
       sessionState: sessionData['session_state'],
       sessionId: sessionData['session_id'],
       communicationState: sessionData['communication_state'],
     });
   } catch (err) {
-    console.error('Error getting sessionstate:', err);
+    // console.error('Error getting sessionstate:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -155,12 +155,12 @@ app.get('/sessions/status/session/:sessionId', async (req, res) => {
     const matchedId = req.params.sessionId;
     const sessionManager = SessionManager.getInstance();
     const sessionData = await sessionManager.getSessionState(matchedId);
-    console.log(sessionData);
+    // console.log(sessionData);
     res.json({
       sessionState: sessionData['session_state'],
     });
   } catch (err) {
-    console.error('Error getting sessionstate:', err);
+    // console.error('Error getting sessionstate:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -173,7 +173,7 @@ app.delete('/sessions/:sessionId/user/:userId', async (req, res) => {
     sessionManager.endSession(sessionId, userId);
     res.status(204).send();
   } catch (err) {
-    console.error('Error ending session:', err);
+    // console.error('Error ending session:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -181,7 +181,7 @@ app.delete('/sessions/:sessionId/user/:userId', async (req, res) => {
 app.get('/document/:sessionId', async (req, res) => {
   try {
     const sessionId = req.params.sessionId;
-    console.log(`[GET /document] Fetching Y.Doc for session ${sessionId}`);
+    // console.log(`[GET /document] Fetching Y.Doc for session ${sessionId}`);
 
     const ydoc = await pgdb.getYDoc(sessionId);
     const yText = ydoc.getText('monaco');
@@ -194,14 +194,14 @@ app.get('/document/:sessionId', async (req, res) => {
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error(`Failed to load persisted doc ${req.params.sessionId}:`, err);
+    // console.error(`Failed to load persisted doc ${req.params.sessionId}:`, err);
     res.status(500).json({ error: 'Failed to load document' });
   }
 });
 
 app.get('/question/:sessionId', async (req, res) => {
   const sessionId = req.params.sessionId;
-  console.log(sessionId);
+  // console.log(sessionId);
   try {
     const questionId = await db.getQuestionIdBySessionId(Number(sessionId));
     if (!questionId) {

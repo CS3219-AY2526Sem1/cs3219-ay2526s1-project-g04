@@ -24,9 +24,9 @@ export class MessageListener {
         const msgJson = JSON.parse(msg);
         // Assume that collab service already creates the code document
         if (msgJson['type'] === 'create') {
-          console.log(
-            `matchedId: ${msgJson['matchedId']}; sessionId: ${msgJson[`sessionId`]}`,
-          );
+          // console.log(
+          //   `matchedId: ${msgJson['matchedId']}; sessionId: ${msgJson[`sessionId`]}`,
+          // );
           await this.handleStartSession(
             msgJson['matchedId'],
             msgJson['sessionId'],

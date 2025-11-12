@@ -57,30 +57,9 @@ export default function CollabNavigationBar({
     }
   }, [onHeightChange]);
 
-  async function runCode(language: string, code: string) {
-    try {
-      const response = await fetch('http://localhost:5000/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language, code }),
-      });
-      const result = await response.json();
-      console.log('[Runner Output]', result);
-      alert(`Output:\n${result.stdout || result.stderr}`);
-      return result;
-    } catch (err) {
-      console.error('Error running code:', err);
-    }
-  }
-
   async function runBatchCode(code: string, inputs: string[]) {
-    console.log('[Batch Runner Inputs]', inputs);
-    console.log('[Entry Point]', entryPoint);
-
-    if (!CODEEXEURL) {
-      alert('⚠️ Missing CODEEXEURL environment variable');
-      return;
-    }
+    // console.log('[Batch Runner Inputs]', inputs);
+    // console.log('[Entry Point]', entryPoint);
 
     setRunningCode(true);
 
@@ -91,7 +70,7 @@ export default function CollabNavigationBar({
         body: JSON.stringify({
           code,
           inputs,
-          entryPoint, // ✅ send this for universal dispatch
+          entryPoint,
         }),
       });
 
@@ -101,18 +80,19 @@ export default function CollabNavigationBar({
       }
 
       const results = await response.json();
-      console.log('[Batch Runner Results]', results);
+      // console.log('[Batch Runner Results]', results);
 
       if (results?.outputs) {
-        console.log('[Outputs]', results.outputs);
         setResults(results.outputs);
-        console.log('[Context Updated] Stored outputs in test case context.');
+        // console.log('Stored outputs in test case context.');
       } else {
-        console.warn('⚠️ No outputs found in response.');
+        // console.warn('No outputs found in response.');
       }
     } catch (err) {
-      console.error('❌ Error running batch code:', err);
-      alert('Error executing code. Please check the console for details.');
+      // console.error('Error running batch code:', err);
+      alert(
+        'Error executing code, please check that your function follows the correct format.',
+      );
     } finally {
       setRunningCode(false);
     }
@@ -156,7 +136,7 @@ export default function CollabNavigationBar({
       if (terminated) {
         const providers = getCollabProvider(sessionId, getUserId()!.toString());
         if (providers && providers.yCodeDoc) {
-          console.log('SENDING MESSAGE');
+          // console.log('SENDING MESSAGE');
           const yNotifications = providers.yCodeDoc.getMap('notifications');
           const messagePayload = {
             type: 'end',
@@ -172,8 +152,7 @@ export default function CollabNavigationBar({
         }
       }
     } catch (error) {
-      console.error('Failed to end session:', error);
-      // Show error message to user
+      // console.error('Failed to end session:', error);
     }
   };
 
@@ -215,7 +194,7 @@ export default function CollabNavigationBar({
             <Tooltip title="Run code">
               <IconButton
                 className="text-[var(--foreground)]"
-                onClick={handleRunClick} // ✅ calls your function
+                onClick={handleRunClick}
               >
                 <PlayArrowOutlinedIcon className="text-4xl" />
               </IconButton>

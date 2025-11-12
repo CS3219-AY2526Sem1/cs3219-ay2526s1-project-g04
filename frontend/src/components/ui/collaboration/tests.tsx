@@ -32,7 +32,7 @@ export const TestCases = () => {
             testCase.expectedOutput.replace(/\s+/g, '') &&
           testCase.visible === 'hidden'
         ) {
-          console.log('hidden failed');
+          // console.log('Failed hidden test case');
           return true;
         }
       }
@@ -88,7 +88,7 @@ export const TestCases = () => {
             }
           }
         } catch (error) {
-          console.error('Error submitting code solved', error);
+          // console.error('Error submitting code solved', error);
         }
       };
       handleHiddenPass();

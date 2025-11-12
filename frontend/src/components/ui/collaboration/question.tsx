@@ -26,18 +26,18 @@ export const QuestionCard = (p: questionProps) => {
   useEffect(() => {
     const fetchQuestion = async () => {
       const questionId: string | null = await getQuestionIdBySessId(sessionId);
-      console.log(1, questionId);
+      // console.log(1, questionId);
 
       if (!questionId) return;
 
       const res = await getQuestionById(questionId);
       if (!res.success) {
-        alert(`⚠️ Error fetching question: ${res.message}`);
+        alert(`Error fetching question: ${res.message}`);
         return;
       }
 
       const question: Question = res.data;
-      console.log(question);
+      // console.log(question);
       setQuestionMd(question?.body_html ?? '');
       setQuestionTitle(question?.title ?? '');
       setQuestionTopics(question?.topics ?? []);
@@ -48,7 +48,7 @@ export const QuestionCard = (p: questionProps) => {
         };
       });
 
-      console.log('tc', testCases);
+      // console.log('tc', testCases);
     };
     fetchQuestion();
   }, []);
