@@ -31,6 +31,7 @@ export class Collab {
     // this.test_send_msg_to_collab('matched:2');
   }
 
+  // Initializes Postgres, Redis, and Yjs PostgresqlPersistence instances
   private async initDatabases() {
     const postgresDb = PostgresPrisma.getInstance();
     const redis = await CollabRedis.getInstance();
@@ -52,6 +53,7 @@ export class Collab {
     return { postgresDb, redis, pgdb };
   }
 
+  // Initializes the HTTP + WebSocket server and binds Yjs persistence for document storage
   private initServer(app: Express, pgdb: PostgresqlPersistence) {
     const PORT = 3009;
     const server = http.createServer(app);
@@ -60,6 +62,7 @@ export class Collab {
       console.log(`[Collab] Server running on http://localhost:${PORT}`);
     });
 
+    // Configure Yjs persistence provider (y-postgresql)
     setPersistence({
       provider: pgdb,
       bindState: async (docName, ydoc) => {
@@ -68,11 +71,13 @@ export class Collab {
         const persistedYDoc = await pgdb.getYDoc(docName);
         Y.applyUpdate(ydoc, Y.encodeStateAsUpdate(persistedYDoc));
 
+        // Automatically store Yjs document updates in PostgreSQL
         ydoc.on('update', async (update: Uint8Array) => {
           await pgdb.storeUpdate(docName, update);
         });
       },
 
+      // Called when a document is finalized or saved explicitly
       writeState: async (docName) => {
         console.log(`[Collab] WriteState (y-postgres) called for ${docName}}`);
         return Promise.resolve();

@@ -31,6 +31,7 @@ export class Session {
     this.questionId = questionId;
   }
 
+  // Checks if all users in the session are ready (i.e., both users have joined the session)
   public allReady(): boolean {
     for (const val of Object.values(this.users)) {
       if (val.state === USERSTATE.waiting) {
@@ -40,6 +41,7 @@ export class Session {
     return true;
   }
 
+  // Marks a specific user as ready in the current session
   public readyUser(userId: number) {
     console.log(
       `[Session] Added userId ${userId} to session ${this.sessionId}`,
@@ -49,6 +51,7 @@ export class Session {
     }
   }
 
+  // Checks if a user is still in the 'waiting' state
   public userNotReady(userId: number): boolean {
     // console.log(this.users[userId]);
     if (userId in this.users) {
@@ -59,18 +62,22 @@ export class Session {
     }
   }
 
+  // Handles session end for a given user (e.g., user leaves or disconnects)
   public end(userId: string) {
     console.log(`[Session] Ending session for ${userId}`);
   }
 
+  // Returns an array of all user IDs participating in the session
   public getUsers(): string[] {
     return Object.keys(this.users);
   }
 
+  // Returns the session ID
   public getId() {
     return this.sessionId;
   }
 
+  // Returns the question ID associated with this session
   public getQuestionId() {
     return this.questionId;
   }

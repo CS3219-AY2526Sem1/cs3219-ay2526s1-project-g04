@@ -50,8 +50,6 @@ export class CommunicationManager {
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
-    console.log('a client connected in comms service');
-
     // Get param values
     const fullUrl = `ws://${req.headers.host}${req.url}`;
     const urlObj = new URL(fullUrl ?? '');
@@ -60,12 +58,12 @@ export class CommunicationManager {
     const sessionId = urlObj.pathname.slice(1);
 
     if (!userId) {
-      console.error('userid not received', userId);
+      console.error('[CommunicationManager] Userid not received');
       return;
     }
 
     console.log(
-      `Handling connection for user ${userId} for session ${sessionId}`,
+      `[CommunicationManager] Handling connection for user ${userId} for session ${sessionId}`,
     );
 
     // console.log('sessions: ', this.sessions);

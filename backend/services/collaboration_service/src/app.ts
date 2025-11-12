@@ -26,10 +26,16 @@ const pgdb = await PostgresqlPersistence.build(
 app.use(cors());
 app.use(express.json());
 
+/**
+ * Health check endpoint for service monitoring
+ */
 app.get('/healthz', (req, res) => {
   res.status(200).send('Collab service is alive');
 });
 
+/**
+ * Fetch all past sessions for the currently authenticated user
+ */
 app.get(
   '/sessions/me',
   authenticateToken,
@@ -55,12 +61,15 @@ app.get(
       });
       res.json(toRet);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error('[APP] Error fetching sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
 );
 
+/**
+ * Retrieve the currently active session (if any) for the logged-in user
+ */
 app.get(
   '/sessions/me/active',
   authenticateToken,
@@ -92,12 +101,15 @@ app.get(
       };
       res.json(activeSession);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      console.error('[APP] Error fetching sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
 );
 
+/**
+ * Mark a given session as 'code passed' after successful problem completion
+ */
 app.post(
   '/sessions/passed/:sessionId',
   authenticateToken,
@@ -111,12 +123,15 @@ app.post(
       sessionManager.setCodePassedSession(sessionId);
       res.status(204).end();
     } catch (error) {
-      console.error('Error saving code in sessions:', error);
+      console.error('[APP] Error saving code in sessions:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   },
 );
 
+/**
+ * Fetch all past sessions for a specific userId (admin/debug route)
+ */
 app.get('/sessions/:userId', authenticateToken, async (req, res) => {
   try {
     const userId = Number(req.params['userId']);
@@ -127,11 +142,14 @@ app.get('/sessions/:userId', authenticateToken, async (req, res) => {
     const sessions = await db.getPastSessionsByUser(userId);
     res.json(sessions);
   } catch (err) {
-    console.error('Error fetching sessions:', err);
+    console.error('[APP] Error fetching sessions:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+/**
+ * Retrieve the current session and communication state by matchedId
+ */
 app.get('/sessions/status/matched/:matchedId', async (req, res) => {
   try {
     const matchedId = req.params.matchedId;
@@ -145,11 +163,14 @@ app.get('/sessions/status/matched/:matchedId', async (req, res) => {
       communicationState: sessionData['communication_state'],
     });
   } catch (err) {
-    console.error('Error getting sessionstate:', err);
+    console.error('[APP] Error getting sessionstate:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+/**
+ * Retrieve session state by sessionId (used for checking active/ended)
+ */
 app.get('/sessions/status/session/:sessionId', async (req, res) => {
   try {
     const matchedId = req.params.sessionId;
@@ -160,11 +181,14 @@ app.get('/sessions/status/session/:sessionId', async (req, res) => {
       sessionState: sessionData['session_state'],
     });
   } catch (err) {
-    console.error('Error getting sessionstate:', err);
+    console.error('[APP] Error getting sessionstate:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+/**
+ * End a running session for a specific user and clean up in-memory state
+ */
 app.delete('/sessions/:sessionId/user/:userId', async (req, res) => {
   try {
     const sessionManager = SessionManager.getInstance();
@@ -173,11 +197,14 @@ app.delete('/sessions/:sessionId/user/:userId', async (req, res) => {
     sessionManager.endSession(sessionId, userId);
     res.status(204).send();
   } catch (err) {
-    console.error('Error ending session:', err);
+    console.error('[APP] Error ending session:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+/**
+ * Fetch and return the persisted Yjs document content for a session
+ */
 app.get('/document/:sessionId', async (req, res) => {
   try {
     const sessionId = req.params.sessionId;
@@ -194,11 +221,17 @@ app.get('/document/:sessionId', async (req, res) => {
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
-    console.error(`Failed to load persisted doc ${req.params.sessionId}:`, err);
+    console.error(
+      `[APP] Failed to load persisted doc ${req.params.sessionId}:`,
+      err,
+    );
     res.status(500).json({ error: 'Failed to load document' });
   }
 });
 
+/**
+ * Get the questionId linked to a given session (used for redirection)
+ */
 app.get('/question/:sessionId', async (req, res) => {
   const sessionId = req.params.sessionId;
   // console.log(sessionId);
@@ -212,6 +245,9 @@ app.get('/question/:sessionId', async (req, res) => {
       question_id: questionId,
     });
   } catch (err) {
-    console.error(`Error fetching questionId for sesssion: ${sessionId}`, err);
+    console.error(
+      `[APP] Error fetching questionId for sesssion: ${sessionId}`,
+      err,
+    );
   }
 });

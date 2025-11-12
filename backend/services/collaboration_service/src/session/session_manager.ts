@@ -70,6 +70,7 @@ export class SessionManager {
     return SessionManager.instance;
   }
 
+  // Creates a new session from match data and initializes Yjs persistence
   public async createSession(matchedId: string) {
     //Get data from redis
     const matchedData: Record<string, string> =
@@ -101,7 +102,7 @@ export class SessionManager {
       SESSIONSTATE.created,
     );
 
-    // const sessionId = await this.db.createSessionDataModel(...);
+    // Initialize Yjs document and load starter code from Question Service
     const ydoc = new Y.Doc();
     const yText = ydoc.getText('monaco');
     try {
@@ -119,29 +120,6 @@ export class SessionManager {
 
     this.pgdb.storeUpdate(docName, Y.encodeStateAsUpdate(ydoc));
     console.log(`[SessionManager] Document initialized for session ${docName}`);
-
-    // async function logPersistedDoc(
-    //   pgdb: PostgresqlPersistence,
-    //   docName: string,
-    // ) {
-    //   setInterval(async () => {
-    //     try {
-    //       const ydoc = await pgdb.getYDoc(docName);
-
-    //       const yText = ydoc.getText('monaco');
-
-    //       console.log(
-    //         `\n[Y.PostgreSQL Snapshot @${new Date().toLocaleTimeString()}]`,
-    //       );
-    //       // console.log(`Document: ${docName}`);
-    //       console.log(yText.toString() || '(empty)');
-    //     } catch (err) {
-    //       console.error(`Failed to load persisted doc ${docName}:`, err);
-    //     }
-    //   }, 20_000); // every 20 seconds
-    // }
-
-    // logPersistedDoc(this.pgdb, sessionId.toString());
 
     // Initialize communication service documents
     const broker = new MessagePublisher('CollaborationService');
@@ -162,10 +140,7 @@ export class SessionManager {
     );
   }
 
-  // public saveSession(sessionId: string) {
-  //   this.sessions[sessionId]?.session?.save();
-  // }
-
+  // Ends a session, updates database and Redis state, and clears it from memory
   public endSession(sessionId: string, userId: string) {
     const matchingId = this.sessions[sessionId]?.matchedId;
     if (!matchingId) {
@@ -181,6 +156,7 @@ export class SessionManager {
     delete this.sessions[sessionId];
   }
 
+  // Retrieves the session and communication state for a given matchedId
   public async getSessionStateByMatchedId(
     matchedId: string,
   ): Promise<Record<string, string>> {
@@ -212,6 +188,7 @@ export class SessionManager {
     }
   }
 
+  // Retrieves the session state for a specific sessionId from Redis
   public async getSessionState(
     session_id: string,
   ): Promise<Record<string, string>> {
@@ -230,6 +207,7 @@ export class SessionManager {
     return toRet;
   }
 
+  // Finds and returns an active session ID for a specific user
   public getActiveSessionForUser(userId: number): number | undefined {
     const sessionItem = Object.values(this.sessions).find((item) =>
       item.session.getUsers().includes(userId.toString()),
@@ -240,11 +218,13 @@ export class SessionManager {
     }
   }
 
+  // Retrieves the question ID associated with a given session
   public getSessionsQuestion(sessionId: number): string | undefined {
     const session = this.getSessionById(sessionId);
     return session?.getQuestionId();
   }
 
+  // Returns the other user's ID in the session (besides the current user)
   public getSessionsOtherUser(
     sessionId: number,
     userId: number,
@@ -260,10 +240,12 @@ export class SessionManager {
     }
   }
 
+  // Marks a session as having passed code validation
   public setCodePassedSession(sessionId: number): void {
     this.db.setCodePassedBySession(sessionId);
   }
 
+  // Handles incoming WebSocket client connections and attaches them to Yjs docs
   private handleConnection(ws: WebSocket, req: IncomingMessage) {
     // console.log('a client connected');
 
@@ -284,8 +266,6 @@ export class SessionManager {
       );
       return;
     }
-    // console.log(`sessionId in ws url : ${sessionId}`);
-    // console.log(`sessionId in created session obj ${session?.getId()}`);
 
     // Setup y-websocket
     setupWSConnection(ws, req, { docName: sessionId.toString() });
@@ -303,6 +283,7 @@ export class SessionManager {
     }
   }
 
+  // Updates a session’s state to 'active' once all users are connected
   private setSessionToReady(session: Session) {
     const sessionMetaData = this.sessions[session.getId()];
     this.redis.setSessionState(
@@ -312,6 +293,7 @@ export class SessionManager {
     );
   }
 
+  // Retrieves a session object by its session ID from the local memory map
   private getSessionById(sessionId: number): Session | undefined {
     return this.sessions[sessionId]?.session;
   }

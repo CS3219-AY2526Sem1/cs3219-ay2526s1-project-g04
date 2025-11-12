@@ -16,6 +16,7 @@ export class PostgresPrisma {
     return PostgresPrisma.instance;
   }
 
+  // Creates a new session record with associated users and an empty code document
   public async createSessionDataModel(
     UserAId: number,
     userBId: number,
@@ -38,6 +39,7 @@ export class PostgresPrisma {
     return sessionDataObj.id;
   }
 
+  // Retrieves all previously ended sessions (terminationStatus = 0) for a given user
   public async getPastSessionsByUser(userId: number) {
     return await this.prismaClient.session.findMany({
       where: {
@@ -61,6 +63,7 @@ export class PostgresPrisma {
     });
   }
 
+  // Returns the questionId linked to a specific sessionId
   public async getQuestionIdBySessionId(
     sessionId: number,
   ): Promise<string | null | undefined> {
@@ -76,6 +79,7 @@ export class PostgresPrisma {
     return session?.questionId;
   }
 
+  // Updates a session’s termination status and logs its end timestamp
   public async setTerminationSession(
     sessionId: number,
     terminationStatus: SessionTerminations,
@@ -89,6 +93,7 @@ export class PostgresPrisma {
     });
   }
 
+  // Marks a session as solved after both users successfully complete the code
   public async setCodePassedBySession(sessionId: number): Promise<void> {
     await this.prismaClient.session.update({
       where: { id: sessionId },
