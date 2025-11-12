@@ -169,8 +169,7 @@ app.delete('/sessions/:sessionId/user/:userId', async (req, res) => {
   try {
     const sessionManager = SessionManager.getInstance();
     const sessionId = req.params.sessionId;
-    const userId = req.params.userId;
-    sessionManager.endSession(sessionId, userId);
+    sessionManager.endSession(sessionId);
     res.status(204).send();
   } catch (err) {
     console.error('Error ending session:', err);
