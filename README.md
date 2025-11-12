@@ -17,7 +17,7 @@ PeerPrep is a collaborative coding platform that allows users to prepare for tec
 
 ## Architecture
 
-![architecture diagram for peerprep](/docs/diagrams/arch_final.png)
+![architecture diagram for peerprep](backend/docs/diagrams/arch_final.png)
 
 ## Team Members
 
@@ -28,7 +28,6 @@ PeerPrep is a collaborative coding platform that allows users to prepare for tec
 - [Yixin](https://github.com/coderhuang559)
 - [Kailash](https://github.com/Kailash201)
 - [Danielle](https://github.com/danielleloh)
-
 
 ### Note:
 
