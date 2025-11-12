@@ -42,6 +42,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import WarningIcon from '@mui/icons-material/Warning';
 import LockResetIcon from '@mui/icons-material/LockReset';
 import MarkEmailReadIcon from '@mui/icons-material/MarkEmailRead';
+import { useAuth } from '@/components/auth/AuthContext';
 import {
   getMyProfile,
   requestDeleteAccountOtp,
@@ -65,6 +66,8 @@ interface UserProfile {
 
 export default function Page() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading, logOut } = useAuth();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editData, setEditData] = useState({
     username: '',
@@ -72,7 +75,7 @@ export default function Page() {
     profilePictureUrl: '',
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true); // Renamed
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -114,7 +117,7 @@ export default function Page() {
   const [deleteError, setDeleteError] = useState('');
 
   const fetchProfile = useCallback(async () => {
-    setIsLoading(true);
+    setIsDataLoading(true);
     setError('');
     const token = getAccessToken();
 
@@ -130,13 +133,15 @@ export default function Page() {
       console.log(err);
       setError('Could not load profile data.');
     } finally {
-      setIsLoading(false);
+      setIsDataLoading(false);
     }
   }, [router]);
 
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (!isAuthLoading && user) {
+      fetchProfile();
+    }
+  }, [fetchProfile, user, isAuthLoading]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -160,12 +165,6 @@ export default function Page() {
     setError('');
     setSuccessMessage('');
     const token = getAccessToken();
-
-    if (!token) {
-      setError('Authentication error. Please log in again.');
-      setIsSaving(false);
-      return;
-    }
 
     let textUpdated = false;
     let imageUpdated = false;
@@ -450,9 +449,16 @@ export default function Page() {
     }
   };
 
-  if (isLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100%',
+        }}
+      >
         <CircularProgress />
       </Box>
     );
