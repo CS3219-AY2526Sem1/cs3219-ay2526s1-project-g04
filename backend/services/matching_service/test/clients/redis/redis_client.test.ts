@@ -80,7 +80,8 @@ describe('MatchingServiceRedis', () => {
   });
 
   it('initializes correctly and clears all data structures', async () => {
-    const service = await MatchingServiceRedis.getInstance();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    await MatchingServiceRedis.getInstance();
 
     expect(mockConnect).toHaveBeenCalled();
     expect(mockClearQueue).toHaveBeenCalled();

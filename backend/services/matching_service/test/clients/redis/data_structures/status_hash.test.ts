@@ -1,9 +1,6 @@
 import { jest } from '@jest/globals';
 import { StatusHash } from '../../../../src/clients/redis/data_structures/status_hash.js';
-import type {
-  HashData,
-  UserStatus,
-} from '../../../../src/clients/redis/types.js';
+import type { HashData } from '../../../../src/clients/redis/types.js';
 import { logger } from '../../../../src/logger/logger.js';
 
 describe('StatusHash', () => {
