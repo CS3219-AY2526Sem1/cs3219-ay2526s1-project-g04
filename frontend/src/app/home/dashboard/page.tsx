@@ -246,8 +246,8 @@ export default function DashboardPage() {
       const currentUserId = user.userId;
       setIsDataLoading(true);
       try {
-        // const rawSessions: RawSession[] = await getMySessions();
-        const rawSessions: RawSession[] = mockSessionData;
+        const rawSessions: RawSession[] = await getMySessions();
+        // const rawSessions: RawSession[] = mockSessionData;
 
         const finishedSessions = rawSessions.filter((s) => s.endedAt !== null);
 
@@ -269,27 +269,26 @@ export default function DashboardPage() {
         ];
 
         // --- ACTUAL API CALLS ----
-        // const [questionRes, peerData] = await Promise.all([
-        //   questionIds.length > 0
-        //     ? getQuestionsBatch(questionIds)
-        //     : Promise.resolve({ success: true, data: { items: [] } }),
-        //   peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
-        // ]);
-        // if (!questionRes.success) {
-        //   throw new Error('Failed to fetch questions');
-        // }
-        // const questionData: Question[] = questionRes.data.items;
+        const [questionRes, peerData] = await Promise.all([
+          questionIds.length > 0
+            ? getQuestionsBatch(questionIds)
+            : Promise.resolve({ success: true, data: { items: [] } }),
+          peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
+        ]);
+        if (!questionRes.success) {
+          throw new Error('Failed to fetch questions');
+        }
+        const questionData: Question[] = questionRes.data.items;
         // --- END ----
 
-        const [questionData, peerData] = await Promise.all([
-          fakeFetch(mockQuestionDatabase, questionIds),
-          fakeFetch(mockUserDatabase, peerIds),
-        ]);
+        // const [questionData, peerData] = await Promise.all([
+        //   fakeFetch(mockQuestionDatabase, questionIds),
+        //   fakeFetch(mockUserDatabase, peerIds),
+        // ]);
 
         const questionMap = new Map(questionData.map((q) => [q.id, q]));
         const peerMap = new Map(peerData.map((p) => [p.id, p]));
 
-        // --- UPDATED: "Stitch" the data together, including isSolved ---
         const enrichedSessions = finishedSessions.map((session) => {
           const peerId =
             session.UserAId === currentUserId
