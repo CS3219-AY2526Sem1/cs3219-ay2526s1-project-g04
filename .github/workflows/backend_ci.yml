@@ -79,6 +79,15 @@ jobs:
       - run: cd shared/redis && npm i
       - run: cd services/matching_service && npm i && npm run build
 
+  node-build-comms-service:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+      - run: cd shared/messaging && npm i
+      - run: cd shared/redis && npm i
+      - run: cd services/communication_service && npm i && npm run build
+
   docker-build-push-collab-service:
     needs: [node-build-collab-service]
     runs-on: ubuntu-latest
@@ -150,3 +159,22 @@ jobs:
           push: true
           tags: peerprep4/peerprep4:matching_service
           platforms: linux/amd64,linux/arm64
+
+
+  docker-build-push-comms-service:
+    needs: [node-build-comms-service]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/services/communication_service/Dockerfile
+          push: true
+          tags: peerprep4/peerprep4:comms_service
+          platforms: linux/amd64
