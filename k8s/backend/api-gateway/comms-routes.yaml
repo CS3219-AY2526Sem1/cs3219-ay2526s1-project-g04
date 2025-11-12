@@ -22,4 +22,4 @@ spec:
               replacePrefixMatch: /
       backendRefs:
         - name: comms-service
-          port: 3003
+          port: 3012
