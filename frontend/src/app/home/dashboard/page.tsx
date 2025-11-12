@@ -40,8 +40,8 @@ import { PublicUserProfile } from '@/lib/user-service';
 import { getUserProfileById, getUsersBatch } from '@/services/userServiceApi';
 import { getQuestionsBatch } from '@/services/questionServiceApi';
 import { Question, Topic } from '@/lib/question-service';
-import { RawSession } from '@/lib/collaboration-service';
-import { getMySessions } from '@/services/collaborationServiceApi';
+import {ActiveSession, RawSession} from '@/lib/collaboration-service';
+import { getMySessions, getMyActiveSession } from '@/services/collaborationServiceApi';
 import { useAuth } from '@/components/auth/AuthContext';
 
 // --- Mock Data (Replace with your API data) ---
@@ -222,7 +222,7 @@ export default function DashboardPage() {
 
   const [history, setHistory] = useState<EnrichedSession[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true); // Renamed from isLoading
-  const [activeSession, setActiveSession] = useState<RawSession | null>(null); // <-- ADD THIS
+  const [activeSession, setActiveSession] = useState<number | null>(null); // <-- ADD THIS
   const router = useRouter();
 
   const [selectedPeer, setSelectedPeer] = useState<
@@ -250,11 +250,9 @@ export default function DashboardPage() {
       try {
         const rawSessions: RawSession[] = await getMySessions();
         // const rawSessions: RawSession[] = mockSessionData;
-        const currentActiveSession = rawSessions.find(
-          (s) => s.endedAt === null,
-        );
+        const currentActiveSession = await getMyActiveSession();
         if (isMounted) {
-          setActiveSession(currentActiveSession || null);
+          setActiveSession(currentActiveSession.activeSession?.sessionId || null);
         }
 
         const finishedSessions = rawSessions.filter((s) => s.endedAt !== null);
@@ -486,7 +484,7 @@ export default function DashboardPage() {
                     <Button
                       variant="contained"
                       onClick={() =>
-                        router.push(`/practice/${activeSession.id}`)
+                        router.push(`/practice/${activeSession}`)
                       }
                       sx={{
                         backgroundColor: '#10B981', // Green
@@ -528,7 +526,6 @@ export default function DashboardPage() {
                 </Stack>
               </Card>
 
-              {/* Practice History */}
               <Paper
                 sx={{
                   p: 3,
@@ -582,7 +579,6 @@ export default function DashboardPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {/* --- RENDER FROM DYNAMIC HISTORY STATE --- */}
                       {history.slice(0, 6).map((row) => (
                         <TableRow
                           key={row.id}
