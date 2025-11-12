@@ -30,27 +30,26 @@ export default function RootLayout({
       >
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
           <ThemeProvider theme={theme}>
-            <AuthProvider>
-              <React.Suspense
-                fallback={
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      height: '100vh',
-                    }}
-                  >
-                    <CircularProgress />
-                  </Box>
-                }
-              >
-                {children}
-              </React.Suspense>
-            </AuthProvider>
-          </ThemeProvider>
-          <ThemeProvider theme={theme}>
-            <SnackbarProvider>{children}</SnackbarProvider>
+            <SnackbarProvider>
+              <AuthProvider>
+                <React.Suspense
+                  fallback={
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '100vh',
+                      }}
+                    >
+                      <CircularProgress />
+                    </Box>
+                  }
+                >
+                  {children}
+                </React.Suspense>
+              </AuthProvider>
+            </SnackbarProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
