@@ -259,27 +259,27 @@ const authenticateToken = (
  * Middleware for Internal-Only Utility Endpoints
  * Checks for a static secret key in the headers.
  */
-const authorizeInternal = (req: Request, res: Response, next: NextFunction) => {
-  const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
-  const requestSecret = req.headers['x-internal-secret'];
-
-  if (!internalSecret) {
-    console.error(
-      'FATAL: INTERNAL_ADMIN_SECRET is not set. Internal endpoints are disabled.',
-    );
-    return res
-      .status(500)
-      .json({ message: 'Internal server misconfiguration.' });
-  }
-
-  if (!requestSecret || requestSecret !== internalSecret) {
-    return res.status(403).json({
-      message: 'Forbidden: Invalid or missing internal secret token.',
-    });
-  }
-
-  next();
-};
+// const authorizeInternal = (req: Request, res: Response, next: NextFunction) => {
+//   const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
+//   const requestSecret = req.headers['x-internal-secret'];
+//
+//   if (!internalSecret) {
+//     console.error(
+//       'FATAL: INTERNAL_ADMIN_SECRET is not set. Internal endpoints are disabled.',
+//     );
+//     return res
+//       .status(500)
+//       .json({ message: 'Internal server misconfiguration.' });
+//   }
+//
+//   if (!requestSecret || requestSecret !== internalSecret) {
+//     return res.status(403).json({
+//       message: 'Forbidden: Invalid or missing internal secret token.',
+//     });
+//   }
+//
+//   next();
+// };
 
 /**
  * OTP and emailing
@@ -472,9 +472,9 @@ app.post('/user/auth/signup', async (req, res) => {
     if (error instanceof z.ZodError) {
       return res
         .status(400)
-        .json({ message: 'Invalid input', details: error.issues });
+        .json({ message: 'Invalid username format.', details: error.issues });
     }
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -507,7 +507,7 @@ app.post('/user/auth/login', async (req, res) => {
       { userId: user.id, username: user.username, role: user.role },
       privateKey,
       {
-        expiresIn: '1d',
+        expiresIn: '30m',
         algorithm: 'RS256',
       },
     );
@@ -527,7 +527,7 @@ app.post('/user/auth/login', async (req, res) => {
     res.status(200).json({ message: 'Login successful.', token, refreshToken });
   } catch (error) {
     console.log(error);
-    res.status(400).json({ message: 'Invalid request', details: error });
+    res.status(400).json({ message: 'Invalid request.', details: error });
   }
 });
 
@@ -553,7 +553,7 @@ app.post('/user/auth/refresh', async (req, res) => {
       { userId: user.id, username: user.username, role: user.role },
       privateKey,
       {
-        expiresIn: '15m',
+        expiresIn: '30m',
         algorithm: 'RS256',
       },
     );
@@ -624,7 +624,7 @@ app.put(
             role: updatedUser.role,
           },
           privateKey,
-          { expiresIn: '15m', algorithm: 'RS256' },
+          { expiresIn: '30m', algorithm: 'RS256' },
         );
       }
 
@@ -636,7 +636,7 @@ app.put(
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid text input', details: error.issues });
+          .json({ message: 'Invalid username format.', details: error.issues });
       }
       if (error instanceof multer.MulterError) {
         return res
@@ -645,12 +645,12 @@ app.put(
       }
       if (
         error instanceof Error &&
-        error.message.includes('Invalid file type')
+        error.message.includes('Invalid file type.')
       ) {
         return res.status(400).json({ message: error.message });
       }
       console.error('Profile Update Error:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -684,7 +684,7 @@ app.get(
       res.status(200).json(userProfile);
     } catch (error) {
       console.error('Failed to retrieve user profile:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -727,7 +727,7 @@ app.post(
     } catch (error) {
       res
         .status(500)
-        .json({ message: 'Internal server error', details: error });
+        .json({ message: 'Internal server error.', details: error });
     }
   },
 );
@@ -769,9 +769,9 @@ app.put(
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid input', details: error.issues });
+          .json({ message: 'Invalid email.', details: error.issues });
       }
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -805,9 +805,9 @@ app.put(
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid input', details: error.issues });
+          .json({ message: 'Invalid password format.', details: error.issues });
       }
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -833,7 +833,7 @@ app.post('/user/auth/verify-email', async (req, res) => {
       { userId: user.id, username: user.username, role: user.role },
       privateKey,
       {
-        expiresIn: '15m',
+        expiresIn: '30m',
         algorithm: 'RS256',
       },
     );
@@ -857,7 +857,7 @@ app.post('/user/auth/verify-email', async (req, res) => {
     });
   } catch (error) {
     console.log('error at verify', error);
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -893,7 +893,7 @@ app.post('/user/auth/resend-otp', async (req, res) => {
 
     res.status(200).json({ message: 'A new OTP has been sent to your email.' });
   } catch (error) {
-    res.status(400).json({ message: 'Invalid request', details: error });
+    res.status(400).json({ message: 'Invalid request.', details: error });
   }
 });
 
@@ -956,7 +956,7 @@ app.post(
         message: 'OTP sent to your new email address. Please check your inbox.',
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1015,7 +1015,7 @@ app.post(
         newEmail,
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1069,7 +1069,7 @@ app.post(
         message: 'OTP sent to your email address. Please check your inbox.',
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1121,7 +1121,7 @@ app.post(
         message: 'Password updated successfully.',
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1174,7 +1174,7 @@ app.post('/user/auth/forgot-password', async (req, res) => {
         'If an account with this email exists, you will receive a password reset code.',
     });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -1218,7 +1218,7 @@ app.post('/user/auth/reset-password', async (req, res) => {
         'Password reset successfully. Please log in with your new password.',
     });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -1275,7 +1275,7 @@ app.get('/user', authenticateToken, async (req: Request, res: Response) => {
 
     res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -1304,106 +1304,98 @@ app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
 
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
-app.post(
-  '/user/utility/promote-admin',
-  authorizeInternal,
-  async (req: Request, res: Response) => {
-    const { email } = req.body;
+app.post('/user/utility/promote-admin', async (req: Request, res: Response) => {
+  const { email } = req.body;
 
-    if (!email || typeof email !== 'string') {
+  if (!email || typeof email !== 'string') {
+    return res
+      .status(400)
+      .json({ message: 'A valid email is required in the body.' });
+  }
+
+  try {
+    const userToPromote = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!userToPromote) {
       return res
-        .status(400)
-        .json({ message: 'A valid email is required in the body.' });
+        .status(404)
+        .json({ message: 'User not found with that email.' });
     }
 
-    try {
-      const userToPromote = await prisma.user.findUnique({
-        where: { email },
+    if (userToPromote.role === Role.ADMIN) {
+      return res.status(200).json({
+        message: 'User is already an admin.',
+        user: userToPromote,
       });
-
-      if (!userToPromote) {
-        return res
-          .status(404)
-          .json({ message: 'User not found with that email.' });
-      }
-
-      if (userToPromote.role === Role.ADMIN) {
-        return res.status(200).json({
-          message: 'User is already an admin.',
-          user: userToPromote,
-        });
-      }
-
-      const updatedUser = await prisma.user.update({
-        where: { email },
-        data: {
-          role: Role.ADMIN,
-          isVerified: true,
-        },
-      });
-
-      res.status(200).json({
-        message: 'User successfully promoted to admin.',
-        user: updatedUser,
-      });
-    } catch (error) {
-      console.error('Promote User Error:', error);
-      res.status(500).json({ message: 'Internal server error.' });
     }
-  },
-);
 
-app.post(
-  '/user/utility/demote-admin',
-  authorizeInternal, // Protects with your new secret key
-  async (req: Request, res: Response) => {
-    const { email } = req.body;
+    const updatedUser = await prisma.user.update({
+      where: { email },
+      data: {
+        role: Role.ADMIN,
+        isVerified: true,
+      },
+    });
 
-    if (!email || typeof email !== 'string') {
+    res.status(200).json({
+      message: 'User successfully promoted to admin.',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Promote User Error:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
+app.post('/user/utility/demote-admin', async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string') {
+    return res
+      .status(400)
+      .json({ message: 'A valid email is required in the body.' });
+  }
+
+  try {
+    const userToDemote = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!userToDemote) {
       return res
-        .status(400)
-        .json({ message: 'A valid email is required in the body.' });
+        .status(404)
+        .json({ message: 'User not found with that email.' });
     }
 
-    try {
-      const userToDemote = await prisma.user.findUnique({
-        where: { email },
+    if (userToDemote.role === Role.USER) {
+      return res.status(200).json({
+        message: 'User is already a regular user.',
+        user: userToDemote,
       });
-
-      if (!userToDemote) {
-        return res
-          .status(404)
-          .json({ message: 'User not found with that email.' });
-      }
-
-      if (userToDemote.role === Role.USER) {
-        return res.status(200).json({
-          message: 'User is already a regular user.',
-          user: userToDemote,
-        });
-      }
-
-      const updatedUser = await prisma.user.update({
-        where: { email },
-        data: {
-          role: Role.USER,
-        },
-      });
-
-      res.status(200).json({
-        message: 'User successfully demoted to user.',
-        user: updatedUser,
-      });
-    } catch (error) {
-      console.error('Demote User Error:', error);
-      res.status(500).json({ message: 'Internal server error.' });
     }
-  },
-);
+
+    const updatedUser = await prisma.user.update({
+      where: { email },
+      data: {
+        role: Role.USER,
+      },
+    });
+
+    res.status(200).json({
+      message: 'User successfully demoted to user.',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Demote User Error:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+});
 
 app.post(
   '/user/me/delete/request-otp',
@@ -1418,13 +1410,11 @@ app.post(
         return res.status(404).json({ message: 'User not found.' });
       }
 
-      // 1. Verify current password
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: 'Incorrect password.' });
       }
 
-      // 2. Check OTP cooldown
       if (
         user.otpLastSentAt &&
         new Date().getTime() - user.otpLastSentAt.getTime() <
@@ -1483,13 +1473,9 @@ app.delete(
         return res.status(400).json({ message: 'OTP has expired.' });
       }
 
-      // 2. --- PERMANENTLY DELETE USER ---
-      // This will cascade and delete related profile data, etc.
       await prisma.user.delete({
         where: { id: userId },
       });
-
-      // (Note: You may also want to queue a job to delete their S3 files)
 
       res.status(200).json({ message: 'Account deleted successfully.' });
     } catch (error) {
@@ -1510,14 +1496,14 @@ app.delete(
  */
 // UTILITY TO BE DELETED !!!!!
 // list all users in db
-app.get('/user/utility/list', async (req, res) => {
-  try {
-    const allUsers = await prisma.user.findMany();
-    res.status(200).json({ message: 'List successful', details: allUsers });
-  } catch (error) {
-    res.status(400).json({ message: 'Invalid request', details: error });
-  }
-});
+// app.get('/user/utility/list', async (req, res) => {
+//   try {
+//     const allUsers = await prisma.user.findMany();
+//     res.status(200).json({ message: 'List successful', details: allUsers });
+//   } catch (error) {
+//     res.status(400).json({ message: 'Invalid request', details: error });
+//   }
+// });
 
 app.get('/healthz', async (req, res) => {
   res.status(200).send('User service is alive');

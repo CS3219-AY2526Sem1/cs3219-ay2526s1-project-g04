@@ -15,6 +15,8 @@ import {
   DialogActions,
   DialogTitle,
   Button,
+  ListItemIcon,
+  Typography,
 } from '@mui/material';
 import {
   Logout,
@@ -22,8 +24,9 @@ import {
   NotificationsOutlined,
   AccountCircleOutlined,
 } from '@mui/icons-material';
-import { logout } from '@/services/userServiceApi';
-import { getAccessToken, removeTokens } from '@/lib/utils/jwt';
+import { useAuth } from '@/components/auth/AuthContext';
+// import { logout } from '@/services/userServiceApi';
+// import { getAccessToken, removeTokens } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
   onHeightChange?: (height: number) => void;
@@ -34,7 +37,9 @@ export default function TopNavigationBar({
   ...props
 }: TopNavigationBarProps) {
   const appBarRef = useRef<HTMLDivElement>(null);
-  const router = useRouter(); // Initialize router
+  const router = useRouter();
+
+  const { user, logOut } = useAuth();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = Boolean(anchorEl);
@@ -43,14 +48,10 @@ export default function TopNavigationBar({
 
   useEffect(() => {
     if (appBarRef.current && onHeightChange) {
-      // Set initial height
       onHeightChange(appBarRef.current.offsetHeight);
-
-      // Update height dynamically when window resizes
       const resizeHandler = () =>
         onHeightChange(appBarRef.current!.offsetHeight);
       window.addEventListener('resize', resizeHandler);
-
       return () => window.removeEventListener('resize', resizeHandler);
     }
   }, [onHeightChange]);
@@ -64,12 +65,7 @@ export default function TopNavigationBar({
   };
 
   const handleProfileClick = () => {
-    router.push('/accounts/profile');
-    handleMenuClose();
-  };
-
-  const handleSettingsClick = () => {
-    router.push('/accounts/account-settings');
+    router.push('/home/profile');
     handleMenuClose();
   };
 
@@ -83,25 +79,7 @@ export default function TopNavigationBar({
   };
 
   const handleConfirmLogout = async () => {
-    console.log('Logging out...');
-    const accessToken = getAccessToken();
-    if (!accessToken) {
-      console.error('Logout failed: Access token not found.');
-      removeTokens();
-      router.push('/accounts/login');
-      handleCloseDialog();
-      return;
-    }
-
-    try {
-      const data = await logout();
-    } catch (error) {
-      console.error('Error during logout API call:', error);
-    } finally {
-      removeTokens();
-      router.push('/accounts/login');
-      handleCloseDialog();
-    }
+    await logOut();
   };
 
   return (
@@ -127,6 +105,12 @@ export default function TopNavigationBar({
 
           {/* Top Navigation Bar right elements */}
           <div className="flex flex-row space-x-2">
+            <Tooltip title="settings">
+              <IconButton className="text-[var(--foreground)]">
+                <SettingsOutlined />
+              </IconButton>
+            </Tooltip>
+
             <Tooltip title="notifications">
               <IconButton className="text-[var(--foreground)]">
                 <NotificationsOutlined />
@@ -137,6 +121,7 @@ export default function TopNavigationBar({
               <IconButton
                 onClick={handleMenuOpen}
                 className="text-[var(--foreground)]"
+                size="small"
               >
                 <AccountCircleOutlined />
               </IconButton>
@@ -161,10 +146,18 @@ export default function TopNavigationBar({
           horizontal: 'right',
         }}
       >
-        <MenuItem onClick={handleProfileClick}>Profile</MenuItem>
-        <MenuItem onClick={handleLogoutClick}>
-          <Logout sx={{ mr: 1, color: 'action.active' }} />
-          Logout
+        <MenuItem onClick={handleProfileClick} sx={{ fontSize: '0.875rem' }}>
+          <ListItemIcon sx={{ minWidth: 'auto', marginRight: '8px' }}>
+            <AccountCircleOutlined />
+          </ListItemIcon>
+          <Typography variant="inherit">View Profile</Typography>
+        </MenuItem>
+
+        <MenuItem onClick={handleLogoutClick} sx={{ fontSize: '0.875rem' }}>
+          <ListItemIcon sx={{ minWidth: 'auto', marginRight: '8px' }}>
+            <Logout fontSize="small" />
+          </ListItemIcon>
+          <Typography variant="inherit">Logout</Typography>
         </MenuItem>
       </Menu>
 
@@ -174,11 +167,6 @@ export default function TopNavigationBar({
         fullWidth={true}
         maxWidth="xs"
       >
-        <DialogTitle
-          sx={{ fontSize: '1.5rem', fontWeight: 'bold', textAlign: 'center' }}
-        >
-          Logout Confirmation
-        </DialogTitle>
         <DialogTitle sx={{ fontSize: '1rem', textAlign: 'center' }}>
           Are you sure you want to log out?
         </DialogTitle>

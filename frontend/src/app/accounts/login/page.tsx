@@ -15,8 +15,9 @@ import {
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
 import { VerifyOtpForm } from '@/components/ui/accounts/VerifyOtp';
-import { login, resendOtp, verifyEmail } from '@/services/userServiceApi';
+import { resendOtp, verifyEmail } from '@/services/userServiceApi';
 import { setTokens } from '@/lib/utils/jwt';
+import { useAuth } from '@/components/auth/AuthContext';
 
 const OTP_COOLDOWN_SECONDS = 60;
 
@@ -28,11 +29,18 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { user, isLoading: isAuthLoading, logIn } = useAuth();
 
   const [isResendingOtp, setIsResendingOtp] = useState(false);
   const [resendMessage, setResendMessage] = useState('');
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const isCooldownActive = cooldownSeconds > 0;
+
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      router.push('/home/dashboard');
+    }
+  }, [user, isAuthLoading, router]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -46,25 +54,22 @@ export default function LoginPage() {
     };
   }, [isCooldownActive]);
 
-  // --- Login Submit Handler ---
   const handleLoginSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
-      const data = await login({ email, password });
-      // localStorage.setItem('accessToken', data.token);
-      // localStorage.setItem('refreshToken', data.refreshToken);
-      setTokens(data.token, data.refreshToken);
-      router.push('/home/dashboard');
+      await logIn({ email, password });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       setError('Failed to connect to the server.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const { verifyAndLogin } = useAuth();
 
   const handleVerifySubmit = useCallback(
     async (submittedOtp: string) => {
@@ -73,19 +78,15 @@ export default function LoginPage() {
       setResendMessage('');
 
       try {
-        const data = await verifyEmail({ email, otp: submittedOtp });
-        // localStorage.setItem('accessToken', data.accessToken);
-        // localStorage.setItem('refreshToken', data.refreshToken);
-        setTokens(data.accessToken, data.refreshToken);
-        router.push('/home/dashboard');
-      } catch (err) {
-        console.log(err);
-        setError('Failed to connect to the server.');
+        await verifyAndLogin({ email, otp: submittedOtp });
+      } catch (e) {
+        console.error('Verify Email Error:', e);
+        setError(e ? e.toString() : 'An unknown error occurred.');
       } finally {
         setIsLoading(false);
       }
     },
-    [email, router],
+    [email, verifyAndLogin],
   );
 
   const handleResendOtp = useCallback(async () => {
@@ -249,7 +250,7 @@ export default function LoginPage() {
           ) : (
             <VerifyOtpForm
               email={email}
-              onSubmitOtp={handleVerifySubmit}
+              onSubmitOtp={() => handleVerifySubmit(otp)}
               onResendOtp={handleResendOtp}
               isLoading={isLoading}
               error={error}

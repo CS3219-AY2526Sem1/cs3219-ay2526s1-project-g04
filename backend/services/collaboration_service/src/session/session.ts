@@ -62,12 +62,6 @@ export class Session {
     }
   }
 
-  // Handles session end for a given user (e.g., user leaves or disconnects)
-  public end(userId: string) {
-    console.log(`[Session] Ending session for ${userId}`);
-  }
-
-  // Returns an array of all user IDs participating in the session
   public getUsers(): string[] {
     return Object.keys(this.users);
   }

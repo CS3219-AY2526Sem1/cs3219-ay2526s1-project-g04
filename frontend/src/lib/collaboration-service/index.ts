@@ -7,6 +7,16 @@ export interface RawSession {
   UserBId: number;
 }
 
+export interface ActiveSession {
+  sessionId: number;
+  questionId: string;
+  partnerId: number;
+}
+
+export interface GetActiveSessionResponse {
+  activeSession: ActiveSession | null;
+}
+
 interface SessionStatus {
   sessionId?: string;
   sessionState: 'active' | 'created' | 'inactive';

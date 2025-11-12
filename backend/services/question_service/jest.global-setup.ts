@@ -27,7 +27,7 @@ export default async () => {
   // Fallback to what your logs showed (5430) if not set
   if (!process.env['DATABASE_URL']) {
     process.env['DATABASE_URL'] =
-      'postgresql://postgres@localhost:5430/qs_test';
+      'postgresql://postgres:postgres@localhost:5430/qs_test';
   }
 
   const pubPath = path.join(process.cwd(), '.public.test.pem');

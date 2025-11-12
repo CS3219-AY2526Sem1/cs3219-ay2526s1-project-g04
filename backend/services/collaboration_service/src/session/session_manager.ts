@@ -140,13 +140,11 @@ export class SessionManager {
     );
   }
 
-  // Ends a session, updates database and Redis state, and clears it from memory
-  public endSession(sessionId: string, userId: string) {
+  public endSession(sessionId: string) {
     const matchingId = this.sessions[sessionId]?.matchedId;
     if (!matchingId) {
       return;
     }
-    this.sessions[sessionId]?.session.end(userId);
     this.db.setTerminationSession(
       Number(sessionId),
       SessionTerminations.endByUser,

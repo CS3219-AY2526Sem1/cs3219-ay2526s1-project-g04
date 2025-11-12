@@ -31,9 +31,9 @@ import {
   DialogActions,
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // For "Solved" status
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For "Attempted" status
+import CategoryChart from '@/components/ui/home/dashboard/CategoryChart';
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
 import { getAccessToken, getUserId, getUsername } from '@/lib/utils/jwt';
 import { PublicUserProfile } from '@/lib/user-service';
@@ -42,6 +42,7 @@ import { getQuestionsBatch } from '@/services/questionServiceApi';
 import { Question, Topic } from '@/lib/question-service';
 import { RawSession } from '@/lib/collaboration-service';
 import { getMySessions } from '@/services/collaborationServiceApi';
+import { useAuth } from '@/components/auth/AuthContext';
 
 // --- Mock Data (Replace with your API data) ---
 interface MockTopic {
@@ -217,8 +218,10 @@ export default function DashboardPage() {
   const [showMatching, setShowMatching] = React.useState(false);
   const [showSessionBeingCreated, setShowSessionBeingCreated] =
     React.useState(true);
+  const { user, isLoading: isAuthLoading } = useAuth();
+
   const [history, setHistory] = useState<EnrichedSession[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true); // Renamed from isLoading
   const router = useRouter();
 
   const [selectedPeer, setSelectedPeer] = useState<
@@ -233,27 +236,24 @@ export default function DashboardPage() {
   // 1. Data Fetching and Orchestration
   useEffect(() => {
     const loadDashboardData = async () => {
-      let currentUserId: number | null = null;
-      // const token = localStorage.getItem('accessToken');
-      const token = getAccessToken();
-      try {
-        console.log(token);
-        currentUserId = getUserId();
-      } catch (error) {
-        console.error('Invalid token:', error);
+      if (isAuthLoading) {
+        return;
+      }
+      if (!user) {
         router.push('/accounts/login');
         return;
       }
-
+      const currentUserId = user.userId;
+      setIsDataLoading(true);
       try {
-        // const rawSessions: RawSession[] = await getMySessions();
-        const rawSessions: RawSession[] = mockSessionData;
+        const rawSessions: RawSession[] = await getMySessions();
+        // const rawSessions: RawSession[] = mockSessionData;
 
         const finishedSessions = rawSessions.filter((s) => s.endedAt !== null);
 
         if (finishedSessions.length === 0) {
           setHistory([]);
-          setIsLoading(false);
+          setIsDataLoading(false);
           return;
         }
 
@@ -269,27 +269,26 @@ export default function DashboardPage() {
         ];
 
         // --- ACTUAL API CALLS ----
-        // const [questionRes, peerData] = await Promise.all([
-        //   questionIds.length > 0
-        //     ? getQuestionsBatch(questionIds)
-        //     : Promise.resolve({ success: true, data: { items: [] } }),
-        //   peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
-        // ]);
-        // if (!questionRes.success) {
-        //   throw new Error('Failed to fetch questions');
-        // }
-        // const questionData: Question[] = questionRes.data.items;
+        const [questionRes, peerData] = await Promise.all([
+          questionIds.length > 0
+            ? getQuestionsBatch(questionIds)
+            : Promise.resolve({ success: true, data: { items: [] } }),
+          peerIds.length > 0 ? getUsersBatch(peerIds) : Promise.resolve([]),
+        ]);
+        if (!questionRes.success) {
+          throw new Error('Failed to fetch questions');
+        }
+        const questionData: Question[] = questionRes.data.items;
         // --- END ----
 
-        const [questionData, peerData] = await Promise.all([
-          fakeFetch(mockQuestionDatabase, questionIds),
-          fakeFetch(mockUserDatabase, peerIds),
-        ]);
+        // const [questionData, peerData] = await Promise.all([
+        //   fakeFetch(mockQuestionDatabase, questionIds),
+        //   fakeFetch(mockUserDatabase, peerIds),
+        // ]);
 
         const questionMap = new Map(questionData.map((q) => [q.id, q]));
         const peerMap = new Map(peerData.map((p) => [p.id, p]));
 
-        // --- UPDATED: "Stitch" the data together, including isSolved ---
         const enrichedSessions = finishedSessions.map((session) => {
           const peerId =
             session.UserAId === currentUserId
@@ -320,11 +319,11 @@ export default function DashboardPage() {
       } catch (error) {
         console.error(error);
       } finally {
-        setIsLoading(false);
+        setIsDataLoading(false);
       }
     };
     loadDashboardData();
-  }, [router]);
+  }, [router, user, isAuthLoading]);
 
   useEffect(() => {
     if (!selectedPeer || selectedPeer.id === -1) return; // Don't fetch for deleted user
@@ -370,8 +369,7 @@ export default function DashboardPage() {
     return { totalSolved, easy, medium, hard, categories };
   }, [history]);
 
-  // --- 3. Loading State ---
-  if (isLoading) {
+  if (isAuthLoading || isDataLoading) {
     return (
       <Box
         sx={{
@@ -413,7 +411,7 @@ export default function DashboardPage() {
             opacity: 0.8,
           }}
         >
-          Welcome back, {getUsername()}!
+          Welcome back, {user?.username}!
         </Typography>
 
         <Box
