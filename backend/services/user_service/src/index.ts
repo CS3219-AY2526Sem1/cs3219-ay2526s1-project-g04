@@ -472,9 +472,9 @@ app.post('/user/auth/signup', async (req, res) => {
     if (error instanceof z.ZodError) {
       return res
         .status(400)
-        .json({ message: 'Invalid input', details: error.issues });
+        .json({ message: 'Invalid username format.', details: error.issues });
     }
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -527,7 +527,7 @@ app.post('/user/auth/login', async (req, res) => {
     res.status(200).json({ message: 'Login successful.', token, refreshToken });
   } catch (error) {
     console.log(error);
-    res.status(400).json({ message: 'Invalid request', details: error });
+    res.status(400).json({ message: 'Invalid request.', details: error });
   }
 });
 
@@ -636,7 +636,7 @@ app.put(
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid text input', details: error.issues });
+          .json({ message: 'Invalid username format.', details: error.issues });
       }
       if (error instanceof multer.MulterError) {
         return res
@@ -645,12 +645,12 @@ app.put(
       }
       if (
         error instanceof Error &&
-        error.message.includes('Invalid file type')
+        error.message.includes('Invalid file type.')
       ) {
         return res.status(400).json({ message: error.message });
       }
       console.error('Profile Update Error:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -684,7 +684,7 @@ app.get(
       res.status(200).json(userProfile);
     } catch (error) {
       console.error('Failed to retrieve user profile:', error);
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -727,7 +727,7 @@ app.post(
     } catch (error) {
       res
         .status(500)
-        .json({ message: 'Internal server error', details: error });
+        .json({ message: 'Internal server error.', details: error });
     }
   },
 );
@@ -769,9 +769,9 @@ app.put(
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid input', details: error.issues });
+          .json({ message: 'Invalid email.', details: error.issues });
       }
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -805,9 +805,9 @@ app.put(
       if (error instanceof z.ZodError) {
         return res
           .status(400)
-          .json({ message: 'Invalid input', details: error.issues });
+          .json({ message: 'Invalid password format.', details: error.issues });
       }
-      res.status(500).json({ message: 'Internal server error' });
+      res.status(500).json({ message: 'Internal server error.' });
     }
   },
 );
@@ -857,7 +857,7 @@ app.post('/user/auth/verify-email', async (req, res) => {
     });
   } catch (error) {
     console.log('error at verify', error);
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -893,7 +893,7 @@ app.post('/user/auth/resend-otp', async (req, res) => {
 
     res.status(200).json({ message: 'A new OTP has been sent to your email.' });
   } catch (error) {
-    res.status(400).json({ message: 'Invalid request', details: error });
+    res.status(400).json({ message: 'Invalid request.', details: error });
   }
 });
 
@@ -956,7 +956,7 @@ app.post(
         message: 'OTP sent to your new email address. Please check your inbox.',
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1015,7 +1015,7 @@ app.post(
         newEmail,
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1069,7 +1069,7 @@ app.post(
         message: 'OTP sent to your email address. Please check your inbox.',
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1121,7 +1121,7 @@ app.post(
         message: 'Password updated successfully.',
       });
     } catch (error) {
-      res.status(500).json({ message: 'Internal server error', error });
+      res.status(500).json({ message: 'Internal server error.', error });
     }
   },
 );
@@ -1174,7 +1174,7 @@ app.post('/user/auth/forgot-password', async (req, res) => {
         'If an account with this email exists, you will receive a password reset code.',
     });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -1218,7 +1218,7 @@ app.post('/user/auth/reset-password', async (req, res) => {
         'Password reset successfully. Please log in with your new password.',
     });
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -1275,7 +1275,7 @@ app.get('/user', authenticateToken, async (req: Request, res: Response) => {
 
     res.status(200).json(users);
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -1304,7 +1304,7 @@ app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
 
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error.', error });
   }
 });
 
@@ -1418,13 +1418,11 @@ app.post(
         return res.status(404).json({ message: 'User not found.' });
       }
 
-      // 1. Verify current password
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: 'Incorrect password.' });
       }
 
-      // 2. Check OTP cooldown
       if (
         user.otpLastSentAt &&
         new Date().getTime() - user.otpLastSentAt.getTime() <
@@ -1483,13 +1481,9 @@ app.delete(
         return res.status(400).json({ message: 'OTP has expired.' });
       }
 
-      // 2. --- PERMANENTLY DELETE USER ---
-      // This will cascade and delete related profile data, etc.
       await prisma.user.delete({
         where: { id: userId },
       });
-
-      // (Note: You may also want to queue a job to delete their S3 files)
 
       res.status(200).json({ message: 'Account deleted successfully.' });
     } catch (error) {
