@@ -1,6 +1,6 @@
 import { MessageReceiver } from '@shared/messaging/src/consumer.js';
 import { MESSAGE_TYPES } from '@shared/messaging/src/constants.js';
-import { CommunicationManager } from './communication_manager';
+import { CommunicationManager } from './communication_manager.js';
 
 export class MessageListener {
   private TYPES_TO_LISTEN = [MESSAGE_TYPES.CommunicationService];

@@ -6,6 +6,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get('/healthz', (req, res) => {
+  res.status(200).send('Comms service is alive');
+});
+
 /**
  * POST /run
  * Runs a single Python code snippet

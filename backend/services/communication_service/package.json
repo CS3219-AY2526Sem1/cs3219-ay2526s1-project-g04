@@ -9,7 +9,8 @@
     "start": "node dist/services/communication_service/src/main.js",
     "type-check": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "cd ../.. && npm run lint -- services/communication_service/src "
+    "lint": "cd ../.. && npm run lint -- services/communication_service/src ",
+    "build": "tsc && tsc-alias"
   },
   "author": "",
   "license": "ISC",

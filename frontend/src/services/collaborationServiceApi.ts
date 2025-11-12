@@ -113,8 +113,10 @@ export async function sessionIsReady(
 
     const jsonRes = await res.json();
 
-    console.log('Get session state successfully', jsonRes['sessionState']);
-    const ready = jsonRes.sessionState === 'active';
+    console.log('Get session state successfully', jsonRes, matchId);
+    const ready =
+      jsonRes.sessionState === 'active' &&
+      jsonRes.communicationState === 'active';
     const created = jsonRes.sessionState === 'created';
     return {
       sessionId: jsonRes.sessionId,

@@ -7,6 +7,7 @@ import {
   getCollabProvider,
   ProviderIsUndefined,
   removeCollabProvider,
+  removeCommsProvider,
 } from './collabSingleton';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -108,6 +109,7 @@ export const Collaboration = (p: CollaborationProps) => {
           if (value?.type === 'end') {
             setTimeout(() => {
               removeCollabProvider();
+              removeCommsProvider();
               router.push('/home/dashboard');
             }, 10000);
           }
