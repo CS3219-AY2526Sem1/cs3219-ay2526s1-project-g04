@@ -162,7 +162,7 @@ export class SessionManager {
     );
   }
 
-  public endSession(sessionId: string, userId: string) {
+  public endSession(sessionId: string) {
     const matchingId = this.sessions[sessionId]?.matchedId;
     if (!matchingId) {
       return;
