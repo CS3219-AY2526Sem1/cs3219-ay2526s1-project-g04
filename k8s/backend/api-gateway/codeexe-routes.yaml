@@ -22,4 +22,4 @@ spec:
               replacePrefixMatch: /
       backendRefs:
         - name: codeexe-service
-          port: 3004
+          port: 3010

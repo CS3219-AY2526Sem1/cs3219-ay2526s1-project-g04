@@ -77,11 +77,11 @@ spec:
                   name: us-secret
                   key: PRIVATE_KEY_BASE_64
 
-          # readinessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
-          # livenessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3005
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3005

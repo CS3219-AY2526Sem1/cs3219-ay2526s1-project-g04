@@ -9,7 +9,7 @@ import {
   GridRowParams,
   GridRenderCellParams,
 } from '@mui/x-data-grid';
-import { Link, Tooltip } from '@mui/material';
+import { Tooltip } from '@mui/material';
 import {
   PencilIcon,
   ArrowUpTrayIcon,

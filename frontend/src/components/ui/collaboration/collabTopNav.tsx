@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { useCodeContext } from '../collaboration/CodeContext';
 import Link from 'next/link';
 import '@/styles/globals.css';
@@ -6,6 +6,7 @@ import {
   AppBar,
   Box,
   Button,
+  CircularProgress,
   IconButton,
   Stack,
   Toolbar,
@@ -23,7 +24,11 @@ import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
 import { terminateSessionIsSuccess } from '@/services/collaborationServiceApi';
 import { useRouter } from 'next/navigation';
-import { getCollabProvider, removeCollabProvider } from './collabSingleton';
+import {
+  getCollabProvider,
+  removeCollabProvider,
+  removeCommsProvider,
+} from './collabSingleton';
 import { getUserId } from '@/lib/utils/jwt';
 
 interface TopNavigationBarProps {
@@ -36,10 +41,11 @@ export default function CollabNavigationBar({
 }: TopNavigationBarProps) {
   const appBarRef = useRef<HTMLDivElement>(null);
 
-  const { code, language, testCases, setResults, sessionId } = useCodeContext();
-  console.log('code in nav', code);
+  const { code, language, testCases, setResults, sessionId, entryPoint } =
+    useCodeContext();
   const router = useRouter();
-  const CODEEXEURL = process.env.NEXT_PUBLIC_CODE_EXE_SERVICE;
+  const [runningCode, setRunningCode] = useState<boolean>(false);
+  const CODEEXEURL = process.env.NEXT_PUBLIC_API_CODE_EXE_SERVICE;
 
   useEffect(() => {
     if (appBarRef.current && onHeightChange) {
@@ -73,12 +79,12 @@ export default function CollabNavigationBar({
     // console.log('parsed output', parsedInputs);
     // console.log(JSON.stringify({ code, parsedInputs }));
     // console.log(JSON.stringify({ code, inputs }));
-
+    setRunningCode(true);
     try {
       const response = await fetch(`${CODEEXEURL}/batch-run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, inputs }),
+        body: JSON.stringify({ code, inputs, entryPoint }),
       });
 
       const results = await response.json();
@@ -87,19 +93,34 @@ export default function CollabNavigationBar({
       if (results?.outputs) {
         console.log('outputs', results.outputs);
         setResults(results.outputs);
+        setRunningCode(false);
         console.log('[Context Updated] Stored outputs in test case context.');
       } else {
+        setRunningCode(false);
         console.warn('⚠️ No outputs found in response.');
       }
 
       return results;
     } catch (err) {
+      setRunningCode(false);
       console.error('❌ Error running batch code:', err);
     }
   }
 
   // Hook it up to the button
   const handleRunClick = () => {
+    if (!code) {
+      alert('No code to run!');
+      return;
+    }
+    // runCode(language, code);
+    runBatchCode(
+      code,
+      testCases.filter((t) => t.visible == 'sample').map((t) => t.input),
+    );
+  };
+
+  const handleRunSubmitClick = () => {
     if (!code) {
       alert('No code to run!');
       return;
@@ -127,6 +148,7 @@ export default function CollabNavigationBar({
           console.log('SENDING MESSAGE');
           const yNotifications = providers.yCodeDoc.getMap('notifications');
           const messagePayload = {
+            type: 'end',
             senderId: getUserId(),
             message:
               'your coding buddy has left, you will be redirected to the home page',
@@ -134,6 +156,7 @@ export default function CollabNavigationBar({
           };
           yNotifications.set(Date.now().toString(), messagePayload);
           removeCollabProvider();
+          removeCommsProvider();
           router.push('/home/dashboard');
         }
       }
@@ -168,53 +191,62 @@ export default function CollabNavigationBar({
           </Tooltip>
         </Stack>
 
-        {/* Sesssion Buttons */}
-        <Stack direction="row" className="w-full justify-center " spacing={2}>
-          <Tooltip title="Run code">
-            <IconButton
-              className="text-[var(--foreground)]"
-              onClick={handleRunClick} // ✅ calls your function
-            >
-              <PlayArrowOutlinedIcon className="text-4xl" />
-            </IconButton>
-          </Tooltip>
-
-          <Tooltip title="Submit Code">
-            <Button
-              className="rounded-full border-black px-5 h-10 self-center"
-              variant="outlined"
-              startIcon={
-                <TaskAltOutlinedIcon className="text-green-500"></TaskAltOutlinedIcon>
-              }
-            >
-              <Typography
-                className="text-green-500 font-bold normal-case"
-                variant="body2"
+        {runningCode ? (
+          <Stack direction="row" className="w-full justify-center" spacing={2}>
+            <CircularProgress size={30} />
+            <Typography variant="body1" className="self-center">
+              Running...
+            </Typography>
+          </Stack>
+        ) : (
+          // {/* Sesssion Buttons */}
+          <Stack direction="row" className="w-full justify-center " spacing={2}>
+            <Tooltip title="Run code">
+              <IconButton
+                className="text-[var(--foreground)]"
+                onClick={handleRunClick} // ✅ calls your function
               >
-                Submit
-              </Typography>
-            </Button>
-          </Tooltip>
+                <PlayArrowOutlinedIcon className="text-4xl" />
+              </IconButton>
+            </Tooltip>
 
-          <Tooltip title="End Session, you will not be able to join back into this room">
-            <Button
-              className="rounded-full border-black px-5 h-10 self-center"
-              variant="outlined"
-              startIcon={
-                <CloseOutlinedIcon className="text-red-500"></CloseOutlinedIcon>
-              }
-              onClick={handleEndSession}
-            >
-              <Typography
-                className="text-red-500 font-bold normal-case"
-                variant="body2"
+            <Tooltip title="Submit Code">
+              <Button
+                className="rounded-full border-black px-5 h-10 self-center"
+                variant="outlined"
+                startIcon={
+                  <TaskAltOutlinedIcon className="text-green-500"></TaskAltOutlinedIcon>
+                }
+                onClick={handleRunSubmitClick}
               >
-                End Sesssion
-              </Typography>
-            </Button>
-          </Tooltip>
-        </Stack>
+                <Typography
+                  className="text-green-500 font-bold normal-case"
+                  variant="body2"
+                >
+                  Submit
+                </Typography>
+              </Button>
+            </Tooltip>
 
+            <Tooltip title="End Session, you will not be able to join back into this room">
+              <Button
+                className="rounded-full border-black px-5 h-10 self-center"
+                variant="outlined"
+                startIcon={
+                  <CloseOutlinedIcon className="text-red-500"></CloseOutlinedIcon>
+                }
+                onClick={handleEndSession}
+              >
+                <Typography
+                  className="text-red-500 font-bold normal-case"
+                  variant="body2"
+                >
+                  End Sesssion
+                </Typography>
+              </Button>
+            </Tooltip>
+          </Stack>
+        )}
         {/* Top Navigation Bar right elements */}
         <Stack direction="row" spacing={2} className="w-full justify-end">
           <Tooltip title="settings">

@@ -617,13 +617,13 @@ export async function updateWithResources(
   if (!updated) return undefined;
 
   // 2. upsert starter code if included in payload
-   const starterPatch: { starter_code?: string; entry_point?: string } = {};
-   if (patch.starter_code !== undefined)
-     starterPatch.starter_code = patch.starter_code;
-   if (patch.entry_point !== undefined)
-     starterPatch.entry_point = patch.entry_point;
+  const starterPatch: { starter_code?: string; entry_point?: string } = {};
+  if (patch.starter_code !== undefined)
+    starterPatch.starter_code = patch.starter_code;
+  if (patch.entry_point !== undefined)
+    starterPatch.entry_point = patch.entry_point;
 
-   await upsertStarter(id, starterPatch);
+  await upsertStarter(id, starterPatch);
 
   // 3. replace test cases if included in payload
   await replaceTestCases(id, patch.test_cases);

@@ -6,6 +6,10 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+app.get('/healthz', (req, res) => {
+  res.status(200).send('Comms service is alive');
+});
+
 /**
  * POST /run
  * Runs a single Python code snippet
@@ -68,7 +72,7 @@ app.post('/run', (req, res) => {
  * Runs the same Python function for multiple input cases and logs results.
  */
 app.post('/batch-run', async (req, res) => {
-  const { code, inputs } = req.body;
+  const { code, inputs, entryPoint } = req.body;
   if (!code || !Array.isArray(inputs))
     return res.status(400).json({ error: 'Missing code or inputs array.' });
 
@@ -76,7 +80,7 @@ app.post('/batch-run', async (req, res) => {
   const funcNameMatch = code.match(/def\s+(\w+)\s*\(/);
   const funcName = funcNameMatch ? funcNameMatch[1] : 'user_function';
 
-  console.log(funcNameMatch);
+  console.log(entryPoint);
   console.log(funcName);
   console.log(code);
   console.log(inputs);

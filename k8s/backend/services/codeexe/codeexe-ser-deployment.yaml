@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codeexe-service
+  labels:
+    app: codeexe-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codeexe-service
+  template:
+    metadata:
+      labels:
+        app: codeexe-service
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      volumes:
+        - name: docker-sock-volume
+          emptyDir: {}
+
+      containers:
+        #  Container 1: Your Node.js Application
+        - name: codeexe-service
+          image: peerprep4/peerprep4:codeexe_service
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3010
+          volumeMounts:
+            - name: docker-sock-volume
+              mountPath: /var/run
+
+        # Container 2: The Docker-in-Docker Daemon Sidecar
+        - name: dind-daemon
+          image: docker:25-dind
+          volumeMounts:
+            - name: docker-sock-volume
+              mountPath: /var/run
+
+          securityContext:
+            privileged: true
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009

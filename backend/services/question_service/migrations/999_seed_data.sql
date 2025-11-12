@@ -581,7 +581,7 @@ INSERT INTO question_python_starter (question_id, starter_code, entry_point) VAL
     'class Solution:
     def serialize(self, root: "TreeNode | None") -> str:
         """
-        Return a BFS serialization with 'null' markers, e.g. "1,2,3,null,null,4,5".
+        Return a BFS serialization with ''null'' markers, e.g. "1,2,3,null,null,4,5".
         """
         pass
 ',

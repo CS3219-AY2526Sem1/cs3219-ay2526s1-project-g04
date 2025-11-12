@@ -5,7 +5,10 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { sessionIsReady } from '@/services/collaborationServiceApi';
-import { getCollabProvider } from '../collaboration/collabSingleton';
+import {
+  getCollabProvider,
+  getCommsProvider,
+} from '../collaboration/collabSingleton';
 import { getUserId } from '@/lib/utils/jwt';
 
 interface MatchedViewProps {
@@ -33,6 +36,7 @@ export default function MatchedView({
         if (created && sessionId) {
           console.log('adding user into socket', matchingId);
           getCollabProvider(sessionId, getUserId()!.toString());
+          getCommsProvider(sessionId, getUserId()!.toString());
           setCreateProcessIsDone(true);
         }
         if (ready && sessionId) {

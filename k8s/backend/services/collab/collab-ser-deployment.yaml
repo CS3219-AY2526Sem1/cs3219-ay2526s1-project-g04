@@ -61,12 +61,17 @@ spec:
                 secretKeyRef:
                   name: cs-secret
                   key: PG_PASSWORD
+            - name: QUESTIONURL
+              valueFrom:
+                secretKeyRef:
+                  name: cs-secret
+                  key: QUESTIONURL
 
-          # readinessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
-          # livenessProbe:
-          #   httpGet:
-          #     path: /healthz
-          #     port: 3009
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3009

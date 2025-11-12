@@ -16,6 +16,10 @@ export async function initServer(redis: MatchingServiceRedis) {
     res.send('Hello World!');
   });
 
+  app.get('/healthz', (req, res) => {
+    res.status(200).send('Matching service is alive');
+  });
+
   await registerMatchRoutes(app, redis);
 
   const server = app.listen(port, () =>

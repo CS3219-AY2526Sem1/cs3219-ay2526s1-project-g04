@@ -12,7 +12,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 1,
     created_at: '2025-11-05T09:00:00.000Z',
     updated_at: '2025-11-05T09:00:00.000Z',
-    snippet: 'Reverse a given string.',
+    snippet_html: '<p>Reverse a given string.</p>',
   },
   {
     id: 'two-sum',
@@ -26,7 +26,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 3,
     created_at: '2025-11-05T09:05:00.000Z',
     updated_at: '2025-11-05T09:05:00.000Z',
-    snippet: 'Find two numbers that sum to a target.',
+    snippet_html: '<p>Find two numbers that sum to a target.</p>',
   },
   {
     id: 'rotate-image-in-place',
@@ -49,7 +49,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 2,
     created_at: '2025-11-05T09:10:00.000Z',
     updated_at: '2025-11-05T09:10:00.000Z',
-    snippet: 'Rotate a matrix by 90° in-place.',
+    snippet_html: '<p>Rotate a matrix by 90° in-place.</p>',
   },
   {
     id: 'merge-sorted-lists',
@@ -66,7 +66,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 1,
     created_at: '2025-11-05T09:12:00.000Z',
     updated_at: '2025-11-05T09:12:00.000Z',
-    snippet: 'Merge two sorted linked lists.',
+    snippet_html: '<p>Merge two sorted linked lists.</p>',
   },
   {
     id: 'valid-parentheses',
@@ -79,7 +79,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 2,
     created_at: '2025-11-05T09:14:00.000Z',
     updated_at: '2025-11-05T09:14:00.000Z',
-    snippet: 'Determine if parentheses are balanced.',
+    snippet_html: '<p>Determine if parentheses are balanced.</p>',
   },
   {
     id: 'longest-substring-without-repeating',
@@ -93,7 +93,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 1,
     created_at: '2025-11-05T09:16:00.000Z',
     updated_at: '2025-11-05T09:16:00.000Z',
-    snippet: 'Find the longest substring without repeating chars.',
+    snippet_html: '<p>Find the longest substring without repeating chars.</p>',
   },
   {
     id: 'binary-tree-level-order',
@@ -107,7 +107,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 2,
     created_at: '2025-11-05T09:18:00.000Z',
     updated_at: '2025-11-05T09:18:00.000Z',
-    snippet: 'Traverse a binary tree level by level.',
+    snippet_html: '<p>Traverse a binary tree level by level.</p>',
   },
   {
     id: 'find-median-from-data-stream',
@@ -124,7 +124,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 1,
     created_at: '2025-11-05T09:20:00.000Z',
     updated_at: '2025-11-05T09:20:00.000Z',
-    snippet: 'Find median efficiently from an incoming stream.',
+    snippet_html: '<p>Find median efficiently from an incoming stream.</p>',
   },
   {
     id: 'word-ladder',
@@ -138,7 +138,7 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 4,
     created_at: '2025-11-05T09:22:00.000Z',
     updated_at: '2025-11-05T09:22:00.000Z',
-    snippet: 'Transform one word to another in minimal steps.',
+    snippet_html: `<p>Implement a function that takes a large dataset of user activity logs and returns the top 10 most active users within a given time range, efficiently handling millions of records without running out of memory or slowing down the server. The function should also allow filtering by user type, activity category, and geographical location, support incremental updates as new logs are added in real time, and provide a summary report including average session duration, peak activity hours, and anomaly detection for unusual user behavior patterns. Consider optimizing for both time and space complexity and using appropriate data structures to maintain scalability.</p>`,
   },
   {
     id: 'lru-cache',
@@ -154,6 +154,6 @@ export const TEST_QUESTION_LIST: Question[] = [
     version: 1,
     created_at: '2025-11-05T09:25:00.000Z',
     updated_at: '2025-11-05T09:25:00.000Z',
-    snippet: 'Implement an LRU cache with O(1) access.',
+    snippet_html: `<p>Implement a function that takes a large dataset of user activity logs and returns the top 10 most active users within a given time range, efficiently handling millions of records without running out of memory or slowing down the server.</p>`,
   },
 ];

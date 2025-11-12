@@ -4,9 +4,11 @@ import { Session } from './session.js';
 import { WebSocketServer } from 'ws';
 import { setupWSConnection } from '@y/websocket-server/utils';
 import { PostgresqlPersistence } from 'y-postgresql';
+import { MessagePublisher } from '@shared/messaging/src/publisher.js';
 import * as Y from 'yjs';
 import type { IncomingMessage } from 'http';
 import type WebSocket from 'ws';
+import { MESSAGE_TYPES } from '@shared/messaging/src/constants.js';
 
 export enum SESSIONSTATE {
   notCreated = 'notCreated',
@@ -102,12 +104,16 @@ export class SessionManager {
     // const sessionId = await this.db.createSessionDataModel(...);
     const ydoc = new Y.Doc();
     const yText = ydoc.getText('monaco');
-    const questionUrl = process.env['QUESTIONURL'];
-    const res = await fetch(
-      `${questionUrl}/questions/${matchedData['questionId']}`,
-    );
-    const resJson: QuestionResponse = await res.json();
-    if (resJson['starter_code']) yText.insert(0, resJson['starter_code']);
+    try {
+      const questionUrl = process.env['QUESTIONURL'];
+      const res = await fetch(
+        `${questionUrl}/questions/${matchedData['questionId']}`,
+      );
+      const resJson: QuestionResponse = await res.json();
+      if (resJson['starter_code']) yText.insert(0, resJson['starter_code']);
+    } catch (error) {
+      console.log(`ERROR ERROR ERROR:`, error);
+    }
 
     const docName = sessionId.toString();
 
@@ -136,6 +142,24 @@ export class SessionManager {
     }
 
     logPersistedDoc(this.pgdb, sessionId.toString());
+
+    // Initialize communication service documents
+    const broker = new MessagePublisher('CollaborationService');
+    await broker.connect();
+
+    const payload = JSON.stringify({
+      type: 'create',
+      matchedId,
+      sessionId,
+    });
+
+    await broker.publishMessageWithType(
+      MESSAGE_TYPES.CommunicationService,
+      payload,
+    );
+    console.log(
+      `Sent session creation for ${sessionId} (match ${matchedId}) to communication service`,
+    );
   }
 
   public saveSession(sessionId: string) {
@@ -166,15 +190,24 @@ export class SessionManager {
       sessionData['session_state'] &&
       sessionData['session_id']
     ) {
-      console.log(1);
-      return {
-        session_state: sessionData['session_state'],
-        session_id: sessionData['session_id'],
-      };
+      if (sessionData['communication_state']) {
+        return {
+          session_state: sessionData['session_state'],
+          session_id: sessionData['session_id'],
+          communication_state: sessionData['communication_state'],
+        };
+      } else {
+        return {
+          session_state: sessionData['session_state'],
+          session_id: sessionData['session_id'],
+          communication_state: SESSIONSTATE.notCreated.valueOf(),
+        };
+      }
     } else {
       return {
         session_state: SESSIONSTATE.notCreated.valueOf(),
         session_id: SESSIONSTATE.notCreated.valueOf(),
+        communication_state: SESSIONSTATE.notCreated.valueOf(),
       };
     }
   }
@@ -225,6 +258,10 @@ export class SessionManager {
         return Number(users[1]);
       }
     }
+  }
+
+  public setCodePassedSession(sessionId: number): void {
+    this.db.setCodePassedBySession(sessionId);
   }
 
   private handleConnection(ws: WebSocket, req: IncomingMessage) {

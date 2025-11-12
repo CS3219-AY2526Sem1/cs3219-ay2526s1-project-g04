@@ -1,0 +1,37 @@
+{
+  "name": "communication_service",
+  "version": "1.0.0",
+  "description": "source code for communication service",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch src/main.ts",
+    "start": "node dist/services/communication_service/src/main.js",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "cd ../.. && npm run lint -- services/communication_service/src ",
+    "build": "tsc && tsc-alias"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@y/websocket-server": "^0.1.1",
+    "amqplib": "^0.10.9",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "redis": "^5.8.3",
+    "ws": "^8.18.3",
+    "y-websocket": "^3.0.0",
+    "yjs": "^13.6.27"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.2",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "@types/ws": "^8.18.1",
+    "tsc-alias": "^1.8.16",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

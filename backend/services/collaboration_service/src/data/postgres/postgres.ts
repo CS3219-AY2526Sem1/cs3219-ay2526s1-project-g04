@@ -41,7 +41,7 @@ export class PostgresPrisma {
   public async getPastSessionsByUser(userId: number) {
     return await this.prismaClient.session.findMany({
       where: {
-        terminationStatus: 1,
+        terminationStatus: 0,
         users: {
           OR: [{ UserAId: userId }, { UserBId: userId }],
         },
@@ -49,6 +49,8 @@ export class PostgresPrisma {
       select: {
         id: true,
         questionId: true,
+        solved: true,
+        endedAt: true,
         users: {
           select: {
             UserAId: true,
@@ -83,6 +85,15 @@ export class PostgresPrisma {
       data: {
         terminationStatus: terminationStatus.valueOf(),
         endedAt: new Date(),
+      },
+    });
+  }
+
+  public async setCodePassedBySession(sessionId: number): Promise<void> {
+    await this.prismaClient.session.update({
+      where: { id: sessionId },
+      data: {
+        solved: true,
       },
     });
   }

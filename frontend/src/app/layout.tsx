@@ -4,8 +4,8 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from '@/styles/theme';
 import '@/styles/globals.css';
+import { SnackbarProvider } from '@/components/ui/notifContext';
 
-// --- 1. Import AuthProvider and necessary React/MUI components ---
 import * as React from 'react';
 import { AuthProvider } from '@/components/auth/AuthContext';
 import { Box, CircularProgress } from '@mui/material';
@@ -48,6 +48,9 @@ export default function RootLayout({
                 {children}
               </React.Suspense>
             </AuthProvider>
+          </ThemeProvider>
+          <ThemeProvider theme={theme}>
+            <SnackbarProvider>{children}</SnackbarProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
