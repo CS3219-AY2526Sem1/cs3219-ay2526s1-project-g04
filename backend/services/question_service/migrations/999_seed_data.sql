@@ -772,8 +772,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  ('sliding-window-maximum', 'sample', '[[[1,3,-1,-3,5,3,6,7],3]]', '[3,3,5,5,6,7]', 1),
-  ('sliding-window-maximum', 'hidden', '[[[9,8,7,6,5,4,3],2]]', '[9,8,7,6,5,4]', 2)
+  ('sliding-window-maximum', 'sample', '[[1,3,-1,-3,5,3,6,7],3]', '[3,3,5,5,6,7]', 1),
+  ('sliding-window-maximum', 'hidden', '[[9,8,7,6,5,4,3],2]', '[9,8,7,6,5,4]', 2)
 ON CONFLICT DO NOTHING;
 
 -- validate-binary-search-tree
@@ -798,7 +798,10 @@ ON CONFLICT DO NOTHING;
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  ('serialize-and-deserialize-binary-tree', 'sample', '[[[1,2,3,null,null,4,5]]]', '"1,2,3,null,null,4,5"', 1)
+  ('serialize-and-deserialize-binary-tree', 'sample',
+   '[[1,2,3,null,null,4,5]]',
+   '"1,2,3,null,null,4,5"',
+   1)
 ON CONFLICT DO NOTHING;
 
 -- n-queens
@@ -831,7 +834,7 @@ ON CONFLICT DO NOTHING;
 -- implement-stack-using-queues
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
   ('implement-stack-using-queues','sample',
-   '[[["MyStack","push","push","top","pop","empty"],[[],[1],[2],[],[],[]]]]',
+   '[["MyStack","push","push","top","pop","empty"],[[],[1],[2],[],[],[]]]',
    '[null,null,null,2,2,false]',1)
 ON CONFLICT DO NOTHING;
 

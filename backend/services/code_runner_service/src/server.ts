@@ -111,13 +111,43 @@ if __name__ == "__main__":
         for case in inputs:
             try:
                 args = ast.literal_eval(case)
-                # 🔧 Always call using *args — no dict unpacking
                 if not isinstance(args, (tuple, list)):
                     args = [args]
+
+                if method.__name__ in ("isValidBST", "maxDepth", "invertTree", "sortedArrayToBST"):
+                    class TreeNode:
+                        def __init__(self, val=0, left=None, right=None):
+                            self.val = val
+                            self.left = left
+                            self.right = right
+
+                    from collections import deque
+                    def build_tree(nodes):
+                        if not nodes:
+                            return None
+                        root = TreeNode(nodes[0])
+                        q = deque([root])
+                        i = 1
+                        while q and i < len(nodes):
+                            node = q.popleft()
+                            if i < len(nodes) and nodes[i] is not None:
+                                node.left = TreeNode(nodes[i])
+                                q.append(node.left)
+                            i += 1
+                            if i < len(nodes) and nodes[i] is not None:
+                                node.right = TreeNode(nodes[i])
+                                q.append(node.right)
+                            i += 1
+                        return root
+
+                    # convert first arg (list) → TreeNode
+                    args = [build_tree(args[0])]
+
                 result = method(*args)
                 print(json.dumps(result))
             except Exception as e:
                 print(json.dumps(f"Error: {e}"))
+
 `;
 
   const args = [
