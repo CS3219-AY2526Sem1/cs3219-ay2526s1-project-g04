@@ -1,0 +1,476 @@
+openapi: 3.0.4
+info:
+  title: Collaborative Service API
+  description: |
+    This API provides comprehensive endpoints for managing user-to-user collaborative coding sessions.
+    All sensitive endpoints are secured using Bearer Token authentication.
+  version: 1.0.0
+
+servers:
+  - url: https://aws_domain/api/collab-service
+    description: Production server
+
+tags:
+  - name: Sessions
+    description: Endpoints for managing and retrieving user session data.
+  - name: Document
+    description: Endpoints for accessing collaborative document content.
+  - name: Question
+    description: Endpoints for linking sessions to question IDs.
+
+paths:
+  /sessions/me:
+    get:
+      summary: Get authenticated user's past sessions
+      description: |
+        Retrieves a list of past programming sessions for the currently authenticated user.
+        Requires a valid Bearer token for authentication.
+      operationId: getMyPastSessions
+      tags:
+        - Sessions
+      security:
+        - bearerAuth: [] # Requires authentication defined in components.securitySchemes
+      responses:
+        '200':
+          description: A list of the user's past sessions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionSummary'
+        '400':
+          description: Bad Request. The userId was invalid or not found in the token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized. The authentication token was missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /sessions/me/active:
+    get:
+      summary: Get authenticated user's active session
+      description: |
+        Retrieves the details of the user's currently active programming session, if one exists.
+        If no session is active, returns an object with empty string values.
+        Requires a valid Bearer token for authentication.
+      operationId: getMyActiveSession
+      tags:
+        - Sessions
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Details of the active session, or empty strings if no session is active.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActiveSession'
+        '400':
+          description: Bad Request. The userId was invalid or not found in the token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized. The authentication token was missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/passed/{sessionId}:
+    post:
+      summary: Mark a session as having passed the code
+      description: Sets the 'code passed' flag for a specific session ID, indicating the user successfully solved the code challenge.
+      operationId: markSessionPassed
+      tags:
+        - Sessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the session to mark as passed.
+          example: 123
+      responses:
+        '204':
+          description: No Content. Session successfully marked as passed.
+        '400':
+          description: Bad Request. Invalid session ID provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized. Authentication token missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/{userId}:
+    get:
+      summary: Get another user's past sessions
+      description: |
+        Retrieves a list of past programming sessions for a specific user ID.
+        Requires a valid Bearer token for authentication.
+      operationId: getPastSessionsByUserId
+      tags:
+        - Sessions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The ID of the user whose sessions are to be retrieved.
+          example: 99
+      responses:
+        '200':
+          description: A list of the user's past sessions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SessionSummary'
+        '400':
+          description: Bad Request. Invalid user ID provided.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized. The authentication token was missing or invalid.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/status/matched/{matchedId}:
+    get:
+      summary: Get the status of a session by its matched ID
+      description: Retrieves the current state and IDs associated with a session based on the unique matched ID (used during the matching phase).
+      operationId: getSessionStatusByMatchedId
+      tags:
+        - Sessions
+      parameters:
+        - name: matchedId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique ID used during the matching phase to identify the session state.
+          example: 'uuid-12345-abcde'
+      responses:
+        '200':
+          description: The current session state details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionStatus'
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/status/session/{sessionId}:
+    get:
+      summary: Get the session state by session ID
+      description: Retrieves the current state of a session using its direct numerical session ID.
+      operationId: getSessionStateBySessionId
+      tags:
+        - Sessions
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique ID of the session.
+          example: '123'
+      responses:
+        '200':
+          description: The current session state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessionState:
+                    type: string
+                    description: The current state of the session (e.g., WAITING, ACTIVE, ENDED).
+                    example: ACTIVE
+                required:
+                  - sessionState
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sessions/{sessionId}/user/{userId}:
+    delete:
+      summary: End and delete a session
+      description: |
+        Ends the specified session, typically used when a user leaves or closes an active session.
+        The endpoint path requires both sessionId and userId, though the current implementation only uses the sessionId to end the session.
+      operationId: endSession
+      tags:
+        - Sessions
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique ID of the session to be ended.
+          example: 'uuid-12345'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user requesting the session end (required by route structure).
+          example: '123'
+      responses:
+        '204':
+          description: No Content. Session successfully ended.
+        '500':
+          description: Internal Server Error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /document/{sessionId}:
+    get:
+      summary: Get the collaborative document content
+      description: Retrieves the current content of the Y.Doc (collaborative document) associated with a specific session ID.
+      operationId: getDocumentContent
+      tags:
+        - Document
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The unique ID of the session associated with the document.
+          example: 'uuid-12345'
+      responses:
+        '200':
+          description: The document content and metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentContent'
+        '500':
+          description: Internal Server Error, typically due to failure to load the persisted document.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /question/{sessionId}:
+    get:
+      summary: Get the question ID for a session
+      description: Retrieves the question ID associated with a given session ID from the database.
+      operationId: getQuestionIdBySession
+      tags:
+        - Question
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the session to look up the question for.
+          example: '123'
+      responses:
+        '200':
+          description: The question ID for the specified session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionId'
+        '500':
+          description: Internal Server Error or the question ID could not be found for the session.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    SessionSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The unique identifier for the session.
+          example: 123
+        questionId:
+          type: integer
+          description: The ID of the question associated with the session.
+          example: 45
+        solved:
+          type: boolean
+          description: Whether the question in the session was marked as solved.
+          example: true
+        endedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the session ended.
+          example: '2023-10-27T10:30:00Z'
+        UserAId:
+          type: integer
+          nullable: true
+          description: The ID of the first user in the session.
+          example: 1
+        UserBId:
+          type: integer
+          nullable: true
+          description: The ID of the second user in the session.
+          example: 2
+      required:
+        - id
+        - questionId
+        - solved
+        - endedAt
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: A brief description of the error.
+          example: Internal server error
+      required:
+        - error
+
+    ActiveSession:
+      type: object
+      description: Represents an active session or indicates no active session.
+      properties:
+        sessionId:
+          type: string
+          description: The ID of the active session, or an empty string if none.
+          example: '123'
+        questionId:
+          type: string
+          description: The question ID for the active session, or an empty string if none.
+          example: '45'
+        partnerId:
+          type: string
+          description: The partner's ID in the active session, or an empty string if none.
+          example: '2'
+      required:
+        - sessionId
+        - questionId
+        - partnerId
+
+    SessionStatus:
+      type: object
+      description: Current state and communication status of a session.
+      properties:
+        sessionState:
+          type: string
+          description: The current state of the session (e.g., WAITING, ACTIVE, ENDED).
+          example: ACTIVE
+        sessionId:
+          type: string
+          description: The ID of the session, returned as a string.
+          example: '123'
+        communicationState:
+          type: string
+          description: The state of communication channels (e.g., CONNECTED, DISCONNECTED).
+          example: CONNECTED
+      required:
+        - sessionState
+        - sessionId
+        - communicationState
+
+    DocumentContent:
+      type: object
+      description: The content and metadata of a collaborative document (Y.Doc).
+      properties:
+        sessionId:
+          type: string
+          description: The ID of the session the document belongs to.
+          example: 'uuid-12345'
+        content:
+          type: string
+          description: The actual text content of the document.
+          example: "def main():\n  print('Hello')"
+        length:
+          type: integer
+          description: The length of the document content string.
+          example: 24
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the document content was last retrieved/updated.
+          example: '2023-11-13T04:30:00Z'
+      required:
+        - sessionId
+        - content
+        - length
+        - updatedAt
+
+    QuestionId:
+      type: object
+      description: The ID of the question associated with a session.
+      properties:
+        question_id:
+          type: integer
+          description: The unique ID of the question.
+          example: 45
+      required:
+        - question_id
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT Authentication token. Provide the token in the 'Authorization' header
+        using the Bearer scheme (e.g., 'Authorization: Bearer <token>').

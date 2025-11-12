@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist",
+    "rootDirs": ["./src", "./scripts", "./prisma"],
+
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "esnext",
+    "types": ["node", "jest"],
+
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noUnusedLocals": true,
+    "noPropertyAccessFromIndexSignature": true,
+
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "scripts/**/*.ts",
+    "tests/**/*.ts",
+    "jest.setup.ts",
+    "jest.global-setup.ts",
+    "jest.global-teardown.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "../../shared/**/tests/**",
+    "../../shared/**/dist/**",
+    "../../shared/**/node_modules/**"
+  ]
+}

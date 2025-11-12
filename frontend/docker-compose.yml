@@ -1,0 +1,22 @@
+services:
+  frontend:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+
+    ports:
+      - "3100:3100"
+    networks:
+      - peerprep-network
+
+    environment:
+      NEXT_PUBLIC_API_COLLAB_SERVICE: ${NEXT_PUBLIC_API_COLLAB_SERVICE}
+      NEXT_PUBLIC_API_QUESTION_SERVICE: ${NEXT_PUBLIC_API_QUESTION_SERVICE}
+      NEXT_PUBLIC_API_MATCHING_SERVICE: ${NEXT_PUBLIC_API_MATCHING_SERVICE}
+      NEXT_PUBLIC_API_USER_SERVICE: ${NEXT_PUBLIC_API_USER_SERVICE}
+      NEXT_PUBLIC_API_CODE_EXE_SERVICE: ${NEXT_PUBLIC_API_CODE_EXE_SERVICE}
+      NEXT_PUBLIC_API_COMMS_SERVICE: ${NEXT_PUBLIC_API_COMMS_SERVICE}
+
+networks:
+  peerprep-network:
+    external: true

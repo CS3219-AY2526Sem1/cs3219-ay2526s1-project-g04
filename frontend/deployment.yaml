@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: peerprep4
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: peerprep4
+  template:
+    metadata:
+      labels:
+        app: peerprep4
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: peerprep4
+          image: peerprep4/peerprep4:frontend
+          ports:
+            - containerPort: 3100

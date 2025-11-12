@@ -1,0 +1,204 @@
+openapi: 3.0.4
+info:
+  title: Matching Service API
+  description: The matching service is responsible for matching users based on some reasonable criteria (e.g., topics and difficulty level of questions, proficiency level of the users, etc.)
+  version: 0.1.9
+
+servers:
+  - url: http://localhost:3008
+    description: Local Development Server
+
+paths:
+  /match/request:
+    post:
+      summary: Send a request to be matched (based on specified difficulty and topics).
+      parameters:
+        - in: header
+          required: true
+          name: Authorization
+          schema:
+            type: string
+          example: 'Bearer <user_token>'
+        - in: header
+          name: Content-Type
+          required: true
+          schema:
+            type: string
+            default: application/json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - difficulty
+                - topics
+              properties:
+                difficulty:
+                  type: string
+                  enum: [Easy, Medium, Hard]
+                topics:
+                  type: array
+                  items:
+                    type: string
+                  example:
+                    ['array', 'dynamic-programming']
+                    # proficiency:
+                    #   type: string
+                    #   enum: [beginner, intermediate, advance]
+      responses:
+        '200':
+          description: Match request accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Request accepted. User queued.'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'User already has a pending match request.'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Internal server error.'
+
+  /match/status:
+    get:
+      summary: Get matching status for a user
+      parameters:
+        - in: header
+          required: true
+          name: Authorization
+          schema:
+            type: string
+          example: 'Bearer <user_token>'
+      responses:
+        '200':
+          description: Current matching status.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                      [
+                        waiting,
+                        matched,
+                        matching,
+                        timeout,
+                        disconnected,
+                        cancelled,
+                      ]
+                  remainingTime:
+                    type: integer
+                    description: Remaining seconds until timeout (only if waiting or matching)
+                  matchingId:
+                    type: string
+                    description: Matching ID of match.
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Missing userId.'
+        '404':
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'User not found.'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Internal server error.'
+
+  /match/cancel:
+    delete:
+      summary: Cancel matching request for a user.
+      parameters:
+        - in: header
+          required: true
+          name: Authorization
+          schema:
+            type: string
+          example: 'Bearer <user_token>'
+        - in: header
+          name: Content-Type
+          required: true
+          schema:
+            type: string
+            default: application/json
+      responses:
+        '200':
+          description: Match request cancelled successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Match request cancelled successfully.'
+        '400':
+          description: Invalid request.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Missing userId.'
+        '404':
+          description: User not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'User not found.'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Internal server error.'

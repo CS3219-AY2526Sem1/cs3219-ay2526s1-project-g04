@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    /* ## Type Checking ## */
+    "strict": true, // Enable all strict type-checking options. This is a best practice.
+    "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file.
+    "noImplicitAny": true, // Raise error on expressions and declarations with an implied 'any' type.
+    "strictNullChecks": true, // Enable strict null checks.
+
+    /* ## Modules ## */
+    "module": "CommonJS", // Specify module code generation: 'CommonJS' for Node.js backends.
+    "esModuleInterop": true, // Enables compatibility with CommonJS modules, fixing errors with libraries like Express.
+    "resolveJsonModule": true, // Allows importing .json files.
+
+    /* ## Emit ## */
+    "outDir": "./dist", // Redirect output structure to the directory.
+    "sourceMap": true, // Generates corresponding '.map' file for easier debugging.
+
+    /* ## Language and Environment ## */
+    "target": "ES2022", // Specify ECMAScript target version. ES2022 is a good modern choice.
+    "lib": ["ES2022"], // List of library files to be included in the compilation.
+
+    /* ## Project Structure ## */
+    "rootDirs": ["./src", "./prisma"],
+
+    /* ## Other ## */
+    "skipLibCheck": true // Skip type checking of declaration files (.d.ts) from dependencies.
+  },
+  "include": [
+    "src/**/*" // Specifies which files TypeScript should compile.
+  ],
+  "exclude": [
+    "node_modules", // Excludes the node_modules folder from compilation.
+    "**/*.spec.ts" // Excludes test files.
+  ]
+}

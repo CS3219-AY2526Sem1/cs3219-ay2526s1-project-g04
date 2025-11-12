@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
+      containers:
+        - name: frontend
+          image: peerprep4/peerprep4:frontend
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3100
+          resources:
+            requests:
+              cpu: "200m"
