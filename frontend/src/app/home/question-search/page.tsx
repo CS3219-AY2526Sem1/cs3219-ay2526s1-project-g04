@@ -19,7 +19,7 @@ export default function QuestionSearchPage() {
   // get the role of user
   React.useEffect(() => {
     const role = getRole();
-    console.log(`User role: ${role}`);
+    // console.log(`User role: ${role}`);
     setUserRole(role);
   }, []);
 

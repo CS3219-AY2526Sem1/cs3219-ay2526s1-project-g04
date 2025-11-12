@@ -128,9 +128,9 @@ export default function QuestionBankTable({
           const data = res.data;
           const items = data.items;
 
-          console.log(
-            `[Question Bank Table] retrieved items: ${JSON.stringify(items)}`,
-          );
+          // console.log(
+          //   `[Question Bank Table] retrieved items: ${JSON.stringify(items)}`,
+          // );
 
           setQuestions(items);
           setRowCount(data.total || items.length);

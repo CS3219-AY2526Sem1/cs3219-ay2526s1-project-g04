@@ -55,7 +55,7 @@ export default function QuestionViewPage() {
             return;
           }
 
-          console.log(`got question successfully: ${JSON.stringify(res.data)}`);
+          // console.log(`got question successfully: ${JSON.stringify(res.data)}`);
           setQuestionData(res.data);
         })
         .catch((err) => console.error(err))
