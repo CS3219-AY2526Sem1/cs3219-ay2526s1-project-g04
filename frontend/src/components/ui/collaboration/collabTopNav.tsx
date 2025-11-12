@@ -75,35 +75,46 @@ export default function CollabNavigationBar({
 
   async function runBatchCode(code: string, inputs: string[]) {
     console.log('[Batch Runner Inputs]', inputs);
+    console.log('[Entry Point]', entryPoint);
 
-    // console.log('parsed output', parsedInputs);
-    // console.log(JSON.stringify({ code, parsedInputs }));
-    // console.log(JSON.stringify({ code, inputs }));
+    if (!CODEEXEURL) {
+      alert('⚠️ Missing CODEEXEURL environment variable');
+      return;
+    }
+
     setRunningCode(true);
+
     try {
       const response = await fetch(`${CODEEXEURL}/batch-run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, inputs, entryPoint }),
+        body: JSON.stringify({
+          code,
+          inputs,
+          entryPoint, // ✅ send this for universal dispatch
+        }),
       });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Runner returned ${response.status}: ${errText}`);
+      }
 
       const results = await response.json();
       console.log('[Batch Runner Results]', results);
 
       if (results?.outputs) {
-        console.log('outputs', results.outputs);
+        console.log('[Outputs]', results.outputs);
         setResults(results.outputs);
-        setRunningCode(false);
         console.log('[Context Updated] Stored outputs in test case context.');
       } else {
-        setRunningCode(false);
         console.warn('⚠️ No outputs found in response.');
       }
-
-      return results;
     } catch (err) {
-      setRunningCode(false);
       console.error('❌ Error running batch code:', err);
+      alert('Error executing code. Please check the console for details.');
+    } finally {
+      setRunningCode(false);
     }
   }
 
@@ -116,7 +127,7 @@ export default function CollabNavigationBar({
     // runCode(language, code);
     runBatchCode(
       code,
-      testCases.filter((t) => t.visible == 'sample').map((t) => t.input),
+      testCases.filter((t) => t.visible === 'sample').map((t) => t.input),
     );
   };
 

@@ -511,8 +511,10 @@ INSERT INTO question_python_starter (question_id, starter_code, entry_point) VAL
   (
     'linked-list-cycle-detection',
     'class Solution:
-    def hasCycle(self, head: "ListNode | None") -> bool:
+    def hasCycle(self, list: list[int], pos: int) -> bool:
+        # convert list+pos into a linked list internally
         pass
+
 ',
     'Solution.hasCycle'
   ),
@@ -729,263 +731,151 @@ ON CONFLICT (question_id) DO UPDATE
       entry_point  = EXCLUDED.entry_point;
 
 -- ==============================================================
--- Test cases (ordinals now 1..n)
+-- Test cases (array-style positional inputs)
 -- ==============================================================
 
 -- reverse-a-string
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'reverse-a-string',
-    'sample',
-    '["h","e","l","l","o"]',
-    '["o","l","l","e","h"]',
-    1
-  ),
-  (
-    'reverse-a-string',
-    'hidden',
-    '["H","a","n","n","a","h"]',
-    '["h","a","n","n","a","H"]',
-    2
-  )
+  ('reverse-a-string', 'sample', '[["h","e","l","l","o"]]', '["o","l","l","e","h"]', 1),
+  ('reverse-a-string', 'hidden', '[["H","a","n","n","a","h"]]', '["h","a","n","n","a","H"]', 2)
 ON CONFLICT DO NOTHING;
 
 -- linked-list-cycle-detection
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'linked-list-cycle-detection',
-    'sample',
-    '{"list":[3,2,0,-4],"pos":1}',
-    'true',
-    1
-  ),
-  (
-    'linked-list-cycle-detection',
-    'hidden',
-    '{"list":[1,2],"pos":0}',
-    'true',
-    2
-  ),
-  (
-    'linked-list-cycle-detection',
-    'hidden',
-    '{"list":[1],"pos":-1}',
-    'false',
-    3
-  )
+  ('linked-list-cycle-detection', 'sample', '[[[3,2,0,-4],1]]', 'true', 1),
+  ('linked-list-cycle-detection', 'hidden', '[[[1,2],0]]', 'true', 2),
+  ('linked-list-cycle-detection', 'hidden', '[[[1],-1]]', 'false', 3)
 ON CONFLICT DO NOTHING;
 
 -- rotate-image
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'rotate-image',
-    'sample',
-    '[[1,2,3],[4,5,6],[7,8,9]]',
-    '[[7,4,1],[8,5,2],[9,6,3]]',
-    1
-  ),
-  (
-    'rotate-image',
-    'hidden',
-    '[[5,1,9,11],[2,4,8,10],[13,3,6,7],[15,14,12,16]]',
-    '[[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]]',
-    2
-  )
+  ('rotate-image', 'sample', '[[[[1,2,3],[4,5,6],[7,8,9]]]]', '[[7,4,1],[8,5,2],[9,6,3]]', 1),
+  ('rotate-image', 'hidden', '[[[[5,1,9,11],[2,4,8,10],[13,3,6,7],[15,14,12,16]]]]', '[[15,13,2,5],[14,3,4,1],[12,6,8,9],[16,7,10,11]]', 2)
 ON CONFLICT DO NOTHING;
 
 -- longest-common-subsequence
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'longest-common-subsequence',
-    'sample',
-    '{"text1":"abcde","text2":"ace"}',
-    '3',
-    1
-  ),
-  (
-    'longest-common-subsequence',
-    'hidden',
-    '{"text1":"abc","text2":"abc"}',
-    '3',
-    2
-  ),
-  (
-    'longest-common-subsequence',
-    'hidden',
-    '{"text1":"abc","text2":"def"}',
-    '0',
-    3
-  )
+  ('longest-common-subsequence', 'sample', '["abcde","ace"]', '3', 1),
+  ('longest-common-subsequence', 'hidden', '["abc","abc"]', '3', 2),
+  ('longest-common-subsequence', 'hidden', '["abc","def"]', '0', 3)
 ON CONFLICT DO NOTHING;
 
 -- sliding-window-maximum
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'sliding-window-maximum',
-    'sample',
-    '{"nums":[1,3,-1,-3,5,3,6,7],"k":3}',
-    '[3,3,5,5,6,7]',
-    1
-  ),
-  (
-    'sliding-window-maximum',
-    'hidden',
-    '{"nums":[9,8,7,6,5,4,3],"k":2}',
-    '[9,8,7,6,5,4]',
-    2
-  )
+  ('sliding-window-maximum', 'sample', '[[[1,3,-1,-3,5,3,6,7],3]]', '[3,3,5,5,6,7]', 1),
+  ('sliding-window-maximum', 'hidden', '[[[9,8,7,6,5,4,3],2]]', '[9,8,7,6,5,4]', 2)
 ON CONFLICT DO NOTHING;
 
 -- validate-binary-search-tree
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'validate-binary-search-tree',
-    'sample',
-    '{"tree":[2,1,3]}',
-    'true',
-    1
-  ),
-  (
-    'validate-binary-search-tree',
-    'hidden',
-    '{"tree":[5,1,4,null,null,3,6]}',
-    'false',
-    2
-  )
+  ('validate-binary-search-tree', 'sample', '[[[2,1,3]]]', 'true', 1),
+  ('validate-binary-search-tree', 'hidden', '[[[5,1,4,null,null,3,6]]]', 'false', 2)
 ON CONFLICT DO NOTHING;
 
 -- lru-cache
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'lru-cache',
-    'sample',
-    '{"ops":["LRUCache","put","put","get","put","get","put","get","get","get"],"args":[[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]}',
-    '[null,null,null,1,null,-1,null,-1,3,4]',
-    1
-  )
+  ('lru-cache', 'sample',
+   '[[["LRUCache","put","put","get","put","get","put","get","get","get"],
+      [[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]]]',
+   '[null,null,null,1,null,-1,null,-1,3,4]', 1)
 ON CONFLICT DO NOTHING;
 
 -- serialize-and-deserialize-binary-tree
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'serialize-and-deserialize-binary-tree',
-    'sample',
-    '{"tree":[1,2,3,null,null,4,5]}',
-    '"1,2,3,null,null,4,5"',
-    1
-  )
+  ('serialize-and-deserialize-binary-tree', 'sample', '[[[1,2,3,null,null,4,5]]]', '"1,2,3,null,null,4,5"', 1)
 ON CONFLICT DO NOTHING;
 
 -- n-queens
 INSERT INTO question_test_cases
   (question_id, visibility, input_data, expected_output, ordinal)
 VALUES
-  (
-    'n-queens',
-    'sample',
-    '{"n":4}',
-    '[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]',
-    1
-  )
+  ('n-queens', 'sample', '[4]',
+   '[[".Q..","...Q","Q...","..Q."],["..Q.","Q...","...Q",".Q.."]]', 1)
 ON CONFLICT DO NOTHING;
 
 -- roman-to-integer
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('roman-to-integer','sample','{"s":"MCMXCIV"}','1994',1),
-  ('roman-to-integer','hidden','{"s":"LVIII"}','58',2)
+  ('roman-to-integer','sample','["MCMXCIV"]','1994',1),
+  ('roman-to-integer','hidden','["LVIII"]','58',2)
 ON CONFLICT DO NOTHING;
 
 -- add-binary
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('add-binary','sample','{"a":"11","b":"1"}','"100"',1),
-  ('add-binary','hidden','{"a":"1010","b":"1011"}','"10101"',2)
+  ('add-binary','sample','["11","1"]','"100"',1),
+  ('add-binary','hidden','["1010","1011"]','"10101"',2)
 ON CONFLICT DO NOTHING;
 
 -- fibonacci-number
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('fibonacci-number','sample','{"n":4}','3',1),
-  ('fibonacci-number','hidden','{"n":0}','0',2),
-  ('fibonacci-number','hidden','{"n":1}','1',3)
+  ('fibonacci-number','sample','[4]','3',1),
+  ('fibonacci-number','hidden','[0]','0',2),
+  ('fibonacci-number','hidden','[1]','1',3)
 ON CONFLICT DO NOTHING;
 
--- implement-stack-using-queues (operation-based harness)
+-- implement-stack-using-queues
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  (
-    'implement-stack-using-queues',
-    'sample',
-    '{"ops":["MyStack","push","push","top","pop","empty"],"args":[[],[1],[2],[],[],[]]}',
-    '[null,null,null,2,2,false]',
-    1
-  )
+  ('implement-stack-using-queues','sample',
+   '[[["MyStack","push","push","top","pop","empty"],[[],[1],[2],[],[],[]]]]',
+   '[null,null,null,2,2,false]',1)
 ON CONFLICT DO NOTHING;
 
--- combine-two-tables (expect canonical SQL string normalized)
+-- combine-two-tables
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  (
-    'combine-two-tables',
-    'sample',
-    '{}',
-    '"SELECT p.firstName, p.lastName, a.city, a.state FROM Person p LEFT JOIN Address a ON a.personId = p.id"',
-    1
-  )
+  ('combine-two-tables','sample','[]',
+   '"SELECT p.firstName, p.lastName, a.city, a.state FROM Person p LEFT JOIN Address a ON a.personId = p.id"',1)
 ON CONFLICT DO NOTHING;
 
 -- repeated-dna-sequences
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('repeated-dna-sequences','sample','{"s":"AAAAACCCCCAAAAACCCCCCAAAAAGGGTTT"}','["AAAAACCCCC","CCCCCAAAAA"]',1),
-  ('repeated-dna-sequences','hidden','{"s":"AAAAAAAAAAAAA"}','["AAAAAAAAAA"]',2)
+  ('repeated-dna-sequences','sample','["AAAAACCCCCAAAAACCCCCCAAAAAGGGTTT"]','["AAAAACCCCC","CCCCCAAAAA"]',1),
+  ('repeated-dna-sequences','hidden','["AAAAAAAAAAAAA"]','["AAAAAAAAAA"]',2)
 ON CONFLICT DO NOTHING;
 
 -- course-schedule
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('course-schedule','sample','{"numCourses":2,"prerequisites":[[1,0]]}','true',1),
-  ('course-schedule','hidden','{"numCourses":2,"prerequisites":[[1,0],[0,1]]}','false',2)
+  ('course-schedule','sample','[2,[[1,0]]]','true',1),
+  ('course-schedule','hidden','[2,[[1,0],[0,1]]]','false',2)
 ON CONFLICT DO NOTHING;
 
 -- airplane-seat-assignment-probability
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('airplane-seat-assignment-probability','sample','{"n":1}','1',1),
-  ('airplane-seat-assignment-probability','hidden','{"n":10}','0.5',2)
+  ('airplane-seat-assignment-probability','sample','[1]','1',1),
+  ('airplane-seat-assignment-probability','hidden','[10]','0.5',2)
 ON CONFLICT DO NOTHING;
 
 -- wildcard-matching
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('wildcard-matching','sample','{"s":"aa","p":"a"}','false',1),
-  ('wildcard-matching','hidden','{"s":"aa","p":"*"}','true',2),
-  ('wildcard-matching','hidden','{"s":"cb","p":"?a"}','false',3)
+  ('wildcard-matching','sample','["aa","a"]','false',1),
+  ('wildcard-matching','hidden','["aa","*"]','true',2),
+  ('wildcard-matching','hidden','["cb","?a"]','false',3)
 ON CONFLICT DO NOTHING;
 
 -- chalkboard-xor-game
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  ('chalkboard-xor-game','sample','{"nums":[1,1,2]}','false',1),
-  ('chalkboard-xor-game','hidden','{"nums":[1,2,3]}','true',2)
+  ('chalkboard-xor-game','sample','[[1,1,2]]','false',1),
+  ('chalkboard-xor-game','hidden','[[1,2,3]]','true',2)
 ON CONFLICT DO NOTHING;
 
--- trips-and-users (expect canonical SQL string normalized)
+-- trips-and-users
 INSERT INTO question_test_cases (question_id, visibility, input_data, expected_output, ordinal) VALUES
-  (
-    'trips-and-users',
-    'sample',
-    '{}',
-    '"-- return an aggregate query computing daily cancellation rate excluding banned users"',
-    1
-  )
+  ('trips-and-users','sample','[]',
+   '"-- return an aggregate query computing daily cancellation rate excluding banned users"',1)
 ON CONFLICT DO NOTHING;
 
 -- ==============================================================

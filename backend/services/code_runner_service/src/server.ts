@@ -12,7 +12,7 @@ app.get('/healthz', (req, res) => {
 
 /**
  * POST /run
- * Runs a single Python code snippet
+ * Runs a single Python code snippet (for manual runs)
  */
 app.post('/run', (req, res) => {
   const { code, input } = req.body;
@@ -69,41 +69,57 @@ app.post('/run', (req, res) => {
 
 /**
  * POST /batch-run
- * Runs the same Python function for multiple input cases and logs results.
+ * Runs the same Python solution function for multiple input cases.
+ * Universal handler: supports any entry point (class.method),
+ * variable number of args, and no-arg SQL problems.
  */
 app.post('/batch-run', async (req, res) => {
   const { code, inputs, entryPoint } = req.body;
-  if (!code || !Array.isArray(inputs))
-    return res.status(400).json({ error: 'Missing code or inputs array.' });
 
-  // Extract function name
-  const funcNameMatch = code.match(/def\s+(\w+)\s*\(/);
-  const funcName = funcNameMatch ? funcNameMatch[1] : 'user_function';
+  if (!code || !entryPoint)
+    return res.status(400).json({ error: 'Missing code or entryPoint.' });
 
-  console.log(entryPoint);
-  console.log(funcName);
-  console.log(code);
-  console.log(inputs);
+  if (!Array.isArray(inputs))
+    return res.status(400).json({ error: 'Inputs must be an array.' });
 
-  // Wrap code
+  const [className, methodName] = entryPoint.split('.');
+  console.log(`\n[BATCH-RUN] Entry: ${entryPoint}`);
+  console.log(`[BATCH-RUN] Inputs: ${JSON.stringify(inputs, null, 2)}`);
+
   const wrapper = `
 ${code}
 
 if __name__ == "__main__":
-    import sys, json
-    import ast
-    inputs = json.loads(sys.argv[1])
-    solver = Solution()
-    for case in inputs:
-        case = ast.literal_eval(case)
+    import sys, json, ast
+
+    try:
+        inputs = json.loads(sys.argv[1])
+    except Exception:
+        inputs = []
+
+    solver = ${className}()
+    method = getattr(solver, "${methodName}")
+
+    # No inputs (e.g., SQL or static-return problems)
+    if not inputs:
         try:
-            result = solver.${funcName}(case)
-            print(json.dumps(result))  # JSON-encoded output for easy parsing
+            result = method()
+            print(json.dumps(result))
         except Exception as e:
             print(json.dumps(f"Error: {e}"))
+    else:
+        for case in inputs:
+            try:
+                args = ast.literal_eval(case)
+                # 🔧 Always call using *args — no dict unpacking
+                if not isinstance(args, (tuple, list)):
+                    args = [args]
+                result = method(*args)
+                print(json.dumps(result))
+            except Exception as e:
+                print(json.dumps(f"Error: {e}"))
 `;
 
-  // Docker args
   const args = [
     'run',
     '--rm',
@@ -118,11 +134,7 @@ if __name__ == "__main__":
     )}'`,
   ];
 
-  console.log(
-    `[BATCH-RUN] Running Python function "${funcName}" on ${inputs.length} inputs...`,
-  );
-  console.log(`[INPUTS]`, JSON.stringify(inputs, null, 2));
-
+  console.log(`[BATCH-RUN] Executing Docker sandbox...`);
   const child = spawn('docker', args, { shell: false });
   let stdout = '',
     stderr = '';
@@ -131,7 +143,7 @@ if __name__ == "__main__":
   child.stderr.on('data', (d) => (stderr += d));
 
   const timeout = setTimeout(() => {
-    stderr += '\nTimeout: execution exceeded 3s.\n';
+    stderr += '\nTimeout: execution exceeded 30s.\n';
     child.kill('SIGKILL');
   }, 30000);
 
@@ -144,7 +156,6 @@ if __name__ == "__main__":
 
   child.on('close', (code) => {
     clearTimeout(timeout);
-
     const rawOutputs = stdout.trim().split('\n').filter(Boolean);
     const parsedOutputs = rawOutputs.map((o) => {
       try {
@@ -154,8 +165,7 @@ if __name__ == "__main__":
       }
     });
 
-    // Log inputs/outputs in aligned format
-    console.log(`\n[RESULTS for ${funcName}]`);
+    console.log(`\n[RESULTS for ${entryPoint}]`);
     inputs.forEach((inp: any, i: number) => {
       console.log(`  Input ${i + 1}:`, JSON.stringify(inp));
       console.log(`  Output ${i + 1}:`, parsedOutputs[i]);
@@ -172,7 +182,8 @@ if __name__ == "__main__":
 });
 
 function escapeForShell(input: string): string {
+  // Escape quotes, $, backslashes, and backticks safely
   return input.replace(/(["\\$`])/g, '\\$1');
 }
 
-app.listen(3010, () => console.log('Python Runner ready on :3010'));
+app.listen(3010, () => console.log('Code runner service ready on :3010'));
