@@ -43,24 +43,6 @@ Our team has decided to prioritize the N2H features that provide the most immedi
     * **Language Support:** Python
 * **Role Allocation:** Debbie
 
-### Test Cases (80% coverage)
-
-* **Relevance:** Critical (for long-term project health). High `Test Coverage` ensures that when we add new features (like 'Admin Permissions'), we don't accidentally break existing ones (like 'Login'). 
-* **Technical Feasibility:** High. We will use Jest to run coverage test. 
-* ``` json
-  {
-    "scripts": {
-    "test": "jest",
-    "test:coverage": "jest --coverage"
-    }
-  }
-  ```
-  Simply run this from time to time:
-  ``` bash
-  npm run test:coverage
-  ```
-* **Role Allocation:** Everyone
-
 ###  CI/CD
 * **Relevance:** `CI/CD` (Continuous Integration / Continuous Deployment) automates testing and deployment, allowing us to ship features faster and more reliably.
 * **Technical Feasibility:** High. This is a standard, essential development practice. `Point 5` will elaborate on CI/CD.
