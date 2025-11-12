@@ -20,6 +20,7 @@ export class CollabRedis {
     return CollabRedis.instance;
   }
 
+  // Retrieves the matched user and question data associated with a match ID
   public async getMatchedData(
     matchedId: string,
   ): Promise<Record<string, string>> {
@@ -28,6 +29,7 @@ export class CollabRedis {
     return matchedData;
   }
 
+  // Adds session details (sessionId and state) to a matched user’s Redis record
   public async addSessionDataToUser(
     sessionId: string,
     matchedId: string,
@@ -45,6 +47,7 @@ export class CollabRedis {
     });
   }
 
+  // Updates the session state (e.g., created → active → end) for a given match ID
   public async setSessionState(
     sessionId: string,
     matchedId: string,
@@ -61,6 +64,7 @@ export class CollabRedis {
     await this.redis.setDictValueByKey(matchedId, matchedRedisData);
   }
 
+  // Retrieves the session state, session ID, and communication state for a given match ID
   public async getSessionState(
     matchedId: string,
   ): Promise<Record<string, string | undefined>> {

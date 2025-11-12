@@ -1,4 +1,97 @@
-# README for collaboration service
+# Collaboration Service Overview
+
+Collaboration service is in charge of handling sessions between 2 users. This readme covers the workflow of the collaboration service in the backend.
+
+## Project Structure
+
+File structure:
+
+```
+backend/services/collaboration_service/
+├── Dockerfile
+├── README.md
+├── package.json
+├── tsconfig.json
+├── public.pem
+├── generated/
+│   └── prisma/
+├── middleware/
+│   └── auth.ts
+├── src/
+│   ├── main.ts
+│   ├── collab.ts
+│   ├── app.ts
+│   ├── listener.ts
+│   ├── data/
+│   │   ├── collab_redis.ts
+│   │   └── postgres/
+│   │       └── postgres.ts
+│   └── session/
+│       ├── session.ts
+│       └── session_manager.ts
+```
+
+## How to run
+
+Install packages through `pnpm i`.
+
+Execute the docker through `docker compose up`. Ensure to add the .env with your server details.
+
+## Managing sessions
+
+Sessions are managed and created within the session folder. When a "session" is created, the following happens:
+
+1. **Collaboration Service creates a new session record**
+   - Retrieves match details (e.g., `userAId`, `userBId`, `questionId`) from **Redis**, using the `matchId` shared by the Matching Service.
+   - A new session entry is inserted into the **PostgreSQL** database (via Prisma), generating a unique `sessionId`.
+
+2. **Session state is cached in Redis**
+   - The service stores the `sessionId` and session state (`created`, `active`, etc.) in Redis, so that other microservices (like Communication Service) can quickly access session metadata.
+   - Redis acts as the central state store and coordination point across services.
+
+3. **Yjs document is initialized**
+   - A **Yjs `Doc`** is created for collaborative code editing, with a shared text type (`monaco`).
+   - The Collaboration Service fetches the corresponding question from the **Question Service** using `QUESTIONURL` and preloads its `starter_code` into the Yjs document.
+   - The initial Yjs document state is stored using the **`y-postgresql`** adapter.
+     - Code documents are persistent.
+     - Currently no versisioning of documents is implemented.
+
+4. **Session is published to Communication Service**
+   - A message is sent through the **message broker** to create another yjs document specifically for communication purposes (messaging, drawing).
+
+5. **WebSocket connections are established**
+   - Clients connect to the Collaboration Service using a WebSocket endpoint:
+
+     ```
+     ws://<collaboration-service-host>/<sessionId>?userId=<id>
+     ```
+
+   - The `SessionManager` validates the session and user through the **Redis**, then attaches the connection to the Yjs WebSocket server using `setupWSConnection`.
+
+6. **Users become ready**
+   - When both users connect, the session transitions from `created` ->`active`.
+   - Session state is updated in Redis to `active`, which will cause the FE to redirect to the collaboration page, and both clients start real-time code collaboration.
+
+7. **Session persistence & end**
+   - During editing, Yjs continuously persists document updates to PostgreSQL via `PostgresqlPersistence`.
+
+8. **Ending a session**
+   - When a session ends (either by user or timeout), the Collaboration Service:
+     - Marks the session as **ended** in Redis and PostgreSQL.
+     - Notifies Communication Service of termination.
+     - Deletes the session from memory.
+
+## Session States
+
+`created`: Session is created, waiting for users to join
+`active`: Both users have joined session
+`end`: Sesssion is terminated by user or timeout
+
+## API
+
+## Architecture
+
+# Decisions made
 
 ## Technology Stack
 
@@ -123,15 +216,3 @@ const content = yText.toString();
 
 - Store past session records in db so the User Service can retrieve and display user history or past collaboration (will be used to show analytics)
 - Can easily integrate with future extensions like leaderboard through session and performance data
-
-## Summary of Service Dependecies
-
-| Source Service    | Target Service    | Protocol       | Purpose                                           |
-| ----------------- | ----------------- | -------------- | ------------------------------------------------- |
-| **Collaboration** | **Question**      | HTTP REST      | Fetch question details for the active session     |
-| **Collaboration** | **User**          | HTTP REST      | Retrieve collaborator profile info                |
-| **Collaboration** | **Code Runner**   | HTTP REST      | Execute user code against predefined test cases   |
-| **Matching**      | **Collaboration** | RabbitMQ       | Trigger creation of new collaboration sessions    |
-| **Frontend**      | **Collaboration** | HTTP REST      | Retrieve past sessions or documents               |
-| **Frontend**      | **Collaboration** | WebSocket      | Real-time code, chat, and drawing synchronization |
-| **Collaboration** | **Redis**         | Redis Protocol | Store and retrieve temporary session state        |
