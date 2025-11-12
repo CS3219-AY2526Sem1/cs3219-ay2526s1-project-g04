@@ -9,6 +9,8 @@ import { COMMUNICATION_STATE } from './types/enums.js';
 type SessionEntry = {
   matchedId: string;
   ydoc: Y.Doc;
+  userAId: boolean;
+  userBId: boolean;
 };
 
 export class CommunicationManager {
@@ -37,17 +39,21 @@ export class CommunicationManager {
     ydoc.getArray('messages');
     ydoc.getArray('strokes');
 
-    this.sessions.set(sessionId, { matchedId, ydoc });
+    // means not connected yet
+    const userAId = false;
+    const userBId = false;
+
+    this.sessions.set(sessionId, { matchedId, ydoc, userAId, userBId });
 
     // console.log('sessions: ', this.sessions);
 
-    this.redis.setCommunicationState(matchedId, COMMUNICATION_STATE.active);
+    this.redis.setCommunicationState(matchedId, COMMUNICATION_STATE.created);
     console.log(
-      `Created new doc with matchedId: ${matchedId} and sessId: ${sessionId}`,
+      `Created new doc with matchedId: ${matchedId} and sessId: ${sessionId}; set redis to "${COMMUNICATION_STATE.created}"`,
     );
   }
 
-  private handleConnection(ws: WebSocket, req: IncomingMessage) {
+  private async handleConnection(ws: WebSocket, req: IncomingMessage) {
     console.log('a client connected in comms service');
 
     // Get param values
@@ -61,27 +67,52 @@ export class CommunicationManager {
       `Handling connection for user ${userId} for session ${sessionId}`,
     );
 
-    // console.log('sessions: ', this.sessions);
-
     if (!this.sessions.has(sessionId)) {
       console.log(
-        'ERROR, create doc is not run after session is created, creating doc entry without match id',
+        'ERROR: createDoc was not run after session was created — creating doc entry without match id',
       );
       this.createDoc('', sessionId);
       return;
     }
 
-    const { matchedId, ydoc } = this.sessions.get(sessionId)!;
+    const sessionEntry = this.sessions.get(sessionId)!;
+    const { matchedId, ydoc } = sessionEntry;
 
-    if (!this.redis.isUserInSession(matchedId, userId)) {
-      console.log(`user ${userId} don't belong in ${sessionId}`);
+    const { isUserAInSession, isUserBInSession } =
+      await this.redis.isUserInSession(matchedId, userId);
+
+    if (isUserAInSession) {
+      sessionEntry.userAId = true;
+      console.log(`User ${userId} set as userA in session ${sessionId}`);
+    } else if (isUserBInSession) {
+      sessionEntry.userBId = true;
+      console.log(`User ${userId} set as userB in session ${sessionId}`);
+    } else {
+      console.log(`User ${userId} does not belong to matchedId ${matchedId}`);
       return;
     }
 
-    // Setup y-websocket
+    // Update the session entry in the Map
+    this.sessions.set(sessionId, sessionEntry);
+
+    // Setup Yjs WebSocket connection
     setupWSConnection(ws, req, { doc: ydoc });
     console.log(
       `Connected user ${userId} to session ${sessionId} in communication service.`,
     );
+
+    if (sessionEntry.userAId && sessionEntry.userBId) {
+      await this.redis.setCommunicationState(
+        matchedId,
+        COMMUNICATION_STATE.active,
+      );
+      console.log(
+        `Both users connected — set state to "${COMMUNICATION_STATE.active}" for matchedId ${matchedId}`,
+      );
+    } else {
+      console.log(
+        `Waiting for both users to connect... (A: ${sessionEntry.userAId}, B: ${sessionEntry.userBId})`,
+      );
+    }
   }
 }

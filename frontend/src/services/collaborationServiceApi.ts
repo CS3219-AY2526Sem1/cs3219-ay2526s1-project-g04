@@ -54,9 +54,13 @@ export async function terminateSessionIsSuccess(
   }
 }
 
-export async function sessionIsReady(
-  matchId: string,
-): Promise<{ sessionId?: string; created: boolean; ready: boolean }> {
+export async function sessionIsReady(matchId: string): Promise<{
+  sessionId?: string;
+  created: boolean;
+  ready: boolean;
+  commsCreated: boolean;
+  commsReady: boolean;
+}> {
   try {
     const url = `${COLLAB_SERVICE_URL}/sessions/status/matched/${matchId}`;
     console.log('Get session status URL:', url);
@@ -79,17 +83,23 @@ export async function sessionIsReady(
 
     console.log('Get session state successfully', jsonRes['sessionState']);
     const ready = jsonRes.sessionState === 'active';
+    const commsReady = jsonRes['communication_state'] === 'active';
     const created = jsonRes.sessionState === 'created';
+    const commsCreated = jsonRes['communication_state'] === 'created';
     return {
       sessionId: jsonRes.sessionId,
       created: created,
       ready: ready,
+      commsReady: commsReady,
+      commsCreated: commsCreated,
     };
   } catch (err) {
     console.error('getSessionState error:', err);
     return {
       ready: false,
       created: false,
+      commsReady: false,
+      commsCreated: false,
     };
   }
 }

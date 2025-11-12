@@ -5,7 +5,10 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { sessionIsReady } from '@/services/collaborationServiceApi';
-import { getCollabProvider } from '../collaboration/collabSingleton';
+import {
+  getCollabProvider,
+  getCommsProvider,
+} from '../collaboration/collabSingleton';
 import { getUserId } from '@/lib/utils/jwt';
 
 interface MatchedViewProps {
@@ -26,16 +29,16 @@ export default function MatchedView({
 
     const pollStatus = async () => {
       try {
-        const { sessionId, created, ready } = await sessionIsReady(
-          `matched:${matchingId}`,
-        );
+        const { sessionId, created, ready, commsCreated, commsReady } =
+          await sessionIsReady(`matched:${matchingId}`);
         console.log(sessionId, created, createProcessIsDone);
-        if (created && sessionId) {
+        if (created && commsCreated && sessionId) {
           console.log('adding user into socket', matchingId);
           getCollabProvider(sessionId, getUserId()!.toString());
+          getCommsProvider(sessionId, getUserId()!.toString());
           setCreateProcessIsDone(true);
         }
-        if (ready && sessionId) {
+        if (ready && commsReady && sessionId) {
           clearInterval(intervalId);
           router.push(`/collaboration/${sessionId}`);
         }

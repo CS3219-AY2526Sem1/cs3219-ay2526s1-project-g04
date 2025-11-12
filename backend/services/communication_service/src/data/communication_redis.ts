@@ -24,13 +24,14 @@ export class CommunicationRedis {
   public async isUserInSession(
     matchedId: string,
     userId: string,
-  ): Promise<boolean> {
+  ): Promise<{ isUserAInSession: boolean; isUserBInSession: boolean }> {
     const matchedRedisData: Record<string, string> =
       await this.redis.getDictValueByKey(matchedId);
-    return (
-      matchedRedisData['userAId'] == userId ||
-      matchedRedisData['userBId'] == userId
-    );
+
+    const isUserAInSession = matchedRedisData['userAId'] === userId;
+    const isUserBInSession = matchedRedisData['userBId'] === userId;
+
+    return { isUserAInSession, isUserBInSession };
   }
 
   public async setCommunicationState(
