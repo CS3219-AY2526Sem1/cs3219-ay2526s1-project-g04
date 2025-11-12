@@ -84,6 +84,7 @@ function CloseFormButton({
 export default function MatchingPopUp({ setShowMatching }: MatchingPopUpProps) {
   const [isCancelling, setIsCancelling] = React.useState(false);
   const [matchState, setMatchState] = React.useState<MatchState>({
+    // status: 'matched',
     status: 'requesting',
     // matchingId: '123',
   });

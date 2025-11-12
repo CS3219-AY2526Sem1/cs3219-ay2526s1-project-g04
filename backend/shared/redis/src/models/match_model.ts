@@ -4,6 +4,7 @@ export type MatchedValue = {
   questionId: string; // Created my matching service
   session_id?: string; // Created my collab service
   session_state?: string; // Created my collab service
+  communication_state?: string; // Created by communication service
 };
 
 export type MatchedHset = {

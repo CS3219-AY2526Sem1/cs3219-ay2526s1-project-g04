@@ -1,120 +1,88 @@
-// 'use client';
+'use client';
 
-// import {
-//   Avatar,
-//   Card,
-//   CardContent,
-//   CardHeader,
-//   Stack,
-//   Typography,
-//   Box,
-// } from '@mui/material';
-// import '@/styles/globals.css';
-// import { UserInput } from './messaging/userInput';
-// import { MessageDialogs } from './messaging/messageDialog';
-// import { CollabProvider, useCollab } from './CollabProvider';
-// import React from 'react';
-// import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import React from 'react';
+import {
+  Avatar,
+  Card,
+  CardContent,
+  CardHeader,
+  Stack,
+  Typography,
+  Box,
+} from '@mui/material';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import '@/styles/globals.css';
+import * as Y from 'yjs';
+import { Awareness } from 'y-protocols/awareness';
+import { MessageDialogs } from './messaging/messageDialog';
+import { UserInput } from './messaging/userInput';
 
-// // 👇 awareness state type
-// interface AwarenessUser {
-//   id: string;
-//   color?: string;
-//   name?: string;
-// }
+interface AwarenessUser {
+  id: string;
+  name?: string;
+  color?: string;
+}
 
-// interface AwarenessState {
-//   user?: AwarenessUser;
-//   cursor?: { x: number; y: number };
-// }
+interface MessageBoardProps {
+  yCommsDoc: Y.Doc;
+  awareness: Awareness | null;
+  userId: string;
+  username: string;
+  otherUser: AwarenessUser | null;
+}
 
-// const ChatHeader = () => {
-//   const { awareness, userId } = useCollab();
-//   const [otherUser, setOtherUser] = React.useState<AwarenessUser | null>(null);
+const ChatHeader = ({ otherUser }: { otherUser: AwarenessUser | null }) => (
+  <CardHeader
+    className="py-2 px-3 h-fit border-b border-[#e0e0e0]"
+    title={
+      <Stack direction="row" alignItems="center" spacing={2}>
+        <Avatar sx={{ bgcolor: '#ded0ff', color: '#8b5cf7' }}>
+          <PersonOutlineIcon sx={{ fontSize: 30 }} />
+        </Avatar>
+        <Typography className="font-semibold">
+          {otherUser?.name || 'Waiting for collaborator...'}
+        </Typography>
+      </Stack>
+    }
+  />
+);
 
-//   React.useEffect(() => {
-//     if (!awareness) return;
+export const MessageBoard = ({
+  yCommsDoc,
+  awareness,
+  userId,
+  username,
+  otherUser,
+}: MessageBoardProps) => {
+  return (
+    <Card
+      className="flex flex-col w-full h-full shadow-none"
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        overflow: 'hidden',
+      }}
+    >
+      <ChatHeader otherUser={otherUser} />
 
-//     const update = () => {
-//       const states = Array.from(
-//         awareness.getStates().values(),
-//       ) as AwarenessState[];
-//       const others = states
-//         .map((s) => s.user)
-//         .filter((u): u is AwarenessUser => !!u && u.id !== userId);
-//       setOtherUser(others[0] || null);
-//     };
+      <CardContent
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          p: 0,
+        }}
+      >
+        <Box sx={{ flex: 1, overflowY: 'auto', px: 2, py: 1 }}>
+          <MessageDialogs yCommsDoc={yCommsDoc} userId={userId} />
+        </Box>
 
-//     update();
-//     awareness.on('change', update);
-//     return () => awareness.off('change', update);
-//   }, [awareness, userId]);
-
-//   return (
-//     <CardHeader
-//       className="py-2 px-3 h-fit border-b border-[#e0e0e0]"
-//       title={
-//         <Stack direction="row" alignItems="center" spacing={2}>
-//           <Avatar
-//             sx={{
-//               bgcolor: '#ded0ff',
-//               color: '#8b5cf7',
-//             }}
-//           >
-//             <PersonOutlineIcon sx={{ fontSize: 30 }} />
-//           </Avatar>
-//           <Typography className="font-semibold">
-//             {otherUser?.id
-//               ? `User-${otherUser.id}`
-//               : 'Waiting for collaborator...'}
-//           </Typography>
-//         </Stack>
-//       }
-//     />
-//   );
-// };
-
-// export const MessageBoard = () => {
-//   return (
-//     <CollabProvider>
-//       <Card
-//         className="flex flex-col w-full h-full shadow-none"
-//         sx={{
-//           display: 'flex',
-//           flexDirection: 'column',
-//           height: '100%',
-//           overflow: 'hidden',
-//         }}
-//       >
-//         <ChatHeader />
-
-//         {/* Scrollable content area */}
-//         <CardContent
-//           sx={{
-//             flex: 1,
-//             display: 'flex',
-//             flexDirection: 'column',
-//             overflow: 'hidden',
-//             p: 0,
-//           }}
-//         >
-//           <Box
-//             sx={{
-//               flex: 1,
-//               overflowY: 'auto',
-//               px: 2,
-//               py: 1,
-//             }}
-//           >
-//             <MessageDialogs />
-//           </Box>
-
-//           {/* Fixed input bar at bottom */}
-//           <Box>
-//             <UserInput />
-//           </Box>
-//         </CardContent>
-//       </Card>
-//     </CollabProvider>
-//   );
-// };
+        <Box>
+          <UserInput yCommsDoc={yCommsDoc} userId={userId} />
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};

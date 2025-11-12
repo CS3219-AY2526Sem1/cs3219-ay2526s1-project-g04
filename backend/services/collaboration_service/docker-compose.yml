@@ -13,7 +13,7 @@ services:
     environment:
       POSTGRES_PASSWORD: example
     ports:
-      - "5439:5432"
+      - '5439:5432'
     networks:
       - peerprep-network
     volumes:
@@ -39,7 +39,7 @@ services:
       # - redis
       # - rabbitmq
     ports:
-      - "3009:3009"
+      - '3009:3009'
     networks:
       - peerprep-network
 
