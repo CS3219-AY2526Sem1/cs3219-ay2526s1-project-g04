@@ -1308,102 +1308,94 @@ app.get('/user/:id', authenticateToken, async (req: Request, res: Response) => {
   }
 });
 
-app.post(
-  '/user/utility/promote-admin',
-  authorizeInternal,
-  async (req: Request, res: Response) => {
-    const { email } = req.body;
+app.post('/user/utility/promote-admin', async (req: Request, res: Response) => {
+  const { email } = req.body;
 
-    if (!email || typeof email !== 'string') {
+  if (!email || typeof email !== 'string') {
+    return res
+      .status(400)
+      .json({ message: 'A valid email is required in the body.' });
+  }
+
+  try {
+    const userToPromote = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!userToPromote) {
       return res
-        .status(400)
-        .json({ message: 'A valid email is required in the body.' });
+        .status(404)
+        .json({ message: 'User not found with that email.' });
     }
 
-    try {
-      const userToPromote = await prisma.user.findUnique({
-        where: { email },
+    if (userToPromote.role === Role.ADMIN) {
+      return res.status(200).json({
+        message: 'User is already an admin.',
+        user: userToPromote,
       });
-
-      if (!userToPromote) {
-        return res
-          .status(404)
-          .json({ message: 'User not found with that email.' });
-      }
-
-      if (userToPromote.role === Role.ADMIN) {
-        return res.status(200).json({
-          message: 'User is already an admin.',
-          user: userToPromote,
-        });
-      }
-
-      const updatedUser = await prisma.user.update({
-        where: { email },
-        data: {
-          role: Role.ADMIN,
-          isVerified: true,
-        },
-      });
-
-      res.status(200).json({
-        message: 'User successfully promoted to admin.',
-        user: updatedUser,
-      });
-    } catch (error) {
-      console.error('Promote User Error:', error);
-      res.status(500).json({ message: 'Internal server error.' });
     }
-  },
-);
 
-app.post(
-  '/user/utility/demote-admin',
-  authorizeInternal, // Protects with your new secret key
-  async (req: Request, res: Response) => {
-    const { email } = req.body;
+    const updatedUser = await prisma.user.update({
+      where: { email },
+      data: {
+        role: Role.ADMIN,
+        isVerified: true,
+      },
+    });
 
-    if (!email || typeof email !== 'string') {
+    res.status(200).json({
+      message: 'User successfully promoted to admin.',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Promote User Error:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+});
+
+app.post('/user/utility/demote-admin', async (req: Request, res: Response) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string') {
+    return res
+      .status(400)
+      .json({ message: 'A valid email is required in the body.' });
+  }
+
+  try {
+    const userToDemote = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!userToDemote) {
       return res
-        .status(400)
-        .json({ message: 'A valid email is required in the body.' });
+        .status(404)
+        .json({ message: 'User not found with that email.' });
     }
 
-    try {
-      const userToDemote = await prisma.user.findUnique({
-        where: { email },
+    if (userToDemote.role === Role.USER) {
+      return res.status(200).json({
+        message: 'User is already a regular user.',
+        user: userToDemote,
       });
-
-      if (!userToDemote) {
-        return res
-          .status(404)
-          .json({ message: 'User not found with that email.' });
-      }
-
-      if (userToDemote.role === Role.USER) {
-        return res.status(200).json({
-          message: 'User is already a regular user.',
-          user: userToDemote,
-        });
-      }
-
-      const updatedUser = await prisma.user.update({
-        where: { email },
-        data: {
-          role: Role.USER,
-        },
-      });
-
-      res.status(200).json({
-        message: 'User successfully demoted to user.',
-        user: updatedUser,
-      });
-    } catch (error) {
-      console.error('Demote User Error:', error);
-      res.status(500).json({ message: 'Internal server error.' });
     }
-  },
-);
+
+    const updatedUser = await prisma.user.update({
+      where: { email },
+      data: {
+        role: Role.USER,
+      },
+    });
+
+    res.status(200).json({
+      message: 'User successfully demoted to user.',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Demote User Error:', error);
+    res.status(500).json({ message: 'Internal server error.' });
+  }
+});
 
 app.post(
   '/user/me/delete/request-otp',

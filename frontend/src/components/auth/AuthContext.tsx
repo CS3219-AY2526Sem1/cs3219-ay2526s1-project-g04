@@ -80,13 +80,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const logIn = async (data: LoginData) => {
     const response = await login(data);
-    console.log(response);
-    console.log(
-      'token=',
-      response.token,
-      'refreshToken=',
-      response.refreshToken,
-    );
+    // console.log(response);
+    // console.log(
+    //   'token=',
+    //   response.token,
+    //   'refreshToken=',
+    //   response.refreshToken,
+    // );
     setAuthData(response.token, response.refreshToken); // Use response.token
     router.push('/home/dashboard');
   };
