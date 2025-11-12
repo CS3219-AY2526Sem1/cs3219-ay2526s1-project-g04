@@ -76,6 +76,11 @@ spec:
                 secretKeyRef:
                   name: us-secret
                   key: PRIVATE_KEY_BASE_64
+            - name: INTERNAL_ADMIN_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: us-secret
+                  key: INTERNAL_ADMIN_SECRET
 
           readinessProbe:
             httpGet:

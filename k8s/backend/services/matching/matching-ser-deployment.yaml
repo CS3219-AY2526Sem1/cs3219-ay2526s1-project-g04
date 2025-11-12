@@ -20,6 +20,9 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 3007
+          resources:
+            requests:
+              cpu: "200m"
           env:
             - name: RABBITMQ_URL
               valueFrom:

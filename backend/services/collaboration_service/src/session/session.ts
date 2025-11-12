@@ -59,10 +59,6 @@ export class Session {
     }
   }
 
-  public end(userId: string) {
-    console.log(`[Session] Ending session for ${userId}`);
-  }
-
   public getUsers(): string[] {
     return Object.keys(this.users);
   }
