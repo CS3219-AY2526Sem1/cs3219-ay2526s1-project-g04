@@ -64,7 +64,6 @@ jobs:
   node-build-question-service:
     needs: [lint-question-service]
     runs-on: ubuntu-latest
-    services:
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
