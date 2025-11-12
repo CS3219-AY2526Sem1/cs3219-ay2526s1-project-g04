@@ -259,27 +259,27 @@ const authenticateToken = (
  * Middleware for Internal-Only Utility Endpoints
  * Checks for a static secret key in the headers.
  */
-const authorizeInternal = (req: Request, res: Response, next: NextFunction) => {
-  const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
-  const requestSecret = req.headers['x-internal-secret'];
-
-  if (!internalSecret) {
-    console.error(
-      'FATAL: INTERNAL_ADMIN_SECRET is not set. Internal endpoints are disabled.',
-    );
-    return res
-      .status(500)
-      .json({ message: 'Internal server misconfiguration.' });
-  }
-
-  if (!requestSecret || requestSecret !== internalSecret) {
-    return res.status(403).json({
-      message: 'Forbidden: Invalid or missing internal secret token.',
-    });
-  }
-
-  next();
-};
+// const authorizeInternal = (req: Request, res: Response, next: NextFunction) => {
+//   const internalSecret = process.env.INTERNAL_ADMIN_SECRET;
+//   const requestSecret = req.headers['x-internal-secret'];
+//
+//   if (!internalSecret) {
+//     console.error(
+//       'FATAL: INTERNAL_ADMIN_SECRET is not set. Internal endpoints are disabled.',
+//     );
+//     return res
+//       .status(500)
+//       .json({ message: 'Internal server misconfiguration.' });
+//   }
+//
+//   if (!requestSecret || requestSecret !== internalSecret) {
+//     return res.status(403).json({
+//       message: 'Forbidden: Invalid or missing internal secret token.',
+//     });
+//   }
+//
+//   next();
+// };
 
 /**
  * OTP and emailing
@@ -1496,14 +1496,14 @@ app.delete(
  */
 // UTILITY TO BE DELETED !!!!!
 // list all users in db
-app.get('/user/utility/list', async (req, res) => {
-  try {
-    const allUsers = await prisma.user.findMany();
-    res.status(200).json({ message: 'List successful', details: allUsers });
-  } catch (error) {
-    res.status(400).json({ message: 'Invalid request', details: error });
-  }
-});
+// app.get('/user/utility/list', async (req, res) => {
+//   try {
+//     const allUsers = await prisma.user.findMany();
+//     res.status(200).json({ message: 'List successful', details: allUsers });
+//   } catch (error) {
+//     res.status(400).json({ message: 'Invalid request', details: error });
+//   }
+// });
 
 app.get('/healthz', async (req, res) => {
   res.status(200).send('User service is alive');
