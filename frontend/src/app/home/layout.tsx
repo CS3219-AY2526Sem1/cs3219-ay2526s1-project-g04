@@ -33,8 +33,8 @@ export default function HomeLayout({ children }: LayoutProps) {
 
     getMyActiveSession()
       .then((data) => {
-        if (data.activeSession) {
-          const sessionId = data.activeSession.sessionId;
+        if (data.sessionId != 1) {
+          const sessionId = data.sessionId;
           const message = (
             <Box>
               You have an active practice session in progress. Click{' '}

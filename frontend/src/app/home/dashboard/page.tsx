@@ -40,8 +40,11 @@ import { PublicUserProfile } from '@/lib/user-service';
 import { getUserProfileById, getUsersBatch } from '@/services/userServiceApi';
 import { getQuestionsBatch } from '@/services/questionServiceApi';
 import { Question, Topic } from '@/lib/question-service';
-import { RawSession } from '@/lib/collaboration-service';
-import { getMySessions } from '@/services/collaborationServiceApi';
+import { ActiveSession, RawSession } from '@/lib/collaboration-service';
+import {
+  getMySessions,
+  getMyActiveSession,
+} from '@/services/collaborationServiceApi';
 import { useAuth } from '@/components/auth/AuthContext';
 
 // --- Mock Data (Replace with your API data) ---
@@ -222,6 +225,7 @@ export default function DashboardPage() {
 
   const [history, setHistory] = useState<EnrichedSession[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true); // Renamed from isLoading
+  const [activeSession, setActiveSession] = useState<number | null>(null); // <-- ADD THIS
   const router = useRouter();
 
   const [selectedPeer, setSelectedPeer] = useState<
@@ -235,6 +239,7 @@ export default function DashboardPage() {
 
   // 1. Data Fetching and Orchestration
   useEffect(() => {
+    let isMounted = true; // --- ADD THIS ---
     const loadDashboardData = async () => {
       if (isAuthLoading) {
         return;
@@ -248,12 +253,18 @@ export default function DashboardPage() {
       try {
         const rawSessions: RawSession[] = await getMySessions();
         // const rawSessions: RawSession[] = mockSessionData;
+        const currentActiveSession = await getMyActiveSession();
+        if (isMounted) {
+          setActiveSession(currentActiveSession.sessionId || 1);
+        }
 
         const finishedSessions = rawSessions.filter((s) => s.endedAt !== null);
 
         if (finishedSessions.length === 0) {
-          setHistory([]);
-          setIsDataLoading(false);
+          if (isMounted) {
+            setHistory([]);
+            setIsDataLoading(false);
+          }
           return;
         }
 
@@ -315,14 +326,23 @@ export default function DashboardPage() {
             peer: { id: peer.id, username: peer.username },
           };
         });
-        setHistory(enrichedSessions);
+        if (isMounted) {
+          // --- ADD THIS CHECK ---
+          setHistory(enrichedSessions);
+        }
       } catch (error) {
         console.error(error);
       } finally {
-        setIsDataLoading(false);
+        if (isMounted) {
+          // --- ADD THIS CHECK ---
+          setIsDataLoading(false);
+        }
       }
     };
     loadDashboardData();
+    return () => {
+      isMounted = false;
+    };
   }, [router, user, isAuthLoading]);
 
   useEffect(() => {
@@ -442,17 +462,15 @@ export default function DashboardPage() {
                 >
                   <Box>
                     <Typography
-                      sx={{
-                        py: 1,
-                        textTransform: 'uppercase',
-                        fontWeight: 800,
-                        letterSpacing: 0.4,
-                        fontSize: '1rem',
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        opacity: 0.6,
-                      }}
+                      sx={
+                        {
+                          // ... (typography styles) ...
+                        }
+                      }
                     >
-                      Sharpen your skills, practice live with peers
+                      {activeSession != 1
+                        ? 'You have an ongoing session'
+                        : 'Sharpen your skills, practice live with peers'}
                     </Typography>
                     <Typography
                       variant="h4"
@@ -461,32 +479,58 @@ export default function DashboardPage() {
                         fontFamily: openSans.style.fontFamily,
                       }}
                     >
-                      Start Practising.
+                      {activeSession != 1
+                        ? 'Rejoin Session.'
+                        : 'Start Practising.'}
                     </Typography>
                   </Box>
-                  <Button
-                    variant="contained"
-                    onClick={() => setShowMatching(true)}
-                    sx={{
-                      backgroundColor: 'white',
-                      color: '#4F46E5',
-                      borderRadius: '999px',
-                      px: 4,
-                      py: 1.5,
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      fontSize: '1rem',
-                      '&:hover': {
-                        backgroundColor: '#F0F0F0',
-                      },
-                    }}
-                  >
-                    Find A Peer
-                  </Button>
+
+                  {activeSession != 1 ? (
+                    <Button
+                      variant="contained"
+                      onClick={() =>
+                        router.push(`/collaboration/${activeSession}`)
+                      }
+                      sx={{
+                        backgroundColor: '#10B981', // Green
+                        color: 'white',
+                        borderRadius: '999px',
+                        px: 4,
+                        py: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        fontSize: '1rem',
+                        '&:hover': {
+                          backgroundColor: '#059669', // Darker green
+                        },
+                      }}
+                    >
+                      Return to Session
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      onClick={() => setShowMatching(true)}
+                      sx={{
+                        backgroundColor: 'white',
+                        color: '#4F46E5',
+                        borderRadius: '999px',
+                        px: 4,
+                        py: 1.5,
+                        textTransform: 'none',
+                        fontWeight: 700,
+                        fontSize: '1rem',
+                        '&:hover': {
+                          backgroundColor: '#F0F0F0',
+                        },
+                      }}
+                    >
+                      Find A Peer
+                    </Button>
+                  )}
                 </Stack>
               </Card>
 
-              {/* Practice History */}
               <Paper
                 sx={{
                   p: 3,
@@ -540,7 +584,6 @@ export default function DashboardPage() {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {/* --- RENDER FROM DYNAMIC HISTORY STATE --- */}
                       {history.slice(0, 6).map((row) => (
                         <TableRow
                           key={row.id}

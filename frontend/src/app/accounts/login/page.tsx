@@ -63,7 +63,7 @@ export default function LoginPage() {
       await logIn({ email, password });
     } catch (err) {
       console.error(err);
-      setError('Failed to connect to the server.');
+      setError(err?.toString() || 'Failed to connect to the server.');
     } finally {
       setIsLoading(false);
     }
@@ -100,7 +100,7 @@ export default function LoginPage() {
       setResendMessage('A new OTP has been sent.');
     } catch (err) {
       console.log(err);
-      setError('Failed to connect to the server.');
+      setError(err?.toString || 'Failed to connect to the server.');
       setCooldownSeconds(0);
     } finally {
       setIsResendingOtp(false);
