@@ -31,9 +31,9 @@ import {
   DialogActions,
 } from '@mui/material';
 import { openSans } from '@/styles/fonts';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // For "Solved" status
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
-import CategoryChart from '@/components/ui/home/dashboard/CategoryChart'; // For "Attempted" status
+import CategoryChart from '@/components/ui/home/dashboard/CategoryChart';
 import MatchingPopUp from '@/components/ui/matching/MatchingPopUp';
 import { getAccessToken, getUserId, getUsername } from '@/lib/utils/jwt';
 import { PublicUserProfile } from '@/lib/user-service';
