@@ -21,7 +21,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     if (!user) {
       router.push('/accounts/login');
     }
-
   }, [isLoading, user, router]);
   if (isLoading) {
     return (

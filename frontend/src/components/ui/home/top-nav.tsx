@@ -123,7 +123,7 @@ export default function TopNavigationBar({
                 className="text-[var(--foreground)]"
                 size="small"
               >
-                  <AccountCircleOutlined />
+                <AccountCircleOutlined />
               </IconButton>
             </Tooltip>
           </div>
@@ -148,7 +148,7 @@ export default function TopNavigationBar({
       >
         <MenuItem onClick={handleProfileClick} sx={{ fontSize: '0.875rem' }}>
           <ListItemIcon sx={{ minWidth: 'auto', marginRight: '8px' }}>
-              <AccountCircleOutlined />
+            <AccountCircleOutlined />
           </ListItemIcon>
           <Typography variant="inherit">View Profile</Typography>
         </MenuItem>
