@@ -169,7 +169,9 @@ export default function SignUpPage() {
       }
     } catch (err) {
       console.error(err);
-      setError('Failed to connect to the server. Please try again.');
+      setError(
+        err?.toString || 'Failed to connect to the server. Please try again.',
+      );
       setCooldownSeconds(0);
     } finally {
       setIsLoading(false);
@@ -188,7 +190,9 @@ export default function SignUpPage() {
         router.push('/home/dashboard');
       } catch (err) {
         console.error(err);
-        setError('Failed to connect to the server. Please try again.');
+        setError(
+          err?.toString || 'Failed to connect to the server. Please try again.',
+        );
       } finally {
         setIsLoading(false);
       }
@@ -206,7 +210,9 @@ export default function SignUpPage() {
       setResendMessage('A new OTP has been sent.');
     } catch (err) {
       console.error(err);
-      setError('Failed to connect to the server. Please try again.');
+      setError(
+        err?.toString || 'Failed to connect to the server. Please try again.',
+      );
       setCooldownSeconds(0);
     } finally {
       setIsResendingOtp(false);
